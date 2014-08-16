@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<site>
+   <description>
+      EIRCC p2 repo
+   </description>
+   <feature url="features/org.l2x6.eircc.feature_0.0.0.qualifier.jar" id="org.l2x6.eircc.feature" version="0.0.0">
+      <category name="IRC Client"/>
+   </feature>
+   <category-def name="IRC Client" label="IRC Client">
+      <description>
+         Eclipse IRC Client
+      </description>
+   </category-def>
+</site>

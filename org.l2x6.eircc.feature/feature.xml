@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feature
+      id="org.l2x6.eircc.feature"
+      label="EIRCC"
+      version="0.0.1.qualifier">
+
+   <description url="https://github.com/ppalaga/eircc">
+      An Eclipse IRC Client
+   </description>
+
+   <copyright url="http://www.example.com/copyright">
+      [Enter Copyright Description here.]
+   </copyright>
+
+   <license url="http://www.eclipse.org/legal/epl-v10.html">
+      Eclipse Public License
+   </license>
+
+   <plugin
+         id="org.l2x6.eircc.ui"
+         download-size="0"
+         install-size="0"
+         version="0.0.0"
+         unpack="false"/>
+
+</feature>

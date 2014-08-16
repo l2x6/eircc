@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?eclipse version="3.4"?>
+<plugin>
+    <extension point="org.eclipse.ui.views">
+        <view id="org.l2x6.eircc.ui.IrcAccountsView" name="IrcAccountsView.name" class="org.l2x6.eircc.ui.views.IrcAccountsView"
+            icon="icons/account.gif" />
+    </extension>
+
+    <extension point="org.eclipse.ui.newWizards">
+        <category id="org.l2x6.eircc.ui.newWizardCategory"
+            name="%NewIrcAccountWizard.name">
+        </category>
+        <wizard id="org.l2x6.eircc.ui.NewIrcAccountWizard" name="%NewIrcAccountWizard.name"
+            class="org.l2x6.eircc.ui.NewIrcAccountWizard"
+            category="org.l2x6.eircc.ui.newWizardCategory"
+            icon="icons/account-new.png">
+
+            <description>%NewIrcAccountWizard.desc</description>
+        </wizard>
+    </extension>
+    <extension
+        point="org.eclipse.ui.perspectives">
+        <perspective
+            id="org.l2x6.eircc.ui.IrcPerspective"
+            name="%IrcPerspective.name"
+            class="org.l2x6.eircc.ui.IrcPerspective"
+            icon="icons/eircc.png">
+        </perspective>
+    </extension>
+    <extension
+        point = "org.eclipse.ui.editors">
+        <editor
+           id = "org.l2x6.eircc.ui.editor.IrcChannelEditor"
+           name="%IrcChannelEditor_name"
+           icon="icons/channel.gif"
+           class="org.l2x6.eircc.ui.editor.IrcChannelEditor"
+           extensions="irc.log" >
+        </editor>
+</extension>
+</plugin>
