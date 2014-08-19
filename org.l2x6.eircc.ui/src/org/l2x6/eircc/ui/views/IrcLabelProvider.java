@@ -10,12 +10,20 @@ package org.l2x6.eircc.ui.views;
 
 import org.eclipse.jface.viewers.LabelProvider;
 import org.eclipse.swt.graphics.Image;
+import org.l2x6.eircc.core.model.IrcAccountsStatistics;
+import org.l2x6.eircc.core.model.IrcChannel;
+import org.l2x6.eircc.core.model.IrcModel;
 import org.l2x6.eircc.core.model.IrcObject;
 import org.l2x6.eircc.ui.IrcImages;
+import org.l2x6.eircc.ui.IrcUiMessages;
 
 public class IrcLabelProvider extends LabelProvider {
 
     private static final IrcLabelProvider INSTANCE = new IrcLabelProvider();
+
+    public static String getChannelJoinedLabel(IrcChannel channel) {
+        return channel.isJoined() ? IrcUiMessages.Channel_Connected : IrcUiMessages.Channel_Disconnected;
+    }
 
     public static IrcLabelProvider getInstance() {
         return INSTANCE;
@@ -34,6 +42,34 @@ public class IrcLabelProvider extends LabelProvider {
             return IrcImages.getInstance().getImage((IrcObject) element);
         }
         return null;
+    }
+
+    /**
+     * @param channel
+     * @return
+     */
+    public String getTooltipText(IrcObject object) {
+        if (object == null) {
+            return null;
+        }
+        else if (object instanceof IrcModel) {
+            IrcModel model = (IrcModel) object;
+            StringBuilder sb = new StringBuilder();
+            IrcAccountsStatistics stats = model.getAccountsStatistics();
+            if (stats.hasChannelsWithUnreadMessages()) {
+                sb.append(IrcUiMessages.Channel_You_have_unseen_messages);
+            }
+            if (sb.length() > 0) {
+                sb.append(" - ");
+            }
+            sb.append(IrcUiMessages.Eclipse_IRC_Client);
+            return sb.toString();
+        }
+        else if (object instanceof IrcChannel) {
+            IrcChannel channel = (IrcChannel) object;
+            return channel.getName() + "@"+ channel.getAccount().getLabel() + " - "+ getChannelJoinedLabel(channel);
+        }
+        return object.toString();
     }
 
 }

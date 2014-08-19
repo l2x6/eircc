@@ -28,12 +28,13 @@
             <groupId>org.schwering</groupId>
             <artifactId>irclib</artifactId>
         </dependency>
-<!--         <dependency>
+        <!-- <dependency>
             <groupId>org.schwering</groupId>
             <artifactId>irclib</artifactId>
             <classifier>sources</classifier>
-        </dependency>
- -->    </dependencies>
+            </dependency>
+        -->
+    </dependencies>
 
     <build>
         <plugins>
@@ -52,6 +53,19 @@
                         </configuration>
                     </execution>
                 </executions>
+            </plugin>
+            <plugin>
+                <artifactId>maven-clean-plugin</artifactId>
+                <configuration>
+                    <filesets>
+                        <fileset>
+                            <directory>lib</directory>
+                            <includes>
+                                <include>**/*.jar</include>
+                            </includes>
+                        </fileset>
+                    </filesets>
+                </configuration>
             </plugin>
         </plugins>
     </build>

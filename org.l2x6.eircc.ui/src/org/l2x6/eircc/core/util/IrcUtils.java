@@ -6,7 +6,7 @@
  * http://www.eclipse.org/legal/epl-v10.html
  */
 
-package org.l2x6.eircc.core;
+package org.l2x6.eircc.core.util;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -75,4 +75,5 @@ public class IrcUtils {
         assertUiThread();
         return TIME_FORMAT.format(new Date(unixTs));
     }
+
 }

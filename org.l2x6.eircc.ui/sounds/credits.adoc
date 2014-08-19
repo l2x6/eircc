@@ -1,0 +1,7 @@
+This file summarizes where the sounds in this folder come from.
+
+[options="header"]
+|=========================================================
+| File             | Original Author       | Changes    | Original File URL  | Original File License
+| notification.wav | Taira Komori          | mp3 -> wav |https://www.freesound.org/people/Taira%20Komori/sounds/211496/ | http://creativecommons.org/licenses/by/3.0/
+|=========================================================

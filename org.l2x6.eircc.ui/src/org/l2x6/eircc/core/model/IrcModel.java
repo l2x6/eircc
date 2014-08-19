@@ -15,14 +15,16 @@ import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 import java.util.UUID;
 
 import org.l2x6.eircc.core.IrcModelEvent;
 import org.l2x6.eircc.core.IrcModelEvent.EventType;
 import org.l2x6.eircc.core.IrcModelEventListener;
-import org.l2x6.eircc.core.IrcUtils;
 import org.l2x6.eircc.core.client.IrcClient;
 import org.l2x6.eircc.core.client.TrafficLoggerFactory;
+import org.l2x6.eircc.core.util.IrcUtils;
 import org.l2x6.eircc.ui.EirccUi;
 import org.l2x6.eircc.ui.IrcUiMessages;
 import org.schwering.irc.lib.TrafficLogger;
@@ -33,7 +35,8 @@ import org.schwering.irc.lib.TrafficLogger;
  * @author <a href="mailto:ppalaga@redhat.com">Peter Palaga</a>
  */
 public class IrcModel extends IrcObject {
-    public enum IrcModelField {};
+    public enum IrcModelField {
+    };
 
     private static final IrcModel INSTANCE = new IrcModel();
 
@@ -41,12 +44,14 @@ public class IrcModel extends IrcObject {
         return INSTANCE;
     }
 
-    private final List<IrcAccount> accounts = new ArrayList<IrcAccount>();
+    /** {@link IrcAccount}s by {@link IrcAccount#getLabel()} */
+    private final Map<String, IrcAccount> accounts = new TreeMap<String, IrcAccount>();
 
     private IrcAccount[] accountsArray;
     private List<IrcModelEventListener> listeners = Collections.emptyList();
 
     private TrafficLoggerFactory trafficLoggerFactory;
+
     /**
      *
      */
@@ -55,9 +60,10 @@ public class IrcModel extends IrcObject {
 
     public void addAccount(IrcAccount account) {
         if (account.getModel() != this) {
-            throw new IllegalArgumentException("Cannot add account with parent distinct from this "+ this.getClass().getSimpleName());
+            throw new IllegalArgumentException("Cannot add account with parent distinct from this "
+                    + this.getClass().getSimpleName());
         }
-        accounts.add(account);
+        accounts.put(account.getLabel(), account);
         accountsArray = null;
         fire(new IrcModelEvent(EventType.ACCOUNT_ADDED, account));
     }
@@ -78,7 +84,7 @@ public class IrcModel extends IrcObject {
     }
 
     public void dispose() {
-        for (IrcAccount account : accounts) {
+        for (IrcAccount account : accounts.values()) {
             account.dispose();
         }
         accountsArray = null;
@@ -98,13 +104,62 @@ public class IrcModel extends IrcObject {
     }
 
     /**
+     * @param accountLabel
+     * @return
+     */
+    public IrcAccount getAccount(String accountLabel) {
+        return accounts.get(accountLabel);
+    }
+
+    /**
      * @return
      */
     public IrcAccount[] getAccounts() {
         if (accountsArray == null) {
-            accountsArray = accounts.toArray(new IrcAccount[accounts.size()]);
+            accountsArray = accounts.values().toArray(new IrcAccount[accounts.size()]);
         }
         return accountsArray;
+    }
+
+    public IrcAccountsStatistics getAccountsStatistics() {
+        int channelsOnline = 0;
+        int channelsOffline = 0;
+        int channelsWithUnreadMessages = 0;
+        int channelsNamingMe = 0;
+        int channelsOfflineAfterError = 0;
+        for (IrcAccount account : accounts.values()) {
+            switch (account.getState()) {
+            case ONLINE:
+                channelsOnline++;
+                break;
+            case OFFLINE:
+                channelsOffline++;
+                break;
+            case OFFLINE_AFTER_ERROR:
+                channelsOfflineAfterError++;
+                break;
+            default:
+                break;
+            }
+            for (IrcChannel channel : account.getChannels()) {
+                IrcLog log = channel.getLog();
+                if (log != null) {
+                    switch (log.getState()) {
+                    case ME_NAMED:
+                        channelsNamingMe++;
+                        break;
+                    case UNREAD_MESSAGES:
+                        channelsWithUnreadMessages++;
+                        break;
+                    case NONE:
+                        /* do nothing */
+                        break;
+                    }
+                }
+            }
+        }
+        return new IrcAccountsStatistics(channelsOnline, channelsOffline, channelsWithUnreadMessages, channelsNamingMe,
+                channelsOfflineAfterError);
     }
 
     /**
@@ -134,10 +189,10 @@ public class IrcModel extends IrcObject {
                     if (minusPos >= 0) {
                         String uuidString = bareName.substring(0, minusPos);
                         UUID uuid = UUID.fromString(uuidString);
-                        String label = bareName.substring(minusPos+1);
+                        String label = bareName.substring(minusPos + 1);
                         IrcAccount account = new IrcAccount(this, uuid, label);
                         account.load(f);
-                        accounts.add(account);
+                        accounts.put(account.getLabel(), account);
                     }
                 }
             }
@@ -159,7 +214,7 @@ public class IrcModel extends IrcObject {
 
         if (accounts.size() > 0) {
             IrcAccount lastAccount = null;
-            for (IrcAccount ircAccount : accounts) {
+            for (IrcAccount ircAccount : accounts.values()) {
                 if (lastAccount == null || ircAccount.getCreatedOn() > lastAccount.getCreatedOn()) {
                     lastAccount = ircAccount;
                 }
@@ -186,7 +241,7 @@ public class IrcModel extends IrcObject {
     }
 
     public void save(File storageRoot) throws UnsupportedEncodingException, FileNotFoundException, IOException {
-        for (IrcAccount account : accounts) {
+        for (IrcAccount account : accounts.values()) {
             account.save(storageRoot);
         }
     }

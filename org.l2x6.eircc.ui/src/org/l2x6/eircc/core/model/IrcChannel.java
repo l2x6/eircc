@@ -9,17 +9,19 @@
 package org.l2x6.eircc.core.model;
 
 import java.io.File;
+import java.util.Collection;
+import java.util.Map;
+import java.util.TreeMap;
 
 import org.l2x6.eircc.core.IrcModelEvent;
 import org.l2x6.eircc.core.IrcModelEvent.EventType;
-
 
 /**
  * @author <a href="mailto:ppalaga@redhat.com">Peter Palaga</a>
  */
 public class IrcChannel extends IrcObject {
     public enum IrcChannelField implements TypedField {
-        autoJoin{
+        autoJoin {
             @Override
             public Object fromString(String value) {
                 return Boolean.valueOf(value);
@@ -35,14 +37,16 @@ public class IrcChannel extends IrcObject {
     static final String FILE_EXTENSION = ".channel.properties";;
     private final IrcAccount account;
     private boolean autoJoin = true;
-    private boolean hasUnseenMessages;
     private boolean joined;
     private boolean kept;
+
     private IrcLog log;
     private final String name;
-
     private IrcUser p2pUser;
 
+    /** Users by nick */
+    private final Map<String, IrcChannelUser> users = new TreeMap<String, IrcChannelUser>();
+    private IrcChannelUser[] usersArray;
     /**
      * @param account
      * @param name
@@ -51,6 +55,61 @@ public class IrcChannel extends IrcObject {
         this.name = name;
         this.account = account;
     }
+
+    /**
+     * @param result
+     */
+    public void addNick(String nick) {
+        addNickInternal(nick);
+        account.getModel().fire(new IrcModelEvent(EventType.CHANNEL_USERS_CHANGED, this));
+    }
+
+    /**
+     * @param user
+     */
+    private void addNickInternal(String nick) {
+        // if (user.getServer() != account.getServer()) {
+        // throw new
+        // IllegalArgumentException("Cannot add user with parent distinct from this "
+        // + this.getClass().getSimpleName());
+        // }
+        // String nick = user.getNick();
+        // if (nicks.get(nick) != null) {
+        // throw new IllegalArgumentException("User with nick '" + nick +
+        // "' already available under server '"
+        // + account.getHost() + "' of the account '" + account.getLabel() +
+        // "'.");
+        // }
+        users.put(nick, createUser(nick));
+        usersArray = null;
+    }
+    /**
+     * @param users2
+     */
+    public void addNicks(Collection<String> nicks) {
+        for (String nick : nicks) {
+            addNickInternal(nick);
+        }
+        account.getModel().fire(new IrcModelEvent(EventType.CHANNEL_USERS_CHANGED, this));
+    }
+
+    /**
+     * @param oldNick
+     * @param newUser
+     */
+    public void changeNick(String oldNick, IrcUser newUser) {
+        users.remove(oldNick);
+        addNickInternal(newUser.getNick());
+        account.getModel().fire(new IrcModelEvent(EventType.CHANNEL_USERS_CHANGED, this));
+    }
+
+    /**
+     * @return
+     */
+    public IrcChannelUser createUser(String nick) {
+        return new IrcChannelUser(this, nick);
+    }
+
     /**
      * @see org.l2x6.eircc.core.model.IrcObject#dispose()
      */
@@ -86,6 +145,7 @@ public class IrcChannel extends IrcObject {
     public IrcAccount getAccount() {
         return account;
     }
+
     /**
      * @see org.l2x6.eircc.core.model.IrcObject#getFields()
      */
@@ -111,6 +171,16 @@ public class IrcChannel extends IrcObject {
         return new File(parentDir, name + FILE_EXTENSION);
     }
 
+    /**
+     * @return
+     */
+    public IrcChannelUser[] getUsers() {
+        if (usersArray == null) {
+            Collection<IrcChannelUser> chans = users.values();
+            usersArray = chans.toArray(new IrcChannelUser[chans.size()]);
+        }
+        return usersArray;
+    }
 
     @Override
     public int hashCode() {
@@ -121,36 +191,34 @@ public class IrcChannel extends IrcObject {
         return result;
     }
 
-
-    /**
-     * @return
-     */
-    public boolean hasUnseenMessages() {
-        return hasUnseenMessages;
-    }
-
-
     public boolean isAutoJoin() {
         return autoJoin;
     }
-
 
     public boolean isJoined() {
         return joined;
     }
 
-
     public boolean isKept() {
         return kept;
     }
 
+    /**
+     * @param user
+     * @return
+     */
+    public boolean isPresent(String nick) {
+        return users.containsKey(nick);
+    }
+
+    public void removeNick(String nick) {
+        if (users.remove(nick) != null) {
+            account.getModel().fire(new IrcModelEvent(EventType.CHANNEL_USERS_CHANGED, this));
+        }
+    }
 
     public void setAutoJoin(boolean autoJoin) {
         this.autoJoin = autoJoin;
-    }
-
-    public void setHasUnseenMessages(boolean hasUnseenMessages) {
-        this.hasUnseenMessages = hasUnseenMessages;
     }
 
     public void setJoined(boolean joined) {
@@ -174,7 +242,6 @@ public class IrcChannel extends IrcObject {
     public void setP2pUser(IrcUser p2pUser) {
         this.p2pUser = p2pUser;
     }
-
 
     @Override
     public String toString() {

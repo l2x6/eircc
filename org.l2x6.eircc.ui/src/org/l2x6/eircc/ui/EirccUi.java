@@ -8,23 +8,28 @@
 package org.l2x6.eircc.ui;
 
 import java.io.File;
-import java.io.IOException;
 
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Status;
+import org.eclipse.swt.SWT;
 import org.eclipse.swt.widgets.Shell;
+import org.eclipse.ui.IEditorPart;
+import org.eclipse.ui.IEditorReference;
+import org.eclipse.ui.IWindowListener;
 import org.eclipse.ui.IWorkbenchPage;
 import org.eclipse.ui.IWorkbenchWindow;
 import org.eclipse.ui.PartInitException;
 import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.plugin.AbstractUIPlugin;
 import org.l2x6.eircc.core.EirccCore;
+import org.l2x6.eircc.core.IrcController;
 import org.l2x6.eircc.core.IrcModelEvent;
 import org.l2x6.eircc.core.IrcModelEventListener;
-import org.l2x6.eircc.core.IrcUtils;
 import org.l2x6.eircc.core.model.IrcAccount;
+import org.l2x6.eircc.core.model.IrcAccount.IrcAccountState;
 import org.l2x6.eircc.core.model.IrcChannel;
 import org.l2x6.eircc.core.model.IrcModel;
+import org.l2x6.eircc.core.util.IrcUtils;
 import org.l2x6.eircc.ui.editor.IrcChannelEditor;
 import org.l2x6.eircc.ui.editor.IrcChannelEditorInput;
 import org.l2x6.eircc.ui.views.IrcLabelProvider;
@@ -33,7 +38,7 @@ import org.osgi.framework.BundleContext;
 /**
  * @author <a href="mailto:ppalaga@redhat.com">Peter Palaga</a>
  */
-public class EirccUi extends AbstractUIPlugin implements IrcModelEventListener {
+public class EirccUi extends AbstractUIPlugin implements IrcModelEventListener, IWindowListener {
 
     /** The singleton */
     private static EirccUi plugin;
@@ -84,20 +89,36 @@ public class EirccUi extends AbstractUIPlugin implements IrcModelEventListener {
     @Override
     public void handle(IrcModelEvent e) {
         switch (e.getEventType()) {
+        case ACCOUNT_ADDED:
+            try {
+                ((IrcAccount)e.getModelObject()).save(getDefaultStorageRoot());
+            } catch (Exception e1) {
+                log(e1);
+            }
+            break;
+        case ACCOUNT_STATE_CHANGED:
+            /* autojoin accounts after the account went online */
+            try {
+                IrcAccount account = (IrcAccount) e.getModelObject();
+                if (account.getState() == IrcAccountState.ONLINE) {
+                    IrcController controller = IrcController.getInstance();
+                    for (IrcChannel ch : account.getChannels()) {
+                        if (ch.isAutoJoin() && !ch.isJoined()) {
+                            controller.joinChannel(ch);
+                        }
+                    }
+                }
+            } catch (Exception e1) {
+                log(e1);
+            }
+            break;
         case CHANNEL_JOINED_CHANGED:
             try {
                 IrcChannel ch = (IrcChannel) e.getModelObject();
                 if (ch.isJoined()) {
                     openChannelEditor(ch);
                 }
-            } catch (PartInitException e1) {
-                log(e1);
-            }
-            break;
-        case ACCOUNT_ADDED:
-            try {
-                ((IrcAccount)e.getModelObject()).save(getDefaultStorageRoot());
-            } catch (IOException e1) {
+            } catch (Exception e1) {
                 log(e1);
             }
             break;
@@ -106,7 +127,7 @@ public class EirccUi extends AbstractUIPlugin implements IrcModelEventListener {
                 IrcChannel channel = (IrcChannel)e.getModelObject();
                 File channelsDir = channel.getAccount().getChannelsDir(getDefaultStorageRoot());
                 channel.save(channelsDir);
-            } catch (IOException e1) {
+            } catch (Exception e1) {
                 log(e1);
             }
             break;
@@ -132,6 +153,17 @@ public class EirccUi extends AbstractUIPlugin implements IrcModelEventListener {
         model.setTrafficLogFactory(IrcConsole.getInstance());
         model.addModelEventListener(this);
         model.load(getDefaultStorageRoot());
+        IrcController controller = IrcController.getInstance();
+        for (IrcAccount account : model.getAccounts()) {
+            if (account.isAutoConnect()) {
+                controller.connect(account);
+            }
+        }
+        /* Touch IrcTray to create it */
+        IrcTray.getInstance();
+        IrcSoundNotifier.getInstance();
+
+        PlatformUI.getWorkbench().addWindowListener(this);
     }
 
     private File getDefaultStorageRoot() {
@@ -143,6 +175,21 @@ public class EirccUi extends AbstractUIPlugin implements IrcModelEventListener {
      */
     @Override
     public void stop(BundleContext context) throws Exception {
+        try {
+            PlatformUI.getWorkbench().removeWindowListener(this);
+        } catch (Exception e) {
+            log(e);
+        }
+        try {
+            IrcSoundNotifier.getInstance().dispose();
+        } catch (Exception e) {
+            log(e);
+        }
+        try {
+            IrcTray.getInstance().dispose();
+        } catch (Exception e) {
+            log(e);
+        }
         try {
             IrcLabelProvider.getInstance().dispose();
         } catch (Exception e) {
@@ -161,5 +208,47 @@ public class EirccUi extends AbstractUIPlugin implements IrcModelEventListener {
         plugin = null;
         super.stop(context);
 
+    }
+
+    /**
+     * @see org.eclipse.ui.IWindowListener#windowActivated(org.eclipse.ui.IWorkbenchWindow)
+     */
+    @Override
+    public void windowActivated(IWorkbenchWindow window) {
+
+        IWorkbenchPage page = window.getActivePage();
+        if (page != null) {
+            IEditorReference[] editorRefs = page.getEditorReferences();
+            for (IEditorReference ref : editorRefs) {
+                IEditorPart editor = ref.getEditor(false);
+                if (editor instanceof IrcChannelEditor) {
+                    IrcChannelEditor channelEditor = (IrcChannelEditor) editor;
+                    channelEditor.updateReadMessages();
+                }
+            }
+        }
+
+    }
+
+    /**
+     * @see org.eclipse.ui.IWindowListener#windowDeactivated(org.eclipse.ui.IWorkbenchWindow)
+     */
+    @Override
+    public void windowDeactivated(IWorkbenchWindow window) {
+    }
+
+    /**
+     * @see org.eclipse.ui.IWindowListener#windowClosed(org.eclipse.ui.IWorkbenchWindow)
+     */
+    @Override
+    public void windowClosed(IWorkbenchWindow window) {
+    }
+
+    /**
+     * @see org.eclipse.ui.IWindowListener#windowOpened(org.eclipse.ui.IWorkbenchWindow)
+     */
+    @Override
+    public void windowOpened(IWorkbenchWindow window) {
+        windowActivated(window);
     }
 }

@@ -10,16 +10,20 @@ package org.l2x6.eircc.ui.editor;
 
 import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.ui.IEditorInput;
+import org.eclipse.ui.IMemento;
 import org.eclipse.ui.IPersistableElement;
 import org.l2x6.eircc.core.model.IrcChannel;
+import org.l2x6.eircc.core.model.IrcModel;
 import org.l2x6.eircc.ui.IrcImages;
+import org.l2x6.eircc.ui.views.IrcLabelProvider;
 
 /**
  * @author <a href="mailto:ppalaga@redhat.com">Peter Palaga</a>
  */
-public class IrcChannelEditorInput implements IEditorInput {
+public class IrcChannelEditorInput implements IEditorInput, IPersistableElement {
+    public enum IrcChannelEditorInputField {CHANNEL_NAME, ACCOUNT_LABEL};
+
     private final IrcChannel channel;
-    private String toolTipText;
 
     /**
      * @param channel
@@ -27,7 +31,6 @@ public class IrcChannelEditorInput implements IEditorInput {
     public IrcChannelEditorInput(IrcChannel channel) {
         super();
         this.channel = channel;
-        this.toolTipText = channel.getName() + "@"+ channel.getAccount().getLabel();
     }
 
     @Override
@@ -43,7 +46,7 @@ public class IrcChannelEditorInput implements IEditorInput {
      */
     @Override
     public boolean exists() {
-        return true;
+        return channel != null && channel.getAccount().getModel() == IrcModel.getInstance();
     }
 
     /**
@@ -79,7 +82,7 @@ public class IrcChannelEditorInput implements IEditorInput {
      */
     @Override
     public IPersistableElement getPersistable() {
-        return null;
+        return this;
     }
 
     /**
@@ -87,12 +90,29 @@ public class IrcChannelEditorInput implements IEditorInput {
      */
     @Override
     public String getToolTipText() {
-        return toolTipText;
+        return IrcLabelProvider.getInstance().getTooltipText(channel);
     }
 
     @Override
     public int hashCode() {
         return channel.hashCode();
+    }
+
+    /**
+     * @see org.eclipse.ui.IPersistable#saveState(org.eclipse.ui.IMemento)
+     */
+    @Override
+    public void saveState(IMemento memento) {
+        memento.putString(IrcChannelEditorInputField.ACCOUNT_LABEL.name(), channel.getAccount().getLabel());
+        memento.putString(IrcChannelEditorInputField.CHANNEL_NAME.name(), channel.getName());
+    }
+
+    /**
+     * @see org.eclipse.ui.IPersistableElement#getFactoryId()
+     */
+    @Override
+    public String getFactoryId() {
+        return IrcChannelElementFactory.ID;
     }
 
 }

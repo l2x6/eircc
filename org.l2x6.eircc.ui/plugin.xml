@@ -2,7 +2,7 @@
 <?eclipse version="3.4"?>
 <plugin>
     <extension point="org.eclipse.ui.views">
-        <view id="org.l2x6.eircc.ui.IrcAccountsView" name="IrcAccountsView.name" class="org.l2x6.eircc.ui.views.IrcAccountsView"
+        <view id="org.l2x6.eircc.ui.views.IrcAccountsView" name="%IrcAccountsView.name" class="org.l2x6.eircc.ui.views.IrcAccountsView"
             icon="icons/account.gif" />
     </extension>
 
@@ -36,5 +36,18 @@
            class="org.l2x6.eircc.ui.editor.IrcChannelEditor"
            extensions="irc.log" >
         </editor>
-</extension>
+    </extension>
+    <extension point="org.eclipse.ui.menus">
+        <menuContribution locationURI="toolbar:org.l2x6.eircc.ui.views.IrcAccountsView">
+           <command commandId="org.eclipse.ui.navigate.expandAll"></command>
+           <command commandId="org.eclipse.ui.navigate.collapseAll"></command>
+        </menuContribution>
+    </extension>
+    <extension
+        point = "org.eclipse.ui.elementFactories">
+        <factory
+           id="org.l2x6.eircc.ui.editor.IrcChannelElementFactory"
+           class="org.l2x6.eircc.ui.editor.IrcChannelElementFactory">
+        </factory>
+    </extension>
 </plugin>

@@ -17,25 +17,30 @@ import org.eclipse.swt.custom.StyledText;
 import org.eclipse.swt.events.KeyEvent;
 import org.eclipse.swt.events.KeyListener;
 import org.eclipse.swt.widgets.Composite;
+import org.eclipse.swt.widgets.Shell;
 import org.eclipse.ui.IEditorInput;
 import org.eclipse.ui.IEditorSite;
+import org.eclipse.ui.IPartListener2;
+import org.eclipse.ui.IWorkbenchPartReference;
 import org.eclipse.ui.PartInitException;
 import org.eclipse.ui.part.EditorPart;
+import org.eclipse.ui.views.contentoutline.IContentOutlinePage;
 import org.l2x6.eircc.core.IrcController;
-import org.l2x6.eircc.core.IrcMessageAddedEvent;
 import org.l2x6.eircc.core.IrcModelEvent;
 import org.l2x6.eircc.core.IrcModelEventListener;
-import org.l2x6.eircc.core.IrcUtils;
 import org.l2x6.eircc.core.model.IrcChannel;
 import org.l2x6.eircc.core.model.IrcLog;
+import org.l2x6.eircc.core.model.IrcMessage;
 import org.l2x6.eircc.core.model.IrcModel;
+import org.l2x6.eircc.core.util.IrcUtils;
 import org.l2x6.eircc.ui.EirccUi;
-import org.l2x6.eircc.ui.IrcMessage;
+import org.l2x6.eircc.ui.IrcImages;
+import org.l2x6.eircc.ui.views.IrcLabelProvider;
 
 /**
  * @author <a href="mailto:ppalaga@redhat.com">Peter Palaga</a>
  */
-public class IrcChannelEditor extends EditorPart implements IrcModelEventListener {
+public class IrcChannelEditor extends EditorPart implements IrcModelEventListener, IPartListener2 {
 
     public static final String ID = "org.l2x6.eircc.ui.editor.IrcChannelEditor";
     private SashForm accountsDetailsSplitter;
@@ -75,13 +80,17 @@ public class IrcChannelEditor extends EditorPart implements IrcModelEventListene
         public void keyReleased(KeyEvent e) {
         }
     };
+    private IrcChannelOutlinePage outlinePage;
 
     /**
      * @param m
      */
     private void append(IrcMessage m) {
-        historyWidget.append("\n" + IrcUtils.toTimeString(m.getPostedOn()) + " " + m.getUser().getNick() + ": "
-                + m.getText());
+        if (historyWidget.getCharCount() > 0) {
+            historyWidget.append("\n");
+        }
+        historyWidget.append(m.toString());
+        historyWidget.setTopIndex(historyWidget.getLineCount() - 1);
     }
 
     /**
@@ -97,12 +106,28 @@ public class IrcChannelEditor extends EditorPart implements IrcModelEventListene
         inputWidget.addKeyListener(inputWidgetListenet);
         accountsDetailsSplitter.setWeights(new int[] { 80, 20 });
 
-        initHistory(channel.getLog());
+        if (channel.getLog() != null) {
+            initHistory(channel.getLog());
+        }
     }
 
     @Override
     public void dispose() {
-        IrcModel.getInstance().removeModelEventListener(this);
+        try {
+            getSite().getPage().addPartListener(this);
+        } catch (Exception e1) {
+            EirccUi.log(e1);
+        }
+        try {
+            IrcModel.getInstance().removeModelEventListener(this);
+        } catch (Exception e1) {
+            EirccUi.log(e1);
+        }
+        try {
+            IrcController.getInstance().partChannel(channel);
+        } catch (IOException e) {
+            EirccUi.log(e);
+        }
         super.dispose();
     }
 
@@ -122,6 +147,20 @@ public class IrcChannelEditor extends EditorPart implements IrcModelEventListene
         // TODO Auto-generated method stub
     }
 
+    @Override
+    public Object getAdapter(@SuppressWarnings("rawtypes") Class cl) {
+        Object adapter;
+        if (cl.equals(IContentOutlinePage.class)) {
+            if (outlinePage == null) {
+                outlinePage = new IrcChannelOutlinePage(channel);
+            }
+            adapter = outlinePage;
+        } else {
+            adapter = super.getAdapter(cl);
+        }
+        return adapter;
+    }
+
     /**
      * @see org.l2x6.eircc.core.IrcModelEventListener#handle(org.l2x6.eircc.core.IrcModelEvent)
      */
@@ -129,15 +168,22 @@ public class IrcChannelEditor extends EditorPart implements IrcModelEventListene
     public void handle(IrcModelEvent e) {
         IrcUtils.assertUiThread();
         switch (e.getEventType()) {
+        case CHANNEL_JOINED_CHANGED:
+            IrcChannel ch = (IrcChannel) e.getModelObject();
+            if (ch == channel) {
+                updateTitle();
+            }
+            break;
         case NEW_MESSAGE:
-            IrcMessageAddedEvent mae = (IrcMessageAddedEvent) e;
-            if (mae.getChannel() == channel) {
-                IrcMessage m = mae.getMessage();
+            IrcMessage m = (IrcMessage) e.getModelObject();
+            if (m.getLog().getChannel() == channel) {
                 append(m);
-                if (m.getUser() == channel.getAccount().getMe()) {
+                if (m.isFromMe()) {
                     inputWidget.setText("");
                     inputWidget.setEditable(true);
                 }
+
+                updateReadMessages();
             }
             break;
         default:
@@ -155,8 +201,9 @@ public class IrcChannelEditor extends EditorPart implements IrcModelEventListene
             setInput(input);
             setSite(site);
             this.channel = ((IrcChannelEditorInput) input).getChannel();
-            setPartName(channel.getName());
+            updateReadMessages();
             IrcModel.getInstance().addModelEventListener(this);
+            site.getPage().addPartListener(this);
         } else {
             throw new PartInitException("Expected an " + IrcChannelEditorInput.class.getSimpleName() + " but got a "
                     + input.getClass().getName());
@@ -167,10 +214,16 @@ public class IrcChannelEditor extends EditorPart implements IrcModelEventListene
      * @param log
      */
     private void initHistory(IrcLog log) {
-        historyWidget.append("You joined on " + IrcUtils.toDateTimeString(log.getStartedOn()));
         for (IrcMessage m : log) {
             append(m);
         }
+        log.allRead();
+    }
+
+    private boolean isBeingRead() {
+        Shell myShell = getEditorSite().getShell();
+        boolean windowActive = myShell.getDisplay().getActiveShell() == myShell;
+        return windowActive && historyWidget.isVisible();
     }
 
     /**
@@ -190,11 +243,107 @@ public class IrcChannelEditor extends EditorPart implements IrcModelEventListene
     }
 
     /**
+     * @see org.eclipse.ui.IPartListener2#partActivated(org.eclipse.ui.IWorkbenchPartReference)
+     */
+    @Override
+    public void partActivated(IWorkbenchPartReference partRef) {
+        updateReadMessages(partRef);
+    }
+
+    /**
+     * @see org.eclipse.ui.IPartListener2#partBroughtToTop(org.eclipse.ui.IWorkbenchPartReference)
+     */
+    @Override
+    public void partBroughtToTop(IWorkbenchPartReference partRef) {
+        updateReadMessages(partRef);
+    }
+
+    /**
+     * @see org.eclipse.ui.IPartListener2#partClosed(org.eclipse.ui.IWorkbenchPartReference)
+     */
+    @Override
+    public void partClosed(IWorkbenchPartReference partRef) {
+    }
+
+    /**
+     * @see org.eclipse.ui.IPartListener2#partDeactivated(org.eclipse.ui.IWorkbenchPartReference)
+     */
+    @Override
+    public void partDeactivated(IWorkbenchPartReference partRef) {
+        // TODO Auto-generated method stub
+
+    }
+
+    /**
+     * @see org.eclipse.ui.IPartListener2#partHidden(org.eclipse.ui.IWorkbenchPartReference)
+     */
+    @Override
+    public void partHidden(IWorkbenchPartReference partRef) {
+    }
+
+    /**
+     * @see org.eclipse.ui.IPartListener2#partInputChanged(org.eclipse.ui.IWorkbenchPartReference)
+     */
+    @Override
+    public void partInputChanged(IWorkbenchPartReference partRef) {
+    }
+
+    /**
+     * @see org.eclipse.ui.IPartListener2#partOpened(org.eclipse.ui.IWorkbenchPartReference)
+     */
+    @Override
+    public void partOpened(IWorkbenchPartReference partRef) {
+        updateReadMessages(partRef);
+    }
+
+    /**
+     * @see org.eclipse.ui.IPartListener2#partVisible(org.eclipse.ui.IWorkbenchPartReference)
+     */
+    @Override
+    public void partVisible(IWorkbenchPartReference partRef) {
+        // TODO Auto-generated method stub
+
+    }
+
+    /**
      * @see org.eclipse.ui.part.WorkbenchPart#setFocus()
      */
     @Override
     public void setFocus() {
         inputWidget.setFocus();
+    }
+
+    /**
+     *
+     */
+    public void updateReadMessages() {
+        if (channel != null && channel.getLog() != null) {
+            if (isBeingRead()) {
+                channel.getLog().allRead();
+            } else {
+                /* let us update the channel state */
+                channel.getLog().updateState();
+            }
+            updateTitle();
+        }
+    }
+
+    /**
+     * @param partRef
+     */
+    private void updateReadMessages(IWorkbenchPartReference partRef) {
+        if (partRef.getPart(false) == this) {
+            updateReadMessages();
+        }
+    }
+
+    /**
+     *
+     */
+    private void updateTitle() {
+        setPartName(channel.getName());
+        setTitleToolTip(IrcLabelProvider.getInstance().getTooltipText(channel));
+        setTitleImage(IrcImages.getInstance().getImage(channel));
     }
 
 }

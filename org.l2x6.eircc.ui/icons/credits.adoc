@@ -10,6 +10,7 @@ This file summarizes where the icons in this folder come from. All original iamg
 |new-overleay.png    | extracted from https://github.com/eclipse/tcf/blob/master/target_explorer/plugins/org.eclipse.tcf.te.tcf.filesystem.ui/icons/obj16/newfolder_wiz.gif and adjusted
 |refresh.gif|https://github.com/eclipse/eclipse.jdt.ui/blob/master/org.eclipse.jdt.astview/icons/c/refresh.gif
 |eircc.png  | by ppalaga, see icons-src/eircc.svg, with elements comming from http://code.google.com/p/eclipse-svg-icons/
+|user.gif   |https://dev.eclipse.org/svnroot/modeling/org.eclipse.epsilon/trunk/plugins/org.eclipse.epsilon.dt.exeed/icons/user.gif
 |warning-overlay.gif|http://code.google.com/p/eclipse-svg-icons/source/browse/src/main/resources/eclipse.platform.ui/bundles/org.eclipse.ui/icons/full/ovr16/warning_ovr.gif
 |=========================================================
 

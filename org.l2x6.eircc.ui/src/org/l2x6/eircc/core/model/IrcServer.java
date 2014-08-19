@@ -9,18 +9,22 @@
 package org.l2x6.eircc.core.model;
 
 import java.io.File;
+import java.text.MessageFormat;
 import java.util.Collection;
 import java.util.Map;
 import java.util.TreeMap;
 
 import org.l2x6.eircc.core.IrcModelEvent;
 import org.l2x6.eircc.core.IrcModelEvent.EventType;
+import org.l2x6.eircc.ui.IrcUiMessages;
 
 /**
  * @author <a href="mailto:ppalaga@redhat.com">Peter Palaga</a>
  */
 public class IrcServer extends IrcObject {
-    public enum IrcServerField {};
+    public enum IrcServerField {
+    };
+
     private final IrcAccount account;
     private final Map<String, IrcChannel> channels = new TreeMap<String, IrcChannel>();
     private IrcChannel[] channelsArray;
@@ -56,6 +60,7 @@ public class IrcServer extends IrcObject {
             account.getModel().fire(new IrcModelEvent(EventType.SERVER_CHANNEL_ADDED, channel));
         }
     }
+
     public void addChannels(IrcChannel[] addChannels) {
         for (IrcChannel channel : addChannels) {
             addChannel(channel, false);
@@ -78,6 +83,29 @@ public class IrcServer extends IrcObject {
         }
         users.put(nick, user);
         account.getModel().fire(new IrcModelEvent(EventType.USER_ADDED, user));
+    }
+
+    /**
+     * @param oldNick
+     * @param newNick
+     * @param username2
+     */
+    public void changeNick(String oldNick, String newNick, String username) {
+        removeUser(oldNick);
+        IrcUser newUser = createUser(newNick, username);
+        addUser(newUser);
+
+        String text = MessageFormat.format(IrcUiMessages.Message_x_is_known_as_y, oldNick, newNick);
+        long now = System.currentTimeMillis();
+
+        for (IrcChannel channel : account.getChannels()) {
+            if (channel.isJoined() && channel.isPresent(oldNick)) {
+                channel.changeNick(oldNick, newUser);
+                IrcLog log = channel.getLog();
+                IrcMessage m = new IrcMessage(log, now, null, text);
+                log.appendMessage(m);
+            }
+        }
     }
 
     /**
@@ -118,6 +146,10 @@ public class IrcServer extends IrcObject {
         return users.get(nick);
     }
 
+    public IrcAccount getAccount() {
+        return account;
+    }
+
     /**
      * @see org.l2x6.eircc.core.model.IrcObject#getChannels()
      */
@@ -139,7 +171,7 @@ public class IrcServer extends IrcObject {
 
     @Override
     protected File getSaveFile(File parentDir) {
-        return new File(parentDir, account.getId().toString() + "-"+ account.getLabel() + ".server.properties");
+        return new File(parentDir, account.getId().toString() + "-" + account.getLabel() + ".server.properties");
     }
 
     /**
@@ -153,6 +185,14 @@ public class IrcServer extends IrcObject {
         channels.remove(channel);
         channelsArray = null;
         account.getModel().fire(new IrcModelEvent(EventType.SERVER_CHANNEL_REMOVED, channel));
+    }
+
+    public void removeUser(String nick) {
+        IrcUser removed = users.remove(nick);
+        if (removed != null) {
+            account.getModel().fire(new IrcModelEvent(EventType.USER_REMOVED, removed));
+            removed.dispose();
+        }
     }
 
 }

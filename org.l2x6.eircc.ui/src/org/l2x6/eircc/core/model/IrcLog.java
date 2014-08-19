@@ -12,10 +12,11 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.ListIterator;
 
-import org.l2x6.eircc.core.IrcMessageAddedEvent;
-import org.l2x6.eircc.core.IrcUtils;
-import org.l2x6.eircc.ui.IrcMessage;
+import org.l2x6.eircc.core.IrcModelEvent;
+import org.l2x6.eircc.core.IrcModelEvent.EventType;
+import org.l2x6.eircc.core.util.IrcUtils;
 
 
 /**
@@ -23,10 +24,23 @@ import org.l2x6.eircc.ui.IrcMessage;
  */
 public class IrcLog extends IrcObject implements Iterable<IrcMessage> {
     public enum IrcLogField {};
+    public enum LogState {
+        ME_NAMED(true), NONE(false), UNREAD_MESSAGES(true);
+        private final boolean hasUnreadMessages;
+        private LogState(boolean hasUnreadMessages) {
+            this.hasUnreadMessages = hasUnreadMessages;
+        }
+        public boolean hasUnreadMessages() {
+            return hasUnreadMessages;
+        }
+    }
+
     private final IrcChannel channel;
+    private long lastMessageTime = -1;
     private final List<IrcMessage> messages = new ArrayList<IrcMessage>();
-    private long seenTill;
+    private long readTill = 0;
     private final long startedOn;
+    private LogState state = LogState.NONE;
     /**
      * @param id
      * @param channel
@@ -38,10 +52,22 @@ public class IrcLog extends IrcObject implements Iterable<IrcMessage> {
         this.startedOn = startedOn;
     }
 
+    /**
+     *
+     */
+    public void allRead() {
+        readTill = System.currentTimeMillis();
+        setState(LogState.NONE);
+    }
+
     public void appendMessage(IrcMessage message) {
         messages.add(message);
-        channel.getAccount().getModel().fire(new IrcMessageAddedEvent(channel, message));
+        if (!message.isSystemMessage() && !message.isFromMe()) {
+            lastMessageTime = message.getPostedOn();
+        }
+        channel.getAccount().getModel().fire(new IrcModelEvent(EventType.NEW_MESSAGE, message));
     }
+
     /**
      * @see org.l2x6.eircc.core.model.IrcObject#dispose()
      */
@@ -64,17 +90,17 @@ public class IrcLog extends IrcObject implements Iterable<IrcMessage> {
     public int getMessageCount() {
         return messages.size();
     }
-
     @Override
     protected File getSaveFile(File parentDir) {
         return new File(parentDir, IrcUtils.toDateTimeString(startedOn) + ".txt");
     }
-    public long getSeenTill() {
-        return seenTill;
-    }
 
     public long getStartedOn() {
         return startedOn;
+    }
+
+    public LogState getState() {
+        return state;
     }
 
     /**
@@ -99,6 +125,35 @@ public class IrcLog extends IrcObject implements Iterable<IrcMessage> {
                 throw new UnsupportedOperationException();
             }
         };
+    }
+
+    public void setState(LogState state) {
+        LogState oldState = this.state;
+        this.state = state;
+        if (oldState != state) {
+            channel.getAccount().getModel().fire(new IrcModelEvent(EventType.LOG_STATE_CHANGED, this));
+        }
+    }
+
+    public void updateState() {
+        boolean hasUnreadMessages = !messages.isEmpty() && lastMessageTime > readTill;
+        if (hasUnreadMessages) {
+            /* look if me is named */
+            ListIterator<IrcMessage> it = messages.listIterator(messages.size());
+            for (IrcMessage m = it.previous(); it.hasPrevious(); m = it.previous()) {
+                if (m.getPostedOn() <= readTill) {
+                    break;
+                }
+                if (m.isMeNamed()) {
+                    setState(LogState.ME_NAMED);
+                    return;
+                }
+            }
+            setState(LogState.UNREAD_MESSAGES);
+            return;
+        }
+        setState(LogState.NONE);
+        return;
     }
 
 }

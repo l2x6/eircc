@@ -12,7 +12,8 @@ Require-Bundle: org.eclipse.ui,
  org.eclipse.core.databinding.property,
  org.eclipse.jface.databinding,
  org.eclipse.ui.console;bundle-version="3.5.300",
- org.eclipse.swt
+ org.eclipse.swt,
+ org.eclipse.ui.views;bundle-version="3.7.0"
 Bundle-ActivationPolicy: lazy
 Bundle-RequiredExecutionEnvironment: JavaSE-1.7
 Bundle-ClassPath: .,
