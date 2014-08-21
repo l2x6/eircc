@@ -1,0 +1,42 @@
+= Eclipse IRC Client - EIRCC
+
+:toc:
+
+== Build
+
+Prerequisistes:
+* JDK 8
+* maven
+
+1. Checkout the sources
+.................
+$ git clone https://github.com/ppalaga/eircc.git
+$ git clone https://github.com/ppalaga/irclib.git
+.................
+
+2. Build with maven
+.................
+$ cd irclib
+$ mvn clean install
+$ cd ../eircc
+$ mvn clean install
+.................
+
+== Run
+
+Prerequisistes:
+* Eclipse Luna
+
+There are no binary downloads available. You will have to build the artifacts
+yourself as described above. Once you have built successfully, you have two
+options how to run the client:
+
+A. PDE's Run as... Eclipse Application or
+B. Take an Eclipse instance independent from your PDE and add the directory
+`eircc/org.l2x6.eircc.site/target/repository` as an update site. The update
+site URL should have the form
+.................
+file:///[projects-root]/eircc/org.l2x6.eircc.site/target/repository
+.................
+[projects-root] should be replaced with the directory where you have invoked
+the `git clone` commands in the first build step above.

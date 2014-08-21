@@ -87,9 +87,7 @@ public class IrcChannel extends IrcObject {
      * @param users2
      */
     public void addNicks(Collection<String> nicks) {
-        for (String nick : nicks) {
-            addNickInternal(nick);
-        }
+        nicks.forEach(nick -> addNickInternal(nick));
         account.getModel().fire(new IrcModelEvent(EventType.CHANNEL_USERS_CHANGED, this));
     }
 

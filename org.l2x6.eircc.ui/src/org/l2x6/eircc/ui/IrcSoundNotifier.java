@@ -24,9 +24,8 @@ import javax.sound.sampled.UnsupportedAudioFileException;
 import org.l2x6.eircc.core.IrcModelEvent;
 import org.l2x6.eircc.core.IrcModelEventListener;
 import org.l2x6.eircc.core.model.IrcLog;
-import org.l2x6.eircc.core.model.IrcMessage;
-import org.l2x6.eircc.core.model.IrcModel;
 import org.l2x6.eircc.core.model.IrcLog.LogState;
+import org.l2x6.eircc.core.model.IrcModel;
 
 /**
  * @author <a href="mailto:ppalaga@redhat.com">Peter Palaga</a>

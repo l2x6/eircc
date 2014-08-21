@@ -8,6 +8,8 @@
 
 package org.l2x6.eircc.ui;
 
+import java.awt.SystemTray;
+
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.widgets.Display;
@@ -72,6 +74,7 @@ public class IrcTray implements IrcModelEventListener {
         tray = Display.getDefault().getSystemTray();
         if (tray != null) {
             trayItem = new TrayItem(tray, SWT.NONE);
+            update();
             IrcModel.getInstance().addModelEventListener(this);
         }
     }
@@ -104,7 +107,12 @@ public class IrcTray implements IrcModelEventListener {
         if (trayItem != null) {
             IrcModel model = IrcModel.getInstance();
             trayItem.setToolTipText(IrcLabelProvider.getInstance().getTooltipText(model));
-            Image[] images = IrcImages.getInstance().getFlashingImage(model);
+
+            /* Find out the icon size required by the tray using AWT.
+             * Feel free to replace this with a pure SWT equivalent if you know one */
+            SystemTray awtTray = SystemTray.getSystemTray();
+            int size = awtTray != null ? awtTray.getTrayIconSize().width : IrcImages.SIZE_16x16;
+            Image[] images = IrcImages.getInstance().getFlashingImage(model, size);
             if (images.length > 1) {
                 this.flasher = new Flasher(images);
                 this.flasher.run();
