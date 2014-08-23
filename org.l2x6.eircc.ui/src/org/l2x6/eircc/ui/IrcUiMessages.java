@@ -52,8 +52,9 @@ public class IrcUiMessages extends NLS {
     public static String Message_x_joined;
     public static String Message_x_left;
     public static String Message_x_left_with_message;
-    public static String Message_You_joined;
+    public static String Message_You_joined_as_nick;
     public static String Message_You_left;
+    public static String Message_You_are_known_as_x;
 
 
     static {

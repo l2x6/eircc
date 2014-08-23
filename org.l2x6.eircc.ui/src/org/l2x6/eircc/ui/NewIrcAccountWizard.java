@@ -8,7 +8,6 @@
 
 package org.l2x6.eircc.ui;
 
-import java.io.IOException;
 import java.text.MessageFormat;
 
 import org.eclipse.core.databinding.Binding;
@@ -33,6 +32,7 @@ import org.eclipse.swt.widgets.Text;
 import org.eclipse.ui.INewWizard;
 import org.eclipse.ui.IWorkbench;
 import org.l2x6.eircc.core.IrcController;
+import org.l2x6.eircc.core.IrcException;
 import org.l2x6.eircc.core.model.IrcAccount;
 import org.l2x6.eircc.core.model.IrcAccount.IrcAccountField;
 import org.l2x6.eircc.core.model.IrcModel;
@@ -165,7 +165,7 @@ public class NewIrcAccountWizard extends Wizard implements INewWizard {
             if (result.isAutoConnect()) {
                 try {
                     IrcController.getInstance().connect(result);
-                } catch (IOException e) {
+                } catch (IrcException e) {
                     setErrorMessage(e.getLocalizedMessage());
                     return false;
                 }

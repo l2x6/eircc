@@ -8,6 +8,7 @@
 
 package org.l2x6.eircc.ui;
 
+import java.awt.Dimension;
 import java.net.URL;
 import java.util.Collections;
 import java.util.HashMap;
@@ -36,48 +37,13 @@ import org.l2x6.eircc.core.model.IrcUser;
  * @author <a href="mailto:ppalaga@redhat.com">Peter Palaga</a>
  */
 public class IrcImages {
-    public class ImageImageDescriptor extends ImageDescriptor {
-        private Image fImage;
-
-        /**
-         * Constructor for ImagImageDescriptor.
-         */
-        public ImageImageDescriptor(Image image) {
-            super();
-            fImage= image;
-        }
-
-        /* (non-Javadoc)
-         * @see ImageDescriptor#getImageData()
-         */
-        @Override
-        public ImageData getImageData() {
-            return fImage.getImageData();
-        }
-
-        /* (non-Javadoc)
-         * @see Object#equals(Object)
-         */
-        @Override
-        public boolean equals(Object obj) {
-            return (obj != null) && getClass().equals(obj.getClass()) && fImage.equals(((ImageImageDescriptor)obj).fImage);
-        }
-
-        /* (non-Javadoc)
-         * @see Object#hashCode()
-         */
-        @Override
-        public int hashCode() {
-            return fImage.hashCode();
-        }
-    }
     private static class GmfRenderInfo implements RenderInfo {
-        private final int size;
+        private final ImageSize size;
 
         /**
          * @param size
          */
-        public GmfRenderInfo(int size) {
+        public GmfRenderInfo(ImageSize size) {
             super();
             this.size = size;
         }
@@ -94,12 +60,12 @@ public class IrcImages {
 
         @Override
         public int getHeight() {
-            return size;
+            return size.getHeight();
         }
 
         @Override
         public int getWidth() {
-            return size;
+            return size.getWidth();
         }
 
         @Override
@@ -118,22 +84,64 @@ public class IrcImages {
             return false;
         }
     }
+    public class ImageImageDescriptor extends ImageDescriptor {
+        private Image fImage;
+
+        /**
+         * Constructor for ImagImageDescriptor.
+         */
+        public ImageImageDescriptor(Image image) {
+            super();
+            fImage = image;
+        }
+
+        /*
+         * (non-Javadoc)
+         *
+         * @see Object#equals(Object)
+         */
+        @Override
+        public boolean equals(Object obj) {
+            return (obj != null) && getClass().equals(obj.getClass())
+                    && fImage.equals(((ImageImageDescriptor) obj).fImage);
+        }
+
+        /*
+         * (non-Javadoc)
+         *
+         * @see ImageDescriptor#getImageData()
+         */
+        @Override
+        public ImageData getImageData() {
+            return fImage.getImageData();
+        }
+
+        /*
+         * (non-Javadoc)
+         *
+         * @see Object#hashCode()
+         */
+        @Override
+        public int hashCode() {
+            return fImage.hashCode();
+        }
+    }
 
     public enum ImageKey {
         ACCOUNT("account.gif", IrcAccount.class), //
         ACCOUNT_NEW("account-new.png"), //
-        BLUE_BALL_OVERLAY("blue-ball-overlay.png", null, SWT.NONE, "blue-ball-overlay.svg"), //
+        BLUE_BALL_OVERLAY("blue-ball-overlay.png", null, SWT.NONE, "blue-ball-overlay.svg", ImageSize._7x7), //
         CHANNEL("channel.gif", IrcChannel.class), //
         CONNECT("connect.gif"), //
         DISCONNECT("disconnect.gif"), //
-        GREEN_BALL_OVERLAY("green-ball-overlay.png", null, SWT.NONE, "green-ball-overlay.svg"), //
-        IRC_CLIENT("eircc.png", IrcModel.class, SWT.NONE, "eircc.svg"), //
+        GREEN_BALL_OVERLAY("green-ball-overlay.png", null, SWT.NONE, "green-ball-overlay.svg", ImageSize._7x7), //
+        IRC_CLIENT("eircc.png", IrcModel.class, SWT.NONE, "eircc.svg", ImageSize._16x16), //
         IRC_CLIENT_DISABLED(IRC_CLIENT, SWT.IMAGE_GRAY), //
         NEW_OVERLAY("new-overlay.png"), //
         REFRESH("refresh.gif"), //
-        SMILEY_OVERLAY("smiley-overlay.png", null, SWT.NONE, "smiley-overlay.svg"), //
+        SMILEY_OVERLAY("smiley-overlay.png", null, SWT.NONE, "smiley-overlay.svg", ImageSize._7x7), //
         USER("user.gif", IrcUser.class), //
-        WARNING_OVERLAY("warning-overlay.png");
+        WARNING_OVERLAY("warning-overlay.gif", null, SWT.NONE, "warning-overlay.svg", ImageSize._7x8);
 
         private static final Map<Class<?>, ImageKey> CLASS_LOOKUP;
 
@@ -151,9 +159,9 @@ public class IrcImages {
             CLASS_LOOKUP = Collections.unmodifiableMap(m);
         }
 
-        private static StringBuilder appendKey(StringBuilder sb, String name, int flags, int size) {
-            return sb.append("f").append(flags).append("-").append(name).append("-").append(size).append("x")
-                    .append(size);
+        private static StringBuilder appendKey(StringBuilder sb, String name, int flags, ImageSize size) {
+            return sb.append("f").append(flags).append("-").append(name).append("-").append(size.getWidth()).append("x")
+                    .append(size.getHeight());
         }
 
         public static ImageKey fromModelClass(Class<?> cl) {
@@ -165,18 +173,25 @@ public class IrcImages {
         private final String key16x16;
         private final Class<?> modelClass;
         private final String path16x16;
-
         private final String pathSvg;
 
+        /**
+         * As stupid as the name of this field may sound... this is a width and
+         * height of the image in pixels. 16x16 is only the form factor, whereas
+         * the image may be an overlay for this form factor that in reality has
+         * 7x7 pixels.
+         */
+        private final ImageSize size16x16;
+
         private ImageKey(ImageKey imageKey, int flags) {
-            this(imageKey.path16x16, imageKey.modelClass, flags, imageKey.pathSvg);
+            this(imageKey.path16x16, imageKey.modelClass, flags, imageKey.pathSvg, imageKey.size16x16);
         }
 
         /**
          * @param path
          */
         private ImageKey(String path16x16) {
-            this(path16x16, null, SWT.NONE, null);
+            this(path16x16, null, SWT.NONE, null, ImageSize._16x16);
         }
 
         /**
@@ -184,19 +199,20 @@ public class IrcImages {
          * @param modelClass
          */
         private ImageKey(String path16x16, Class<?> modelClass) {
-            this(path16x16, modelClass, SWT.NONE, null);
+            this(path16x16, modelClass, SWT.NONE, null, ImageSize._16x16);
         }
 
-        private ImageKey(String path16x16, Class<?> modelClass, int flags, String pathSvg) {
+        private ImageKey(String path16x16, Class<?> modelClass, int flags, String pathSvg, ImageSize size16x16) {
             this.path16x16 = path16x16;
             this.modelClass = modelClass;
             this.flags = flags;
             this.pathSvg = pathSvg;
-            this.key16x16 = appendKey(new StringBuilder(), name(), flags, SIZE_16x16).toString();
+            this.size16x16 = size16x16;
+            this.key16x16 = appendKey(new StringBuilder(), name(), flags, ImageSize._16x16).toString();
         }
 
-        public void appendKey(StringBuilder sb, int size) {
-            if (size == SIZE_16x16) {
+        public void appendKey(StringBuilder sb, ImageSize size) {
+            if (size == ImageSize._16x16) {
                 sb.append(key16x16);
             } else {
                 appendKey(sb, name(), flags, size);
@@ -219,7 +235,7 @@ public class IrcImages {
          * @param size
          * @return
          */
-        public String getKey(int size) {
+        public String getKey(ImageSize size) {
             return appendKey(new StringBuilder(), name(), flags, size).toString();
         }
 
@@ -231,13 +247,72 @@ public class IrcImages {
             return path16x16;
         }
 
+        public ImageSize getSize16x16() {
+            return size16x16;
+        }
+    }
+
+    public static class ImageSize {
+        public static final ImageSize _16x16 = new ImageSize(16, 16);
+        public static final ImageSize _7x7 = new ImageSize(7, 7);
+        public static final ImageSize _7x8 = new ImageSize(7, 8);
+        private final int height;
+        private final int width;
+        /**
+         * @param trayIconSize
+         */
+        public ImageSize(Dimension dimension) {
+            this.width = dimension.width;
+            this.height = dimension.height;
+        }
+        /**
+         * @param width
+         * @param height
+         */
+        public ImageSize(int width, int height) {
+            super();
+            this.width = width;
+            this.height = height;
+        }
+        @Override
+        public boolean equals(Object obj) {
+            if (this == obj)
+                return true;
+            if (obj == null)
+                return false;
+            if (getClass() != obj.getClass())
+                return false;
+            ImageSize other = (ImageSize) obj;
+            if (height != other.height)
+                return false;
+            if (width != other.width)
+                return false;
+            return true;
+        }
+        public int getHeight() {
+            return height;
+        }
+        public int getWidth() {
+            return width;
+        }
+
+        @Override
+        public int hashCode() {
+            final int prime = 31;
+            int result = 1;
+            result = prime * result + height;
+            result = prime * result + width;
+            return result;
+        }
+
+        public ImageSize scaleToSquare(int size) {
+            return new ImageSize(width * size/ImageSize._16x16.getWidth(), height * size/ImageSize._16x16.getHeight()) ;
+        }
     }
 
     private static final IrcImages INSTANCE = new IrcImages();
 
-    public static final int SIZE_16x16 = 16;
-
-    public static Image fromSvg(URL url, int size) {
+    public static Image fromSvg(URL url, ImageSize size) {
         RenderInfo ri = new GmfRenderInfo(size);
         RenderedImage renderedImage = RenderedImageFactory.getInstance(url, ri);
         return renderedImage.getSWTImage();
@@ -247,7 +322,7 @@ public class IrcImages {
         return INSTANCE;
     }
 
-    private static String getKey(ImageKey[] overlays, int size) {
+    private static String getKey(ImageKey[] overlays, ImageSize size) {
         int i = 0;
         StringBuilder sb = new StringBuilder();
         overlays[i++].appendKey(sb, size);
@@ -282,7 +357,7 @@ public class IrcImages {
         imageRegistry.dispose();
     }
 
-    public Image[] getFlashingImage(IrcModel model, int size) {
+    public Image[] getFlashingImage(IrcModel model, ImageSize size) {
         IrcAccountsStatistics stats = model.getAccountsStatistics();
         if (stats.hasChannelsNamingMe()) {
             return new Image[] { getImage(getOverlays(stats, true), size), getImage(getOverlays(stats, false), size) };
@@ -300,10 +375,10 @@ public class IrcImages {
     }
 
     public Image getImage(ImageKey[] overlays) {
-        return getImage(overlays, SIZE_16x16);
+        return getImage(overlays, ImageSize._16x16);
     }
 
-    public Image getImage(ImageKey[] overlays, int size) {
+    public Image getImage(ImageKey[] overlays, ImageSize size) {
         String key = getKey(overlays, size);
         getImageDescriptor(key, overlays, size);
         return imageRegistry.get(key);
@@ -324,10 +399,10 @@ public class IrcImages {
     }
 
     public ImageDescriptor getImageDescriptor(ImageKey imageKey) {
-        return getImageDescriptor(imageKey, SIZE_16x16);
+        return getImageDescriptor(imageKey, ImageSize._16x16);
     }
 
-    public ImageDescriptor getImageDescriptor(ImageKey imageKey, ImageKey overlayKey, int size, int quadrant) {
+    public ImageDescriptor getImageDescriptor(ImageKey imageKey, ImageKey overlayKey, ImageSize size, int quadrant) {
         ImageKey[] overlays = new ImageKey[6];
         overlays[0] = imageKey;
         overlays[quadrant + 1] = overlayKey;
@@ -335,7 +410,7 @@ public class IrcImages {
         return getImageDescriptor(key, overlays, size);
     }
 
-    public ImageDescriptor getImageDescriptor(ImageKey imageKey, int size) {
+    public ImageDescriptor getImageDescriptor(ImageKey imageKey, ImageSize size) {
         if (imageKey == null) {
             return null;
         }
@@ -346,7 +421,10 @@ public class IrcImages {
             String svgPath = imageKey.getAbsolutePathSvg();
             if (svgPath != null) {
                 URL url = getClass().getClassLoader().getResource(imageKey.getAbsolutePathSvg());
-                Image image = fromSvg(url, size);
+                if (url == null) {
+                    return null;
+                }
+                Image image = fromSvg(url, imageKey.getSize16x16().scaleToSquare(size.getWidth()));
                 imageRegistry.put(key, image);
                 result = imageRegistry.getDescriptor(key);
             }
@@ -355,10 +433,10 @@ public class IrcImages {
     }
 
     public ImageDescriptor getImageDescriptor(IrcObject element) {
-        return getImageDescriptor(element, SIZE_16x16);
+        return getImageDescriptor(element, ImageSize._16x16);
     }
 
-    public ImageDescriptor getImageDescriptor(IrcObject element, int size) {
+    public ImageDescriptor getImageDescriptor(IrcObject element, ImageSize size) {
         if (element == null) {
             return null;
         }
@@ -374,7 +452,7 @@ public class IrcImages {
         return getImageDescriptor(key, overlays, size);
     }
 
-    public ImageDescriptor getImageDescriptor(String key, ImageKey[] overlays, int size) {
+    public ImageDescriptor getImageDescriptor(String key, ImageKey[] overlays, ImageSize size) {
         ImageDescriptor result = imageRegistry.getDescriptor(key);
         if (result == null) {
             switch (overlays.length) {
@@ -492,7 +570,7 @@ public class IrcImages {
         }
     }
 
-    private ImageDescriptor[] toOverlayDescriptors(ImageKey[] overlays, int size) {
+    private ImageDescriptor[] toOverlayDescriptors(ImageKey[] overlays, ImageSize size) {
         int i = 1;
         return new ImageDescriptor[] { getImageDescriptor(overlays[i++], size),
                 getImageDescriptor(overlays[i++], size), getImageDescriptor(overlays[i++], size),

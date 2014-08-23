@@ -14,8 +14,11 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.Locale;
+import java.util.StringTokenizer;
 
 import org.eclipse.swt.widgets.Display;
+import org.schwering.irc.lib.IRCCommand;
 
 /**
  * @author <a href="mailto:ppalaga@redhat.com">Peter Palaga</a>
@@ -51,6 +54,7 @@ public class IrcUtils {
         }
         return result.toString();
     }
+
     public static String getRealUserName() throws IOException, InterruptedException {
         String os = System.getProperty("os.name");
         if (os != null && (os.startsWith("Windows"))) {
@@ -71,9 +75,36 @@ public class IrcUtils {
         assertUiThread();
         return FULL_DATE_TIME_FORMAT.format(new Date(unixTs));
     }
+
     public static String toTimeString(long unixTs) {
         assertUiThread();
         return TIME_FORMAT.format(new Date(unixTs));
+    }
+
+    /**
+     * Looks whether the {@code message} starts with {@code '/'} followed by a
+     * command name followed in {@link IRCCommand}.
+     *
+     * @param message
+     * @return the {@link IRCCommand} or {@code null}
+     */
+    public static IRCCommand getInitialCommand(String message) {
+        if (message.length() > 2 && message.charAt(0) == IrcConstants.COMMAND_MARKER) {
+            String firstToken = new StringTokenizer(message, " \t\n\r").nextToken();
+            firstToken = firstToken.substring(1);
+            return IRCCommand.fastValueOf(firstToken.toUpperCase(Locale.ENGLISH));
+        }
+        return null;
+    }
+
+    /**
+     * Call only after {@link #getInitialCommand(String)}.
+     *
+     * @param message
+     * @return
+     */
+    public static String getRawCommand(String message) {
+        return message.substring(1);
     }
 
 }

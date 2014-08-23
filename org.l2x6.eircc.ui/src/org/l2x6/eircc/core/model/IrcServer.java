@@ -14,8 +14,8 @@ import java.util.Collection;
 import java.util.Map;
 import java.util.TreeMap;
 
-import org.l2x6.eircc.core.IrcModelEvent;
-import org.l2x6.eircc.core.IrcModelEvent.EventType;
+import org.l2x6.eircc.core.model.event.IrcModelEvent;
+import org.l2x6.eircc.core.model.event.IrcModelEvent.EventType;
 import org.l2x6.eircc.ui.IrcUiMessages;
 
 /**
@@ -95,9 +95,15 @@ public class IrcServer extends IrcObject {
         IrcUser newUser = createUser(newNick, username);
         addUser(newUser);
 
-        String text = MessageFormat.format(IrcUiMessages.Message_x_is_known_as_y, oldNick, newNick);
-        long now = System.currentTimeMillis();
+        String text;
+        if (oldNick != null && oldNick.equals(account.getAcceptedNick())) {
+            account.setMe(newUser);
+            text = MessageFormat.format(IrcUiMessages.Message_You_are_known_as_x, newNick);
+        } else {
+            text = MessageFormat.format(IrcUiMessages.Message_x_is_known_as_y, oldNick, newNick);
+        }
 
+        long now = System.currentTimeMillis();
         for (IrcChannel channel : account.getChannels()) {
             if (channel.isJoined() && channel.isPresent(oldNick)) {
                 channel.changeNick(oldNick, newUser);

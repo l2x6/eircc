@@ -8,8 +8,6 @@
 
 package org.l2x6.eircc.ui.editor;
 
-import java.io.IOException;
-
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.SashForm;
@@ -26,12 +24,12 @@ import org.eclipse.ui.PartInitException;
 import org.eclipse.ui.part.EditorPart;
 import org.eclipse.ui.views.contentoutline.IContentOutlinePage;
 import org.l2x6.eircc.core.IrcController;
-import org.l2x6.eircc.core.IrcModelEvent;
-import org.l2x6.eircc.core.IrcModelEventListener;
 import org.l2x6.eircc.core.model.IrcChannel;
 import org.l2x6.eircc.core.model.IrcLog;
 import org.l2x6.eircc.core.model.IrcMessage;
 import org.l2x6.eircc.core.model.IrcModel;
+import org.l2x6.eircc.core.model.event.IrcModelEvent;
+import org.l2x6.eircc.core.model.event.IrcModelEventListener;
 import org.l2x6.eircc.core.util.IrcUtils;
 import org.l2x6.eircc.ui.EirccUi;
 import org.l2x6.eircc.ui.IrcImages;
@@ -40,13 +38,14 @@ import org.l2x6.eircc.ui.views.IrcLabelProvider;
 /**
  * @author <a href="mailto:ppalaga@redhat.com">Peter Palaga</a>
  */
-public class IrcChannelEditor extends EditorPart implements IrcModelEventListener, IPartListener2 {
+public class IrcChannelEditor extends EditorPart implements IrcModelEventListener {
 
     public static final String ID = "org.l2x6.eircc.ui.editor.IrcChannelEditor";
     private SashForm accountsDetailsSplitter;
     private IrcChannel channel;
     private StyledText historyWidget;
     private StyledText inputWidget;
+
     private KeyListener inputWidgetListenet = new KeyListener() {
 
         @Override
@@ -67,10 +66,10 @@ public class IrcChannelEditor extends EditorPart implements IrcModelEventListene
                         }
                         if (text.length() > 0) {
                             IrcController.getInstance().postMessage(channel, text);
-                            inputWidget.setEditable(false);
+                            inputWidget.setText("");
                         }
                     }
-                } catch (IOException e1) {
+                } catch (Exception e1) {
                     EirccUi.log(e1);
                 }
             }
@@ -81,6 +80,69 @@ public class IrcChannelEditor extends EditorPart implements IrcModelEventListene
         }
     };
     private IrcChannelOutlinePage outlinePage;
+    private IPartListener2 readMessagesUpdater = new IPartListener2() {
+
+        /**
+         * @see org.eclipse.ui.IPartListener2#partActivated(org.eclipse.ui.IWorkbenchPartReference)
+         */
+        @Override
+        public void partActivated(IWorkbenchPartReference partRef) {
+            updateReadMessages(partRef);
+        }
+
+        /**
+         * @see org.eclipse.ui.IPartListener2#partBroughtToTop(org.eclipse.ui.IWorkbenchPartReference)
+         */
+        @Override
+        public void partBroughtToTop(IWorkbenchPartReference partRef) {
+            updateReadMessages(partRef);
+        }
+
+        /**
+         * @see org.eclipse.ui.IPartListener2#partClosed(org.eclipse.ui.IWorkbenchPartReference)
+         */
+        @Override
+        public void partClosed(IWorkbenchPartReference partRef) {
+        }
+
+        /**
+         * @see org.eclipse.ui.IPartListener2#partDeactivated(org.eclipse.ui.IWorkbenchPartReference)
+         */
+        @Override
+        public void partDeactivated(IWorkbenchPartReference partRef) {
+        }
+
+        /**
+         * @see org.eclipse.ui.IPartListener2#partHidden(org.eclipse.ui.IWorkbenchPartReference)
+         */
+        @Override
+        public void partHidden(IWorkbenchPartReference partRef) {
+        }
+
+        /**
+         * @see org.eclipse.ui.IPartListener2#partInputChanged(org.eclipse.ui.IWorkbenchPartReference)
+         */
+        @Override
+        public void partInputChanged(IWorkbenchPartReference partRef) {
+        }
+
+        /**
+         * @see org.eclipse.ui.IPartListener2#partOpened(org.eclipse.ui.IWorkbenchPartReference)
+         */
+        @Override
+        public void partOpened(IWorkbenchPartReference partRef) {
+            updateReadMessages(partRef);
+        }
+
+        /**
+         * @see org.eclipse.ui.IPartListener2#partVisible(org.eclipse.ui.IWorkbenchPartReference)
+         */
+        @Override
+        public void partVisible(IWorkbenchPartReference partRef) {
+            updateReadMessages(partRef);
+        }
+
+    };
 
     /**
      * @param m
@@ -114,7 +176,7 @@ public class IrcChannelEditor extends EditorPart implements IrcModelEventListene
     @Override
     public void dispose() {
         try {
-            getSite().getPage().addPartListener(this);
+            getSite().getPage().addPartListener(readMessagesUpdater);
         } catch (Exception e1) {
             EirccUi.log(e1);
         }
@@ -125,7 +187,7 @@ public class IrcChannelEditor extends EditorPart implements IrcModelEventListene
         }
         try {
             IrcController.getInstance().partChannel(channel);
-        } catch (IOException e) {
+        } catch (Exception e) {
             EirccUi.log(e);
         }
         super.dispose();
@@ -136,7 +198,6 @@ public class IrcChannelEditor extends EditorPart implements IrcModelEventListene
      */
     @Override
     public void doSave(IProgressMonitor monitor) {
-        // TODO Auto-generated method stub
     }
 
     /**
@@ -144,7 +205,6 @@ public class IrcChannelEditor extends EditorPart implements IrcModelEventListene
      */
     @Override
     public void doSaveAs() {
-        // TODO Auto-generated method stub
     }
 
     @Override
@@ -162,7 +222,7 @@ public class IrcChannelEditor extends EditorPart implements IrcModelEventListene
     }
 
     /**
-     * @see org.l2x6.eircc.core.IrcModelEventListener#handle(org.l2x6.eircc.core.IrcModelEvent)
+     * @see org.l2x6.eircc.core.model.event.IrcModelEventListener#handle(org.l2x6.eircc.core.model.event.IrcModelEvent)
      */
     @Override
     public void handle(IrcModelEvent e) {
@@ -178,11 +238,6 @@ public class IrcChannelEditor extends EditorPart implements IrcModelEventListene
             IrcMessage m = (IrcMessage) e.getModelObject();
             if (m.getLog().getChannel() == channel) {
                 append(m);
-                if (m.isFromMe()) {
-                    inputWidget.setText("");
-                    inputWidget.setEditable(true);
-                }
-
                 updateReadMessages();
             }
             break;
@@ -203,7 +258,7 @@ public class IrcChannelEditor extends EditorPart implements IrcModelEventListene
             this.channel = ((IrcChannelEditorInput) input).getChannel();
             updateReadMessages();
             IrcModel.getInstance().addModelEventListener(this);
-            site.getPage().addPartListener(this);
+            site.getPage().addPartListener(readMessagesUpdater);
         } else {
             throw new PartInitException("Expected an " + IrcChannelEditorInput.class.getSimpleName() + " but got a "
                     + input.getClass().getName());
@@ -240,69 +295,6 @@ public class IrcChannelEditor extends EditorPart implements IrcModelEventListene
     @Override
     public boolean isSaveAsAllowed() {
         return false;
-    }
-
-    /**
-     * @see org.eclipse.ui.IPartListener2#partActivated(org.eclipse.ui.IWorkbenchPartReference)
-     */
-    @Override
-    public void partActivated(IWorkbenchPartReference partRef) {
-        updateReadMessages(partRef);
-    }
-
-    /**
-     * @see org.eclipse.ui.IPartListener2#partBroughtToTop(org.eclipse.ui.IWorkbenchPartReference)
-     */
-    @Override
-    public void partBroughtToTop(IWorkbenchPartReference partRef) {
-        updateReadMessages(partRef);
-    }
-
-    /**
-     * @see org.eclipse.ui.IPartListener2#partClosed(org.eclipse.ui.IWorkbenchPartReference)
-     */
-    @Override
-    public void partClosed(IWorkbenchPartReference partRef) {
-    }
-
-    /**
-     * @see org.eclipse.ui.IPartListener2#partDeactivated(org.eclipse.ui.IWorkbenchPartReference)
-     */
-    @Override
-    public void partDeactivated(IWorkbenchPartReference partRef) {
-        // TODO Auto-generated method stub
-
-    }
-
-    /**
-     * @see org.eclipse.ui.IPartListener2#partHidden(org.eclipse.ui.IWorkbenchPartReference)
-     */
-    @Override
-    public void partHidden(IWorkbenchPartReference partRef) {
-    }
-
-    /**
-     * @see org.eclipse.ui.IPartListener2#partInputChanged(org.eclipse.ui.IWorkbenchPartReference)
-     */
-    @Override
-    public void partInputChanged(IWorkbenchPartReference partRef) {
-    }
-
-    /**
-     * @see org.eclipse.ui.IPartListener2#partOpened(org.eclipse.ui.IWorkbenchPartReference)
-     */
-    @Override
-    public void partOpened(IWorkbenchPartReference partRef) {
-        updateReadMessages(partRef);
-    }
-
-    /**
-     * @see org.eclipse.ui.IPartListener2#partVisible(org.eclipse.ui.IWorkbenchPartReference)
-     */
-    @Override
-    public void partVisible(IWorkbenchPartReference partRef) {
-        // TODO Auto-generated method stub
-
     }
 
     /**

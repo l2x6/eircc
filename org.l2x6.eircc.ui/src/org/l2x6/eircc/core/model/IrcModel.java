@@ -19,11 +19,11 @@ import java.util.Map;
 import java.util.TreeMap;
 import java.util.UUID;
 
-import org.l2x6.eircc.core.IrcModelEvent;
-import org.l2x6.eircc.core.IrcModelEvent.EventType;
-import org.l2x6.eircc.core.IrcModelEventListener;
 import org.l2x6.eircc.core.client.IrcClient;
 import org.l2x6.eircc.core.client.TrafficLoggerFactory;
+import org.l2x6.eircc.core.model.event.IrcModelEvent;
+import org.l2x6.eircc.core.model.event.IrcModelEventListener;
+import org.l2x6.eircc.core.model.event.IrcModelEvent.EventType;
 import org.l2x6.eircc.core.util.IrcUtils;
 import org.l2x6.eircc.ui.EirccUi;
 import org.l2x6.eircc.ui.IrcUiMessages;

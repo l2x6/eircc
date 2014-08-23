@@ -26,6 +26,7 @@ import org.l2x6.eircc.core.model.IrcServer;
 import org.l2x6.eircc.core.model.IrcUser;
 import org.l2x6.eircc.core.util.IrcUtils;
 import org.l2x6.eircc.ui.IrcUiMessages;
+import org.schwering.irc.lib.IRCCommand;
 import org.schwering.irc.lib.IRCUser;
 
 /**
@@ -52,9 +53,9 @@ public class IrcController {
         server.changeNick(oldNick, newNick, username);
     }
 
-    public void connect(IrcAccount ircAccount) throws IOException {
+    public void connect(IrcAccount account) throws IrcException {
         IrcUtils.assertUiThread();
-        getClientOrConnect(ircAccount);
+        getClientOrConnect(account);
     }
 
     public void dispose() {
@@ -72,19 +73,24 @@ public class IrcController {
     }
 
     /**
-     * @param ircAccount
+     * @param account
      * @throws IOException
      */
-    private IrcClient getClientOrConnect(IrcAccount ircAccount) throws IOException {
-        IrcClient client = clients.get(ircAccount.getId());
+    private IrcClient getClientOrConnect(IrcAccount account) throws IrcException {
+        IrcClient client = clients.get(account.getId());
         if (client != null && !client.isConnected()) {
             client.close();
             client = null;
         }
         if (client == null) {
             client = new IrcClient();
-            client.connect(ircAccount);
-            clients.put(ircAccount.getId(), client);
+            try {
+                client.connect(account);
+                clients.put(account.getId(), client);
+            } catch (IrcException e) {
+                account.setOffline(e);
+                throw e;
+            }
         }
         return client;
     }
@@ -121,7 +127,7 @@ public class IrcController {
      * @param channel
      * @throws IOException
      */
-    public void joinChannel(IrcChannel channel) throws IOException {
+    public void joinChannel(IrcChannel channel) throws IrcException {
         IrcUtils.assertUiThread();
         if (!channel.isJoined()) {
             getClientOrConnect(channel.getAccount()).joinChannel(channel);
@@ -132,7 +138,7 @@ public class IrcController {
      * @param account
      * @throws IOException
      */
-    public void listChannels(IrcAccount account) throws IOException {
+    public void listChannels(IrcAccount account) throws IrcException {
         IrcUtils.assertUiThread();
         getClientOrConnect(account).listChannels();
     }
@@ -141,7 +147,7 @@ public class IrcController {
      * @param channel
      * @throws IOException
      */
-    public void partChannel(IrcChannel channel) throws IOException {
+    public void partChannel(IrcChannel channel) throws IrcException {
         IrcUtils.assertUiThread();
         if (channel.isJoined()) {
             getClientOrConnect(channel.getAccount()).partChannel(channel);
@@ -153,9 +159,16 @@ public class IrcController {
      * @param text
      * @throws IOException
      */
-    public void postMessage(IrcChannel channel, String text) throws IOException {
+    public void postMessage(IrcChannel channel, String text) throws IrcException {
         IrcUtils.assertUiThread();
-        getClientOrConnect(channel.getAccount()).postMessage(channel, text);
+        IrcClient client = getClientOrConnect(channel.getAccount());
+
+        IRCCommand cmd = IrcUtils.getInitialCommand(text);
+        if (cmd != null) {
+            client.postRaw(IrcUtils.getRawCommand(text));
+        } else {
+            client.postMessage(channel, text);
+        }
     }
 
     public void quit(IrcAccount ircAccount) {

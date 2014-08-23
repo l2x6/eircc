@@ -15,10 +15,10 @@ import org.eclipse.jface.viewers.TreeViewer;
 import org.eclipse.jface.viewers.Viewer;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.ui.views.contentoutline.ContentOutlinePage;
-import org.l2x6.eircc.core.IrcModelEvent;
-import org.l2x6.eircc.core.IrcModelEventListener;
 import org.l2x6.eircc.core.model.IrcChannel;
 import org.l2x6.eircc.core.model.IrcModel;
+import org.l2x6.eircc.core.model.event.IrcModelEvent;
+import org.l2x6.eircc.core.model.event.IrcModelEventListener;
 import org.l2x6.eircc.ui.EirccUi;
 import org.l2x6.eircc.ui.views.IrcLabelProvider;
 
@@ -131,7 +131,7 @@ public class IrcChannelOutlinePage extends ContentOutlinePage implements IDouble
     }
 
     /**
-     * @see org.l2x6.eircc.core.IrcModelEventListener#handle(org.l2x6.eircc.core.IrcModelEvent)
+     * @see org.l2x6.eircc.core.model.event.IrcModelEventListener#handle(org.l2x6.eircc.core.model.event.IrcModelEvent)
      */
     @Override
     public void handle(IrcModelEvent e) {

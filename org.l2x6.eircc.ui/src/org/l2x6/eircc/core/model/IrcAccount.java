@@ -17,8 +17,9 @@ import java.util.Map;
 import java.util.TreeMap;
 import java.util.UUID;
 
-import org.l2x6.eircc.core.IrcModelEvent;
-import org.l2x6.eircc.core.IrcModelEvent.EventType;
+import org.l2x6.eircc.core.IrcException;
+import org.l2x6.eircc.core.model.event.IrcModelEvent;
+import org.l2x6.eircc.core.model.event.IrcModelEvent.EventType;
 import org.l2x6.eircc.ui.IrcUiMessages;
 import org.schwering.irc.lib.TrafficLogger;
 
@@ -91,6 +92,7 @@ public class IrcAccount extends IrcObject {
 
     private IrcChannel[] keptChannelsArray;
     private String label;
+    private IrcException lastException;
     private IrcUser me;
     private final IrcModel model;
     private String password;
@@ -101,6 +103,7 @@ public class IrcAccount extends IrcObject {
     private boolean ssl;
     private IrcAccountState state = IrcAccountState.OFFLINE;
     private TrafficLogger trafficLogger;
+
     private String username;
 
     public IrcAccount(IrcModel model, UUID id, String label) {
@@ -231,6 +234,10 @@ public class IrcAccount extends IrcObject {
 
     public String getLabel() {
         return label;
+    }
+
+    public IrcException getLastException() {
+        return lastException;
     }
 
     /**
@@ -385,6 +392,11 @@ public class IrcAccount extends IrcObject {
         this.realName = name;
     }
 
+    public void setOffline(IrcException e) {
+        this.lastException = e;
+        setState(IrcAccountState.OFFLINE_AFTER_ERROR);
+    }
+
     public void setPassword(String password) {
         this.password = password;
     }
@@ -400,10 +412,12 @@ public class IrcAccount extends IrcObject {
     public void setSsl(boolean ssl) {
         this.ssl = ssl;
     }
-
     public void setState(IrcAccountState state) {
         IrcAccountState oldState = this.state;
         this.state = state;
+        if (state != IrcAccountState.OFFLINE_AFTER_ERROR) {
+            this.lastException = null;
+        }
         if (oldState != state) {
             model.fire(new IrcModelEvent(EventType.ACCOUNT_STATE_CHANGED, this));
         }

@@ -13,8 +13,8 @@ import java.util.Collection;
 import java.util.Map;
 import java.util.TreeMap;
 
-import org.l2x6.eircc.core.IrcModelEvent;
-import org.l2x6.eircc.core.IrcModelEvent.EventType;
+import org.l2x6.eircc.core.model.event.IrcModelEvent;
+import org.l2x6.eircc.core.model.event.IrcModelEvent.EventType;
 
 /**
  * @author <a href="mailto:ppalaga@redhat.com">Peter Palaga</a>

@@ -21,10 +21,10 @@ import javax.sound.sampled.LineListener;
 import javax.sound.sampled.LineUnavailableException;
 import javax.sound.sampled.UnsupportedAudioFileException;
 
-import org.l2x6.eircc.core.IrcModelEvent;
-import org.l2x6.eircc.core.IrcModelEventListener;
 import org.l2x6.eircc.core.model.IrcLog;
 import org.l2x6.eircc.core.model.IrcLog.LogState;
+import org.l2x6.eircc.core.model.event.IrcModelEvent;
+import org.l2x6.eircc.core.model.event.IrcModelEventListener;
 import org.l2x6.eircc.core.model.IrcModel;
 
 /**
@@ -74,7 +74,7 @@ public class IrcSoundNotifier implements IrcModelEventListener {
     }
 
     /**
-     * @see org.l2x6.eircc.core.IrcModelEventListener#handle(org.l2x6.eircc.core.IrcModelEvent)
+     * @see org.l2x6.eircc.core.model.event.IrcModelEventListener#handle(org.l2x6.eircc.core.model.event.IrcModelEvent)
      */
     @Override
     public void handle(IrcModelEvent e) {

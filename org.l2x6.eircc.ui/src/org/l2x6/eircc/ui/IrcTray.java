@@ -15,9 +15,10 @@ import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Tray;
 import org.eclipse.swt.widgets.TrayItem;
-import org.l2x6.eircc.core.IrcModelEvent;
-import org.l2x6.eircc.core.IrcModelEventListener;
 import org.l2x6.eircc.core.model.IrcModel;
+import org.l2x6.eircc.core.model.event.IrcModelEvent;
+import org.l2x6.eircc.core.model.event.IrcModelEventListener;
+import org.l2x6.eircc.ui.IrcImages.ImageSize;
 import org.l2x6.eircc.ui.views.IrcLabelProvider;
 
 /**
@@ -88,7 +89,7 @@ public class IrcTray implements IrcModelEventListener {
     }
 
     /**
-     * @see org.l2x6.eircc.core.IrcModelEventListener#handle(org.l2x6.eircc.core.IrcModelEvent)
+     * @see org.l2x6.eircc.core.model.event.IrcModelEventListener#handle(org.l2x6.eircc.core.model.event.IrcModelEvent)
      */
     @Override
     public void handle(IrcModelEvent e) {
@@ -102,16 +103,17 @@ public class IrcTray implements IrcModelEventListener {
         }
     }
 
-
     private void update() {
         if (trayItem != null) {
             IrcModel model = IrcModel.getInstance();
             trayItem.setToolTipText(IrcLabelProvider.getInstance().getTooltipText(model));
 
-            /* Find out the icon size required by the tray using AWT.
-             * Feel free to replace this with a pure SWT equivalent if you know one */
+            /*
+             * Find out the icon size required by the tray using AWT. Feel free
+             * to replace this with a pure SWT equivalent if you know one
+             */
             SystemTray awtTray = SystemTray.getSystemTray();
-            int size = awtTray != null ? awtTray.getTrayIconSize().width : IrcImages.SIZE_16x16;
+            ImageSize size = awtTray != null ? new ImageSize(awtTray.getTrayIconSize()) : ImageSize._16x16;
             Image[] images = IrcImages.getInstance().getFlashingImage(model, size);
             if (images.length > 1) {
                 this.flasher = new Flasher(images);

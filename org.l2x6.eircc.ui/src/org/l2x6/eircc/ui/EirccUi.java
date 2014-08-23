@@ -22,10 +22,10 @@ import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.plugin.AbstractUIPlugin;
 import org.l2x6.eircc.core.EirccCore;
 import org.l2x6.eircc.core.IrcController;
-import org.l2x6.eircc.core.IrcModelEvent;
-import org.l2x6.eircc.core.IrcModelEventListener;
 import org.l2x6.eircc.core.model.IrcAccount;
 import org.l2x6.eircc.core.model.IrcAccount.IrcAccountState;
+import org.l2x6.eircc.core.model.event.IrcModelEvent;
+import org.l2x6.eircc.core.model.event.IrcModelEventListener;
 import org.l2x6.eircc.core.model.IrcChannel;
 import org.l2x6.eircc.core.model.IrcModel;
 import org.l2x6.eircc.core.util.IrcUtils;
@@ -83,7 +83,7 @@ public class EirccUi extends AbstractUIPlugin implements IrcModelEventListener, 
     }
 
     /**
-     * @see org.l2x6.eircc.core.IrcModelEventListener#handle(org.l2x6.eircc.core.IrcModelEvent)
+     * @see org.l2x6.eircc.core.model.event.IrcModelEventListener#handle(org.l2x6.eircc.core.model.event.IrcModelEvent)
      */
     @Override
     public void handle(IrcModelEvent e) {
@@ -155,7 +155,11 @@ public class EirccUi extends AbstractUIPlugin implements IrcModelEventListener, 
         IrcController controller = IrcController.getInstance();
         for (IrcAccount account : model.getAccounts()) {
             if (account.isAutoConnect()) {
-                controller.connect(account);
+                try {
+                    controller.connect(account);
+                } catch (Exception e) {
+                    EirccUi.log(e);
+                }
             }
         }
         /* Touch IrcTray to create it */

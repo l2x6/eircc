@@ -14,8 +14,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
 
-import org.l2x6.eircc.core.IrcModelEvent;
-import org.l2x6.eircc.core.IrcModelEvent.EventType;
+import org.l2x6.eircc.core.model.event.IrcModelEvent;
+import org.l2x6.eircc.core.model.event.IrcModelEvent.EventType;
 import org.l2x6.eircc.core.util.IrcUtils;
 
 
