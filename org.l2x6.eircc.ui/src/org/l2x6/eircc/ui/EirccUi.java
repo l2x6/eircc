@@ -22,12 +22,13 @@ import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.plugin.AbstractUIPlugin;
 import org.l2x6.eircc.core.EirccCore;
 import org.l2x6.eircc.core.IrcController;
+import org.l2x6.eircc.core.model.AbstractIrcChannel;
 import org.l2x6.eircc.core.model.IrcAccount;
 import org.l2x6.eircc.core.model.IrcAccount.IrcAccountState;
+import org.l2x6.eircc.core.model.IrcModel;
+import org.l2x6.eircc.core.model.IrcUser;
 import org.l2x6.eircc.core.model.event.IrcModelEvent;
 import org.l2x6.eircc.core.model.event.IrcModelEventListener;
-import org.l2x6.eircc.core.model.IrcChannel;
-import org.l2x6.eircc.core.model.IrcModel;
 import org.l2x6.eircc.core.util.IrcUtils;
 import org.l2x6.eircc.ui.editor.IrcChannelEditor;
 import org.l2x6.eircc.ui.editor.IrcChannelEditorInput;
@@ -101,7 +102,7 @@ public class EirccUi extends AbstractUIPlugin implements IrcModelEventListener, 
                 IrcAccount account = (IrcAccount) e.getModelObject();
                 if (account.getState() == IrcAccountState.ONLINE) {
                     IrcController controller = IrcController.getInstance();
-                    for (IrcChannel ch : account.getChannels()) {
+                    for (AbstractIrcChannel ch : account.getChannels()) {
                         if (ch.isAutoJoin() && !ch.isJoined()) {
                             controller.joinChannel(ch);
                         }
@@ -113,7 +114,7 @@ public class EirccUi extends AbstractUIPlugin implements IrcModelEventListener, 
             break;
         case CHANNEL_JOINED_CHANGED:
             try {
-                IrcChannel ch = (IrcChannel) e.getModelObject();
+                AbstractIrcChannel ch = (AbstractIrcChannel) e.getModelObject();
                 if (ch.isJoined()) {
                     openChannelEditor(ch);
                 }
@@ -123,9 +124,20 @@ public class EirccUi extends AbstractUIPlugin implements IrcModelEventListener, 
             break;
         case KEPT_CHANNEL_ADDED:
             try {
-                IrcChannel channel = (IrcChannel)e.getModelObject();
-                File channelsDir = channel.getAccount().getChannelsDir(getDefaultStorageRoot());
-                channel.save(channelsDir);
+                AbstractIrcChannel channel = (AbstractIrcChannel)e.getModelObject();
+                if (channel.isKept()) {
+                    File channelsDir = channel.getAccount().getChannelsDir(getDefaultStorageRoot());
+                    channel.save(channelsDir);
+                }
+            } catch (Exception e1) {
+                log(e1);
+            }
+            break;
+        case USER_ADDED:
+            try {
+                IrcUser user = (IrcUser)e.getModelObject();
+                File usersDir = user.getServer().getAccount().getUsersDir(getDefaultStorageRoot());
+                user.save(usersDir);
             } catch (Exception e1) {
                 log(e1);
             }
@@ -135,7 +147,7 @@ public class EirccUi extends AbstractUIPlugin implements IrcModelEventListener, 
         }
     }
 
-    public void openChannelEditor(IrcChannel channel) throws PartInitException {
+    public void openChannelEditor(AbstractIrcChannel channel) throws PartInitException {
         IrcUtils.assertUiThread();
         IWorkbenchPage page = PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage();
         page.openEditor(new IrcChannelEditorInput(channel), IrcChannelEditor.ID);
@@ -166,6 +178,8 @@ public class EirccUi extends AbstractUIPlugin implements IrcModelEventListener, 
         IrcTray.getInstance();
         IrcSoundNotifier.getInstance();
 
+        IrcSystemMessagesGenerator.getInstance();
+
         PlatformUI.getWorkbench().addWindowListener(this);
     }
 
@@ -178,8 +192,14 @@ public class EirccUi extends AbstractUIPlugin implements IrcModelEventListener, 
      */
     @Override
     public void stop(BundleContext context) throws Exception {
+        IrcUtils.markShutDownThread();
         try {
             PlatformUI.getWorkbench().removeWindowListener(this);
+        } catch (Exception e) {
+            log(e);
+        }
+        try {
+            IrcSystemMessagesGenerator.getInstance().dispose();
         } catch (Exception e) {
             log(e);
         }

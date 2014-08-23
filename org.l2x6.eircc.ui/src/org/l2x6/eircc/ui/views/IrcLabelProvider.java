@@ -10,8 +10,8 @@ package org.l2x6.eircc.ui.views;
 
 import org.eclipse.jface.viewers.LabelProvider;
 import org.eclipse.swt.graphics.Image;
+import org.l2x6.eircc.core.model.AbstractIrcChannel;
 import org.l2x6.eircc.core.model.IrcAccountsStatistics;
-import org.l2x6.eircc.core.model.IrcChannel;
 import org.l2x6.eircc.core.model.IrcModel;
 import org.l2x6.eircc.core.model.IrcObject;
 import org.l2x6.eircc.ui.IrcImages;
@@ -21,7 +21,7 @@ public class IrcLabelProvider extends LabelProvider {
 
     private static final IrcLabelProvider INSTANCE = new IrcLabelProvider();
 
-    public static String getChannelJoinedLabel(IrcChannel channel) {
+    public static String getChannelJoinedLabel(AbstractIrcChannel channel) {
         return channel.isJoined() ? IrcUiMessages.Channel_Connected : IrcUiMessages.Channel_Disconnected;
     }
 
@@ -65,8 +65,8 @@ public class IrcLabelProvider extends LabelProvider {
             sb.append(IrcUiMessages.Eclipse_IRC_Client);
             return sb.toString();
         }
-        else if (object instanceof IrcChannel) {
-            IrcChannel channel = (IrcChannel) object;
+        else if (object instanceof AbstractIrcChannel) {
+            AbstractIrcChannel channel = (AbstractIrcChannel) object;
             return channel.getName() + "@"+ channel.getAccount().getLabel() + " - "+ getChannelJoinedLabel(channel);
         }
         return object.toString();

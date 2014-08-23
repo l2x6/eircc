@@ -35,7 +35,7 @@ public class IrcLog extends IrcObject implements Iterable<IrcMessage> {
         }
     }
 
-    private final IrcChannel channel;
+    private final AbstractIrcChannel channel;
     private long lastMessageTime = -1;
     private final List<IrcMessage> messages = new ArrayList<IrcMessage>();
     private long readTill = 0;
@@ -46,7 +46,7 @@ public class IrcLog extends IrcObject implements Iterable<IrcMessage> {
      * @param channel
      * @param startedOn
      */
-    public IrcLog(IrcChannel channel, long startedOn) {
+    public IrcLog(AbstractIrcChannel channel, long startedOn) {
         super();
         this.channel = channel;
         this.startedOn = startedOn;
@@ -75,7 +75,7 @@ public class IrcLog extends IrcObject implements Iterable<IrcMessage> {
     public void dispose() {
     }
 
-    public IrcChannel getChannel() {
+    public AbstractIrcChannel getChannel() {
         return channel;
     }
 

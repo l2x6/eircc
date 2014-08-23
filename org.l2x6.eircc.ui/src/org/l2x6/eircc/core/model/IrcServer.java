@@ -9,14 +9,13 @@
 package org.l2x6.eircc.core.model;
 
 import java.io.File;
-import java.text.MessageFormat;
 import java.util.Collection;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.UUID;
 
 import org.l2x6.eircc.core.model.event.IrcModelEvent;
 import org.l2x6.eircc.core.model.event.IrcModelEvent.EventType;
-import org.l2x6.eircc.ui.IrcUiMessages;
 
 /**
  * @author <a href="mailto:ppalaga@redhat.com">Peter Palaga</a>
@@ -27,9 +26,9 @@ public class IrcServer extends IrcObject {
 
     private final IrcAccount account;
     private final Map<String, IrcChannel> channels = new TreeMap<String, IrcChannel>();
-    private IrcChannel[] channelsArray;
+    private AbstractIrcChannel[] channelsArray;
     /** Users by nick */
-    private final Map<String, IrcUser> users = new TreeMap<String, IrcUser>();
+    private final Map<UUID, IrcUser> users = new TreeMap<UUID, IrcUser>();
 
     /**
      * @param id
@@ -76,12 +75,12 @@ public class IrcServer extends IrcObject {
             throw new IllegalArgumentException("Cannot add user with parent distinct from this "
                     + this.getClass().getSimpleName());
         }
-        String nick = user.getNick();
-        if (users.get(nick) != null) {
-            throw new IllegalArgumentException("User with nick '" + nick + "' already available under server '"
+        UUID id = user.getId();
+        if (users.get(id) != null) {
+            throw new IllegalArgumentException("User with ID '" + id + "' already available under server '"
                     + account.getHost() + "' of the account '" + account.getLabel() + "'.");
         }
-        users.put(nick, user);
+        users.put(id, user);
         account.getModel().fire(new IrcModelEvent(EventType.USER_ADDED, user));
     }
 
@@ -91,26 +90,12 @@ public class IrcServer extends IrcObject {
      * @param username2
      */
     public void changeNick(String oldNick, String newNick, String username) {
-        removeUser(oldNick);
-        IrcUser newUser = createUser(newNick, username);
-        addUser(newUser);
-
-        String text;
-        if (oldNick != null && oldNick.equals(account.getAcceptedNick())) {
-            account.setMe(newUser);
-            text = MessageFormat.format(IrcUiMessages.Message_You_are_known_as_x, newNick);
+        IrcUser user = findUser(oldNick);
+        if (user != null) {
+            user.setNick(newNick);
         } else {
-            text = MessageFormat.format(IrcUiMessages.Message_x_is_known_as_y, oldNick, newNick);
-        }
-
-        long now = System.currentTimeMillis();
-        for (IrcChannel channel : account.getChannels()) {
-            if (channel.isJoined() && channel.isPresent(oldNick)) {
-                channel.changeNick(oldNick, newUser);
-                IrcLog log = channel.getLog();
-                IrcMessage m = new IrcMessage(log, now, null, text);
-                log.appendMessage(m);
-            }
+            user = createUser(newNick, username);
+            addUser(user);
         }
     }
 
@@ -121,7 +106,7 @@ public class IrcServer extends IrcObject {
      * @return
      */
     public IrcUser createUser(String nick, String username) {
-        return new IrcUser(this, nick, username);
+        return new IrcUser(this, UUID.randomUUID(), nick, username);
     }
 
     /**
@@ -149,7 +134,11 @@ public class IrcServer extends IrcObject {
      * @return
      */
     public IrcUser findUser(String nick) {
-        return users.get(nick);
+        return users.values().stream().findFirst().filter(user -> user.getNick().equals(nick)).orElse(null);
+    }
+
+    public IrcUser findUser(UUID id) {
+        return users.get(id);
     }
 
     public IrcAccount getAccount() {
@@ -159,7 +148,7 @@ public class IrcServer extends IrcObject {
     /**
      * @see org.l2x6.eircc.core.model.IrcObject#getChannels()
      */
-    public IrcChannel[] getChannels() {
+    public AbstractIrcChannel[] getChannels() {
         if (channelsArray == null) {
             Collection<IrcChannel> chans = channels.values();
             channelsArray = chans.toArray(new IrcChannel[chans.size()]);
@@ -187,7 +176,7 @@ public class IrcServer extends IrcObject {
         return !channels.isEmpty();
     }
 
-    public void removeChannel(IrcChannel channel) {
+    public void removeChannel(AbstractIrcChannel channel) {
         channels.remove(channel);
         channelsArray = null;
         account.getModel().fire(new IrcModelEvent(EventType.SERVER_CHANNEL_REMOVED, channel));
@@ -199,6 +188,14 @@ public class IrcServer extends IrcObject {
             account.getModel().fire(new IrcModelEvent(EventType.USER_REMOVED, removed));
             removed.dispose();
         }
+    }
+
+    /**
+     * @return
+     * @return
+     */
+    Map<UUID, IrcUser> getUsers() {
+        return users;
     }
 
 }

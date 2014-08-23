@@ -24,9 +24,9 @@ import org.eclipse.swt.SWT;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.graphics.ImageData;
 import org.eclipse.swt.graphics.RGB;
+import org.l2x6.eircc.core.model.AbstractIrcChannel;
 import org.l2x6.eircc.core.model.IrcAccount;
 import org.l2x6.eircc.core.model.IrcAccountsStatistics;
-import org.l2x6.eircc.core.model.IrcChannel;
 import org.l2x6.eircc.core.model.IrcChannelUser;
 import org.l2x6.eircc.core.model.IrcLog;
 import org.l2x6.eircc.core.model.IrcModel;
@@ -84,6 +84,7 @@ public class IrcImages {
             return false;
         }
     }
+
     public class ImageImageDescriptor extends ImageDescriptor {
         private Image fImage;
 
@@ -131,12 +132,14 @@ public class IrcImages {
         ACCOUNT("account.gif", IrcAccount.class), //
         ACCOUNT_NEW("account-new.png"), //
         BLUE_BALL_OVERLAY("blue-ball-overlay.png", null, SWT.NONE, "blue-ball-overlay.svg", ImageSize._7x7), //
-        CHANNEL("channel.gif", IrcChannel.class), //
+        CHANNEL("channel.gif", AbstractIrcChannel.class), //
         CONNECT("connect.gif"), //
         DISCONNECT("disconnect.gif"), //
         GREEN_BALL_OVERLAY("green-ball-overlay.png", null, SWT.NONE, "green-ball-overlay.svg", ImageSize._7x7), //
         IRC_CLIENT("eircc.png", IrcModel.class, SWT.NONE, "eircc.svg", ImageSize._16x16), //
         IRC_CLIENT_DISABLED(IRC_CLIENT, SWT.IMAGE_GRAY), //
+        JOIN_CHANNEL("join-channel.gif"), //
+        LEAVE_CHANNEL("leave-channel.gif"), //
         NEW_OVERLAY("new-overlay.png"), //
         REFRESH("refresh.gif"), //
         SMILEY_OVERLAY("smiley-overlay.png", null, SWT.NONE, "smiley-overlay.svg", ImageSize._7x7), //
@@ -160,8 +163,8 @@ public class IrcImages {
         }
 
         private static StringBuilder appendKey(StringBuilder sb, String name, int flags, ImageSize size) {
-            return sb.append("f").append(flags).append("-").append(name).append("-").append(size.getWidth()).append("x")
-                    .append(size.getHeight());
+            return sb.append("f").append(flags).append("-").append(name).append("-").append(size.getWidth())
+                    .append("x").append(size.getHeight());
         }
 
         public static ImageKey fromModelClass(Class<?> cl) {
@@ -258,6 +261,7 @@ public class IrcImages {
         public static final ImageSize _7x8 = new ImageSize(7, 8);
         private final int height;
         private final int width;
+
         /**
          * @param trayIconSize
          */
@@ -265,6 +269,7 @@ public class IrcImages {
             this.width = dimension.width;
             this.height = dimension.height;
         }
+
         /**
          * @param width
          * @param height
@@ -274,6 +279,7 @@ public class IrcImages {
             this.width = width;
             this.height = height;
         }
+
         @Override
         public boolean equals(Object obj) {
             if (this == obj)
@@ -289,9 +295,11 @@ public class IrcImages {
                 return false;
             return true;
         }
+
         public int getHeight() {
             return height;
         }
+
         public int getWidth() {
             return width;
         }
@@ -306,8 +314,15 @@ public class IrcImages {
         }
 
         public ImageSize scaleToSquare(int size) {
-            return new ImageSize(width * size/ImageSize._16x16.getWidth(), height * size/ImageSize._16x16.getHeight()) ;
+            return new ImageSize(width * size / ImageSize._16x16.getWidth(), height * size
+                    / ImageSize._16x16.getHeight());
         }
+
+        @Override
+        public String toString() {
+            return "" + width + "x" + height;
+        }
+
     }
 
     private static final IrcImages INSTANCE = new IrcImages();
@@ -390,8 +405,8 @@ public class IrcImages {
         }
         if (element instanceof IrcAccount) {
             return getImage(getOverlays((IrcAccount) element));
-        } else if (element instanceof IrcChannel) {
-            return getImage(getOverlays((IrcChannel) element));
+        } else if (element instanceof AbstractIrcChannel) {
+            return getImage(getOverlays((AbstractIrcChannel) element));
         } else if (element instanceof IrcModel) {
             return getImage(getOverlays(((IrcModel) element).getAccountsStatistics(), true));
         }
@@ -425,8 +440,12 @@ public class IrcImages {
                     return null;
                 }
                 Image image = fromSvg(url, imageKey.getSize16x16().scaleToSquare(size.getWidth()));
-                imageRegistry.put(key, image);
-                result = imageRegistry.getDescriptor(key);
+                if (imageKey.getFlags() != SWT.NONE) {
+                    result = ImageDescriptor.createWithFlags(new ImageImageDescriptor(image), imageKey.getFlags());
+                } else {
+                    result = new ImageImageDescriptor(image);
+                }
+                imageRegistry.put(key, result);
             }
         }
         return result;
@@ -443,8 +462,8 @@ public class IrcImages {
         ImageKey[] overlays;
         if (element instanceof IrcAccount) {
             overlays = getOverlays((IrcAccount) element);
-        } else if (element instanceof IrcChannel) {
-            overlays = getOverlays((IrcChannel) element);
+        } else if (element instanceof AbstractIrcChannel) {
+            overlays = getOverlays((AbstractIrcChannel) element);
         } else {
             return getImageDescriptor(ImageKey.fromModelClass(element.getClass()), size);
         }
@@ -532,7 +551,7 @@ public class IrcImages {
         }
     }
 
-    private ImageKey[] getOverlays(IrcChannel channel) {
+    private ImageKey[] getOverlays(AbstractIrcChannel channel) {
         boolean hasOverlays = false;
         ImageKey topLeftOverlay = null;
         ImageKey topRightOverlay = null;

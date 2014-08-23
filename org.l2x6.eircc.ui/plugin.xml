@@ -15,7 +15,7 @@
             <description>%NewIrcAccountWizard.desc</description>
         </wizard>
         <category id="org.l2x6.eircc.ui.newWizardCategory"
-            name="%NewIrcAccountWizard.name">
+            name="%NewIrcAccountWizard.category">
         </category>
     </extension>
     <extension
@@ -42,20 +42,6 @@
            <command commandId="org.eclipse.ui.navigate.expandAll"></command>
            <command commandId="org.eclipse.ui.navigate.collapseAll"></command>
         </menuContribution>
-        <menuContribution
-              allPopups="false"
-              locationURI="toolbar:org.eclipse.ui.main.toolbar">
-           <toolbar
-                 id="org.l2x6.eircc.ui.IrcToolbar"
-                 label="%IrcToolbar.label">
-              <command
-                    commandId="org.l2x6.eircc.ui.commands.IrcConnectCommand"
-                    icon="icons/connect.gif"
-                    label="%IrcConnectCommand.name"
-                    style="push">
-              </command>
-           </toolbar>
-        </menuContribution>
     </extension>
     <extension
         point = "org.eclipse.ui.elementFactories">
@@ -63,33 +49,5 @@
            id="org.l2x6.eircc.ui.editor.IrcChannelElementFactory"
            class="org.l2x6.eircc.ui.editor.IrcChannelElementFactory">
         </factory>
-    </extension>
-    <extension
-          point="org.eclipse.ui.commands">
-          <command
-                categoryId="org.l2x6.eircc.ui.IrcCommands"
-                description="%IrcConnectCommand.desc"
-                id="org.l2x6.eircc.ui.commands.IrcConnectCommand"
-                name="%IrcConnectCommand.name">
-          </command>
-          <category
-            name="%IrcCommandCategory.name"
-            description="%IrcCommandCategory.desc"
-            id="org.l2x6.eircc.ui.IrcCommands">
-          </category>
-    </extension>
-    <extension
-          point="org.eclipse.ui.handlers">
-        <handler
-             class="org.l2x6.eircc.ui.commands.IrcConnectHandler"
-             commandId="org.l2x6.eircc.ui.commands.IrcConnectCommand">
-                <enabledWhen>
-                    <with variable="selection">
-                        <iterate ifEmpty="false" operator="or">
-                            <instanceof value="org.l2x6.eircc.core.model.IrcChannel"/>
-                        </iterate>
-                    </with>
-                </enabledWhen>
-        </handler>
     </extension>
 </plugin>

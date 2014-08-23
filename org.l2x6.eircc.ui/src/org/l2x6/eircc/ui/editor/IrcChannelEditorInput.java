@@ -12,8 +12,9 @@ import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.ui.IEditorInput;
 import org.eclipse.ui.IMemento;
 import org.eclipse.ui.IPersistableElement;
-import org.l2x6.eircc.core.model.IrcChannel;
+import org.l2x6.eircc.core.model.AbstractIrcChannel;
 import org.l2x6.eircc.core.model.IrcModel;
+import org.l2x6.eircc.core.model.P2pIrcChannel;
 import org.l2x6.eircc.ui.IrcImages;
 import org.l2x6.eircc.ui.views.IrcLabelProvider;
 
@@ -21,14 +22,14 @@ import org.l2x6.eircc.ui.views.IrcLabelProvider;
  * @author <a href="mailto:ppalaga@redhat.com">Peter Palaga</a>
  */
 public class IrcChannelEditorInput implements IEditorInput, IPersistableElement {
-    public enum IrcChannelEditorInputField {CHANNEL_NAME, ACCOUNT_LABEL};
+    public enum IrcChannelEditorInputField {CHANNEL_NAME, ACCOUNT_LABEL, P2P_USER_ID, P2P_NICK, P2P_USERNAME};
 
-    private final IrcChannel channel;
+    private final AbstractIrcChannel channel;
 
     /**
      * @param channel
      */
-    public IrcChannelEditorInput(IrcChannel channel) {
+    public IrcChannelEditorInput(AbstractIrcChannel channel) {
         super();
         this.channel = channel;
     }
@@ -57,7 +58,7 @@ public class IrcChannelEditorInput implements IEditorInput, IPersistableElement 
         return null;
     }
 
-    public IrcChannel getChannel() {
+    public AbstractIrcChannel getChannel() {
         return channel;
     }
 
@@ -104,7 +105,11 @@ public class IrcChannelEditorInput implements IEditorInput, IPersistableElement 
     @Override
     public void saveState(IMemento memento) {
         memento.putString(IrcChannelEditorInputField.ACCOUNT_LABEL.name(), channel.getAccount().getLabel());
-        memento.putString(IrcChannelEditorInputField.CHANNEL_NAME.name(), channel.getName());
+        if (channel.isP2p()) {
+            memento.putString(IrcChannelEditorInputField.P2P_USER_ID.name(), ((P2pIrcChannel) channel).getP2pUser().getId().toString());
+        } else {
+            memento.putString(IrcChannelEditorInputField.CHANNEL_NAME.name(), channel.getName());
+        }
     }
 
     /**

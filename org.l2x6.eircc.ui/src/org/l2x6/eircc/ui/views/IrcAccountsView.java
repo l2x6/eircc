@@ -8,12 +8,13 @@
 
 package org.l2x6.eircc.ui.views;
 
-import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
 import org.eclipse.jface.action.IStatusLineManager;
 import org.eclipse.jface.action.IToolBarManager;
+import org.eclipse.jface.action.MenuManager;
 import org.eclipse.jface.action.Separator;
 import org.eclipse.jface.action.ToolBarManager;
 import org.eclipse.jface.viewers.ISelection;
@@ -33,6 +34,7 @@ import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Event;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Listener;
+import org.eclipse.swt.widgets.Menu;
 import org.eclipse.swt.widgets.ToolBar;
 import org.eclipse.swt.widgets.Tree;
 import org.eclipse.swt.widgets.TreeItem;
@@ -44,8 +46,8 @@ import org.eclipse.ui.part.PageBook;
 import org.eclipse.ui.part.ViewPart;
 import org.l2x6.eircc.core.IrcController;
 import org.l2x6.eircc.core.IrcException;
+import org.l2x6.eircc.core.model.AbstractIrcChannel;
 import org.l2x6.eircc.core.model.IrcAccount;
-import org.l2x6.eircc.core.model.IrcChannel;
 import org.l2x6.eircc.core.model.IrcModel;
 import org.l2x6.eircc.core.model.event.IrcModelEvent;
 import org.l2x6.eircc.core.model.event.IrcModelEventListener;
@@ -53,14 +55,12 @@ import org.l2x6.eircc.ui.ContextMenuConstants;
 import org.l2x6.eircc.ui.EirccUi;
 import org.l2x6.eircc.ui.IrcUiMessages;
 import org.l2x6.eircc.ui.actions.AddIrcAccountAction;
-import org.l2x6.eircc.ui.actions.JoinIrcChannelAction;
-import org.l2x6.eircc.ui.actions.LeaveIrcChannelAction;
-import org.l2x6.eircc.ui.actions.ListIrcChannelsAction;
+import org.l2x6.eircc.ui.actions.IrcTreeAction;
 
 /**
  * @author <a href="mailto:ppalaga@redhat.com">Peter Palaga</a>
  */
-public class IrcAccountsView extends ViewPart implements IrcModelEventListener, ISelectionProvider {
+public class IrcAccountsView extends ViewPart implements IrcModelEventListener {
     public static final String ID = "org.l2x6.eircc.ui.views.IrcAccountsView";
     private SashForm accountsDetailsSplitter;
     private Listener accountsTreeSelectionListener;
@@ -68,11 +68,41 @@ public class IrcAccountsView extends ViewPart implements IrcModelEventListener, 
     private AddIrcAccountAction addIrcAccountAction;
 
     private CollapseAllHandler collapseAllAccounts;
+    private IrcTreeAction<?> connectAccountAction;
+
+    private IrcTreeAction<?> disconnectAccountAction;
+
     private Label emptyLabel;
 
     private ExpandAllHandler expandAllAccounts;
-
     private ISelectionProvider focusedTreeViewer;
+    private IrcTreeAction<?> joinAccountChannelAction;
+    private IrcTreeAction<?> joinServerChannelAction;
+    private IrcTreeAction<?> leaveAccountChannelAction;
+    private IrcTreeAction<?> leaveServerChannelAction;
+    private IrcTreeAction<?> listChannelsAction;
+    private IrcTreeAction<?>[] treeActions;
+    private List<ISelectionChangedListener> listeners = Collections.emptyList();
+    private PageBook pagebook;
+    private CLabel serverChannelsLabel;
+    private TreeViewer serverChannelsTreeViewer;
+    // TODO private TreeViewer serverUsersTreeViewer;
+    private ViewForm serverChannelsViewForm;
+
+    private MouseListener treeMouseListener;
+
+    private FocusListener treesFocusListener = new FocusListener() {
+        public void focusGained(FocusEvent event) {
+            if (accountsTreeViewer.getTree() == event.getSource()) {
+                focusedTreeViewer = accountsTreeViewer;
+            } else if (serverChannelsTreeViewer.getTree() == event.getSource()) {
+                focusedTreeViewer = serverChannelsTreeViewer;
+            }
+        }
+
+        public void focusLost(FocusEvent event) {
+        }
+    };
 
     private ISelectionChangedListener treesSelectionListener = new ISelectionChangedListener() {
 
@@ -91,41 +121,6 @@ public class IrcAccountsView extends ViewPart implements IrcModelEventListener, 
             }
         }
     };
-    private FocusListener treesFocusListener = new FocusListener() {
-        public void focusGained(FocusEvent event) {
-            if (accountsTreeViewer.getTree() == event.getSource()) {
-                focusedTreeViewer = accountsTreeViewer;
-            } else if (serverChannelsTreeViewer.getTree() == event.getSource()) {
-                focusedTreeViewer = serverChannelsTreeViewer;
-            }
-        }
-
-        public void focusLost(FocusEvent event) {
-        }
-    };
-    private JoinIrcChannelAction joinIrcChannelAction;
-    private LeaveIrcChannelAction leaveIrcChannelAction;
-    private ListIrcChannelsAction listChannelsAction;
-    private List<ISelectionChangedListener> listeners = Collections.emptyList();
-    private PageBook pagebook;
-    private CLabel serverChannelsLabel;
-
-    private TreeViewer serverChannelsTreeViewer;
-
-    // TODO private TreeViewer serverUsersTreeViewer;
-    private ViewForm serverChannelsViewForm;
-
-    private MouseListener treeMouseListener;
-
-    /**
-     * @see org.eclipse.jface.viewers.ISelectionProvider#addSelectionChangedListener(org.eclipse.jface.viewers.ISelectionChangedListener)
-     */
-    @Override
-    public void addSelectionChangedListener(ISelectionChangedListener listener) {
-        List<ISelectionChangedListener> newListeners = new ArrayList<ISelectionChangedListener>(listeners);
-        newListeners.add(listener);
-        this.listeners = newListeners;
-    }
 
     @Override
     public void createPartControl(Composite container) {
@@ -181,29 +176,66 @@ public class IrcAccountsView extends ViewPart implements IrcModelEventListener, 
         accountsTree.addMouseListener(getTreeMouseListener());
         accountsTree.addFocusListener(treesFocusListener);
         addIrcAccountAction = new AddIrcAccountAction();
-        listChannelsAction = new ListIrcChannelsAction(accountsTree);
+        listChannelsAction = IrcTreeAction.createListChannelsAction(accountsTree);
+        connectAccountAction = IrcTreeAction.createConnectAccountAction(accountsTree);
+        disconnectAccountAction = IrcTreeAction.createDisonnectAccountAction(accountsTree);
+        joinAccountChannelAction = IrcTreeAction.createJoinChannelAction(accountsTree);
+        leaveAccountChannelAction = IrcTreeAction.createLeaveChannelAction(accountsTree);
 
         IViewSite site = getViewSite();
-        site.setSelectionProvider(this);
-        IToolBarManager tbm = site.getActionBars().getToolBarManager();
-        tbm.add(new Separator(ContextMenuConstants.GROUP_IRC_ACCOUNTS));
-        tbm.appendToGroup(ContextMenuConstants.GROUP_IRC_ACCOUNTS, addIrcAccountAction);
+        IToolBarManager accountsTbm = site.getActionBars().getToolBarManager();
+        accountsTbm.add(new Separator(ContextMenuConstants.GROUP_IRC_ACCOUNTS));
+        accountsTbm.appendToGroup(ContextMenuConstants.GROUP_IRC_ACCOUNTS, addIrcAccountAction);
+        accountsTbm.appendToGroup(ContextMenuConstants.GROUP_IRC_ACCOUNTS, connectAccountAction);
+        accountsTbm.appendToGroup(ContextMenuConstants.GROUP_IRC_ACCOUNTS, disconnectAccountAction);
+        accountsTbm.appendToGroup(ContextMenuConstants.GROUP_IRC_ACCOUNTS, joinAccountChannelAction);
+        accountsTbm.appendToGroup(ContextMenuConstants.GROUP_IRC_ACCOUNTS, leaveAccountChannelAction);
         site.getActionBars().updateActionBars();
+
+        /* accounts tree context menu */
+        MenuManager accountsMenuManager = new MenuManager("#PopupMenu");
+        Menu accountsMenu = accountsMenuManager.createContextMenu(accountsTree);
+        accountsMenuManager.add(addIrcAccountAction);
+        accountsMenuManager.add(listChannelsAction);
+        accountsMenuManager.add(connectAccountAction);
+        accountsMenuManager.add(disconnectAccountAction);
+        accountsMenuManager.add(joinAccountChannelAction);
+        accountsMenuManager.add(leaveAccountChannelAction);
+        accountsTree.setMenu(accountsMenu);
+        site.registerContextMenu(accountsMenuManager, accountsTreeViewer);
 
         /* server channels related actions */
         Tree serverChannelsTree = serverChannelsTreeViewer.getTree();
         serverChannelsTree.addMouseListener(getTreeMouseListener());
         serverChannelsTree.addFocusListener(treesFocusListener);
 
-        joinIrcChannelAction = new JoinIrcChannelAction(serverChannelsTree);
-        leaveIrcChannelAction = new LeaveIrcChannelAction(serverChannelsTree);
+        joinServerChannelAction = IrcTreeAction.createJoinChannelAction(serverChannelsTree);
+        leaveServerChannelAction = IrcTreeAction.createLeaveChannelAction(serverChannelsTree);
+        treeActions = new IrcTreeAction[] {
+                listChannelsAction,
+                connectAccountAction,
+                disconnectAccountAction,
+                joinAccountChannelAction,
+                leaveAccountChannelAction,
+                joinServerChannelAction,
+                leaveServerChannelAction
+        };
 
         ToolBarManager serverChannelsTbm = new ToolBarManager(serverChannelsToolbar);
         serverChannelsTbm.add(new Separator(ContextMenuConstants.GROUP_IRC_SERVER_CHANNELS));
         serverChannelsTbm.appendToGroup(ContextMenuConstants.GROUP_IRC_SERVER_CHANNELS, listChannelsAction);
-        serverChannelsTbm.appendToGroup(ContextMenuConstants.GROUP_IRC_SERVER_CHANNELS, joinIrcChannelAction);
-        serverChannelsTbm.appendToGroup(ContextMenuConstants.GROUP_IRC_SERVER_CHANNELS, leaveIrcChannelAction);
+        serverChannelsTbm.appendToGroup(ContextMenuConstants.GROUP_IRC_SERVER_CHANNELS, joinServerChannelAction);
+        serverChannelsTbm.appendToGroup(ContextMenuConstants.GROUP_IRC_SERVER_CHANNELS, leaveServerChannelAction);
         serverChannelsTbm.update(false);
+
+        /* server channels context menu */
+        MenuManager serverChannelsMenuManager = new MenuManager("#PopupMenu");
+        Menu serverChannelsMenu = serverChannelsMenuManager.createContextMenu(accountsTree);
+        serverChannelsMenuManager.add(listChannelsAction);
+        serverChannelsMenuManager.add(joinServerChannelAction);
+        serverChannelsMenuManager.add(leaveServerChannelAction);
+        serverChannelsTree.setMenu(serverChannelsMenu);
+        site.registerContextMenu(serverChannelsMenuManager, serverChannelsTreeViewer);
 
         if (site != null) {
             IHandlerService handlerService = (IHandlerService) site.getService(IHandlerService.class);
@@ -235,9 +267,9 @@ public class IrcAccountsView extends ViewPart implements IrcModelEventListener, 
             serverChannelsTree.removeFocusListener(treesFocusListener);
         }
         IrcModel.getInstance().removeModelEventListener(this);
-        listChannelsAction.dispose();
-        joinIrcChannelAction.dispose();
-        leaveIrcChannelAction.dispose();
+
+        Arrays.stream(treeActions).forEach(action -> action.dispose());
+
         super.dispose();
     }
 
@@ -266,7 +298,6 @@ public class IrcAccountsView extends ViewPart implements IrcModelEventListener, 
     /**
      * @see org.eclipse.jface.viewers.ISelectionProvider#getSelection()
      */
-    @Override
     public ISelection getSelection() {
         if (focusedTreeViewer != null) {
             return focusedTreeViewer.getSelection();
@@ -283,8 +314,8 @@ public class IrcAccountsView extends ViewPart implements IrcModelEventListener, 
                         if (e.widget instanceof Tree) {
                             Tree tree = (Tree) e.widget;
                             TreeItem[] selection = tree.getSelection();
-                            if (selection.length == 1 && selection[0].getData() instanceof IrcChannel) {
-                                IrcChannel ch = (IrcChannel) selection[0].getData();
+                            if (selection.length == 1 && selection[0].getData() instanceof AbstractIrcChannel) {
+                                AbstractIrcChannel ch = (AbstractIrcChannel) selection[0].getData();
                                 if (!ch.isJoined()) {
                                     /* this should both join and open the editor */
                                     IrcController.getInstance().joinChannel(ch);
@@ -348,12 +379,13 @@ public class IrcAccountsView extends ViewPart implements IrcModelEventListener, 
                 statusLineManager.setMessage("");
                 break;
             }
+            Arrays.stream(treeActions).forEach(action -> action.updateEnablement());
+
             break;
         case CHANNEL_JOINED_CHANGED:
             accountsTreeViewer.refresh();
             serverChannelsTreeViewer.refresh();
-            joinIrcChannelAction.updateEnablement();
-            leaveIrcChannelAction.updateEnablement();
+            Arrays.stream(treeActions).forEach(action -> action.updateEnablement());
             break;
         case SERVER_CHANNEL_ADDED:
         case SERVER_CHANNELS_ADDED:
@@ -371,16 +403,6 @@ public class IrcAccountsView extends ViewPart implements IrcModelEventListener, 
         }
     }
 
-    /**
-     * @see org.eclipse.jface.viewers.ISelectionProvider#removeSelectionChangedListener(org.eclipse.jface.viewers.ISelectionChangedListener)
-     */
-    @Override
-    public void removeSelectionChangedListener(ISelectionChangedListener listener) {
-        List<ISelectionChangedListener> newListeners = new ArrayList<ISelectionChangedListener>(listeners);
-        newListeners.add(listener);
-        this.listeners = newListeners;
-    }
-
     private void setEmptyLabelVisible(boolean visible) {
         if (visible) {
             pagebook.showPage(emptyLabel);
@@ -392,16 +414,6 @@ public class IrcAccountsView extends ViewPart implements IrcModelEventListener, 
     @Override
     public void setFocus() {
         accountsTreeViewer.getTree().setFocus();
-    }
-
-    /**
-     * @see org.eclipse.jface.viewers.ISelectionProvider#setSelection(org.eclipse.jface.viewers.ISelection)
-     */
-    @Override
-    public void setSelection(ISelection selection) {
-        if (focusedTreeViewer != null) {
-            focusedTreeViewer.setSelection(selection);
-        }
     }
 
 }

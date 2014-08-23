@@ -36,12 +36,16 @@ public class IrcUiMessages extends NLS {
     public static String Channel_Disconnected;
     public static String Channel_You_have_unseen_messages;
 
+    public static String ConnectIrcChannelAction_label;
+
     public static String Console_Account_Log;
 
+    public static String DisconnectIrcChannelAction_label;
     public static String Eclipse_IRC_Client;
 
     public static String Error_Input_in_field_x_required;
     public static String IrcAccountsView_serverChannelsLabel_text;
+    public static String IrcChannelOutlinePage_Open_Private_Chat;
     public static String IrcServersView_empty;
     public static String JoinIrcChannelAction_label;
     public static String ListChannelsAction_label;
@@ -55,6 +59,7 @@ public class IrcUiMessages extends NLS {
     public static String Message_You_joined_as_nick;
     public static String Message_You_left;
     public static String Message_You_are_known_as_x;
+
 
 
     static {

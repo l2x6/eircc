@@ -7,6 +7,8 @@ This file summarizes where the icons in this folder come from. All original iamg
 |channel.gif|https://github.com/eclipse/tcf/blob/master/target_explorer/plugins/org.eclipse.tcf.te.tcf.filesystem.ui/icons/obj16/folder.gif
 |connect.gif|https://github.com/eclipse/tcf/blob/master/target_explorer/plugins/org.eclipse.tcf.te.ui/icons/elcl16/connect.gif
 |disconnect.gif|https://github.com/eclipse/tcf/blob/master/target_explorer/plugins/org.eclipse.tcf.te.ui/icons/elcl16/disconnect.gif
+|join-channel.gif|http://code.google.com/p/eclipse-svg-icons/source/browse/src/main/resources/eclipse.platform.debug/org.eclipse.debug.ui/full/elcl16/stepinto_co.gif
+|leave-channel.gif|http://code.google.com/p/eclipse-svg-icons/source/browse/src/main/resources/eclipse.platform.debug/org.eclipse.debug.ui/full/elcl16/stepreturn_co.gif
 |new-overleay.png    | extracted from https://github.com/eclipse/tcf/blob/master/target_explorer/plugins/org.eclipse.tcf.te.tcf.filesystem.ui/icons/obj16/newfolder_wiz.gif and adjusted
 |refresh.gif|https://github.com/eclipse/eclipse.jdt.ui/blob/master/org.eclipse.jdt.astview/icons/c/refresh.gif
 |eircc.png  | by ppalaga, see icons-src/eircc.svg, with elements comming from http://code.google.com/p/eclipse-svg-icons/

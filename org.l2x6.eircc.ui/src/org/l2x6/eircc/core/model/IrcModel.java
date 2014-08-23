@@ -141,7 +141,7 @@ public class IrcModel extends IrcObject {
             default:
                 break;
             }
-            for (IrcChannel channel : account.getChannels()) {
+            for (AbstractIrcChannel channel : account.getChannels()) {
                 IrcLog log = channel.getLog();
                 if (log != null) {
                     switch (log.getState()) {

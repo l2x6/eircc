@@ -10,6 +10,7 @@ package org.l2x6.eircc.ui.views;
 
 import org.eclipse.jface.viewers.ITreeContentProvider;
 import org.eclipse.jface.viewers.Viewer;
+import org.l2x6.eircc.core.model.AbstractIrcChannel;
 import org.l2x6.eircc.core.model.IrcAccount;
 import org.l2x6.eircc.core.model.IrcChannel;
 import org.l2x6.eircc.core.model.IrcModel;
@@ -61,7 +62,7 @@ public class IrcAccountsTreeContentProvider implements ITreeContentProvider {
     @Override
     public Object getParent(Object element) {
         if (element instanceof IrcChannel) {
-            return ((IrcChannel) element).getAccount();
+            return ((AbstractIrcChannel) element).getAccount();
         }
         return null;
     }

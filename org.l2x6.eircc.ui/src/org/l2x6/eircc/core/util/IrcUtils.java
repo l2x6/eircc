@@ -28,9 +28,15 @@ public class IrcUtils {
 
     private static final SimpleDateFormat TIME_FORMAT = new SimpleDateFormat("HH:mm:ss");
 
+    private static final ThreadLocal<Boolean> isShutdownThread = new ThreadLocal<Boolean>();
+
+    public static void markShutDownThread() {
+        isShutdownThread.set(Boolean.TRUE);
+    }
+
     public static void assertUiThread() {
-        if (Display.getCurrent() == null) {
-            throw new IllegalStateException("Cannot call this method from a thread other then the SWT UI thread.");
+        if (Display.getCurrent() == null && !Boolean.TRUE.equals(isShutdownThread.get()) ) {
+            throw new IllegalStateException("Cannot call this method from a thread other then the SWT UI thread or shutdown thread");
         }
     }
 

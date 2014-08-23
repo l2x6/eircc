@@ -9,7 +9,6 @@
 package org.l2x6.eircc.core;
 
 import java.io.IOException;
-import java.text.MessageFormat;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -17,17 +16,14 @@ import java.util.Map;
 import java.util.UUID;
 
 import org.l2x6.eircc.core.client.IrcClient;
+import org.l2x6.eircc.core.model.AbstractIrcChannel;
 import org.l2x6.eircc.core.model.IrcAccount;
 import org.l2x6.eircc.core.model.IrcAccount.IrcAccountState;
 import org.l2x6.eircc.core.model.IrcChannel;
-import org.l2x6.eircc.core.model.IrcLog;
-import org.l2x6.eircc.core.model.IrcMessage;
 import org.l2x6.eircc.core.model.IrcServer;
 import org.l2x6.eircc.core.model.IrcUser;
 import org.l2x6.eircc.core.util.IrcUtils;
-import org.l2x6.eircc.ui.IrcUiMessages;
 import org.schwering.irc.lib.IRCCommand;
-import org.schwering.irc.lib.IRCUser;
 
 /**
  * @author <a href="mailto:ppalaga@redhat.com">Peter Palaga</a>
@@ -62,14 +58,10 @@ public class IrcController {
         quitAll();
     }
 
-    public IrcChannel getAccountChannel(IrcAccount ircAccount, String channelName) {
+    public AbstractIrcChannel getAccountChannel(IrcAccount ircAccount, String channelName) {
         IrcUtils.assertUiThread();
-        IrcChannel result = ircAccount.findChannel(channelName);
-        if (result == null) {
-            result = ircAccount.createChannel(channelName);
-        }
+        AbstractIrcChannel result = ircAccount.findChannel(channelName);
         return result;
-
     }
 
     /**
@@ -95,21 +87,28 @@ public class IrcController {
         return client;
     }
 
-    public IrcChannel getOrCreateAccountChannel(IrcAccount ircAccount, String channelName) {
-        return getOrCreateAccountChannel(ircAccount, channelName, null);
-    }
-
-    public IrcChannel getOrCreateAccountChannel(IrcAccount ircAccount, String channelName, IRCUser p2pUser) {
+    public AbstractIrcChannel getOrCreateAccountChannel(IrcAccount ircAccount, String channelName) {
         IrcUtils.assertUiThread();
-        IrcChannel result = ircAccount.findChannel(channelName);
+        AbstractIrcChannel result = ircAccount.findChannel(channelName);
         if (result == null) {
             result = ircAccount.createChannel(channelName);
-            if (p2pUser != null) {
-                IrcUser p2p = getOrCreateUser(ircAccount.getServer(), p2pUser.getNick(), p2pUser.getUsername());
-                result.setP2pUser(p2p);
-            }
         }
-        ircAccount.ensureChannelKept(result);
+        ircAccount.ensureChannelListed(result);
+        return result;
+    }
+
+    /**
+     * @param user
+     * @return
+     */
+    public AbstractIrcChannel getOrCreateP2pChannel(IrcUser p2pUser) {
+        IrcUtils.assertUiThread();
+        IrcAccount account = p2pUser.getServer().getAccount();
+        AbstractIrcChannel result = account.findP2pChannel(p2pUser);
+        if (result == null) {
+            result = account.createP2pChannel(p2pUser);
+        }
+        account.ensureChannelListed(result);
         return result;
     }
 
@@ -127,10 +126,20 @@ public class IrcController {
      * @param channel
      * @throws IOException
      */
-    public void joinChannel(IrcChannel channel) throws IrcException {
+    public void joinChannel(AbstractIrcChannel channel) throws IrcException {
         IrcUtils.assertUiThread();
         if (!channel.isJoined()) {
-            getClientOrConnect(channel.getAccount()).joinChannel(channel);
+            IrcClient client = getClientOrConnect(channel.getAccount());
+            if (!channel.isP2p()) {
+                client.joinChannel(channel);
+            } else {
+                /*
+                 * there is no need to join p2p channels via client let us set
+                 * it joined manually now after we have successfully called
+                 * getClientOrConnect()
+                 */
+                channel.setJoined(true);
+            }
         }
     }
 
@@ -147,7 +156,7 @@ public class IrcController {
      * @param channel
      * @throws IOException
      */
-    public void partChannel(IrcChannel channel) throws IrcException {
+    public void partChannel(AbstractIrcChannel channel) throws IrcException {
         IrcUtils.assertUiThread();
         if (channel.isJoined()) {
             getClientOrConnect(channel.getAccount()).partChannel(channel);
@@ -159,7 +168,7 @@ public class IrcController {
      * @param text
      * @throws IOException
      */
-    public void postMessage(IrcChannel channel, String text) throws IrcException {
+    public void postMessage(AbstractIrcChannel channel, String text) throws IrcException {
         IrcUtils.assertUiThread();
         IrcClient client = getClientOrConnect(channel.getAccount());
 
@@ -174,7 +183,7 @@ public class IrcController {
     public void quit(IrcAccount ircAccount) {
         IrcUtils.assertUiThread();
         IrcClient client = clients.remove(ircAccount.getId());
-        if (client != null && !client.isConnected()) {
+        if (client != null && client.isConnected()) {
             client.quitAndClose();
         }
     }
@@ -198,6 +207,21 @@ public class IrcController {
         //TODO nicks resolving
         //getClientOrConnect(server.getAccount()).whois(nicks);
     }
+    /**
+     * @param channel
+     * @param nick
+     */
+    public void userLeft(AbstractIrcChannel channel, String nick, String msg) {
+        IrcUtils.assertUiThread();
+        if (nick.equals(channel.getAccount().getAcceptedNick())) {
+            /* It is me who left */
+            channel.setJoined(false);
+        } else {
+            if (channel.isPresent(nick)) {
+                channel.removeNick(nick, msg);
+            }
+        }
+    }
 
     public void userQuit(IrcAccount account, String nick, String msg) {
         IrcUtils.assertUiThread();
@@ -205,38 +229,10 @@ public class IrcController {
             account.setState(IrcAccountState.OFFLINE);
         } else {
             /* someone else has quit */
-            for (IrcChannel channel : account.getChannels()) {
+            for (AbstractIrcChannel channel : account.getChannels()) {
                 if (channel.isJoined()) {
                     userLeft(channel, nick, msg);
                 }
-            }
-        }
-    }
-    /**
-     * @param channel
-     * @param nick
-     */
-    public void userLeft(IrcChannel channel, String nick, String msg) {
-        IrcUtils.assertUiThread();
-        if (nick.equals(channel.getAccount().getAcceptedNick())) {
-            /* It is me who left */
-            channel.setJoined(false);
-            String text = IrcUiMessages.Message_You_left;
-            IrcLog log = channel.getLog();
-            IrcMessage m = new IrcMessage(log, System.currentTimeMillis(), text);
-            log.appendMessage(m);
-        } else {
-            if (channel.isPresent(nick)) {
-                channel.removeNick(nick);
-                String text;
-                if (msg != null && msg.length() > 0) {
-                    text = MessageFormat.format(IrcUiMessages.Message_x_left_with_message, nick, msg);
-                } else {
-                    text = MessageFormat.format(IrcUiMessages.Message_x_left, nick);
-                }
-                IrcLog log = channel.getLog();
-                IrcMessage m = new IrcMessage(log, System.currentTimeMillis(), text);
-                log.appendMessage(m);
             }
         }
     }

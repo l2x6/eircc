@@ -24,7 +24,7 @@ import org.eclipse.ui.PartInitException;
 import org.eclipse.ui.part.EditorPart;
 import org.eclipse.ui.views.contentoutline.IContentOutlinePage;
 import org.l2x6.eircc.core.IrcController;
-import org.l2x6.eircc.core.model.IrcChannel;
+import org.l2x6.eircc.core.model.AbstractIrcChannel;
 import org.l2x6.eircc.core.model.IrcLog;
 import org.l2x6.eircc.core.model.IrcMessage;
 import org.l2x6.eircc.core.model.IrcModel;
@@ -42,7 +42,7 @@ public class IrcChannelEditor extends EditorPart implements IrcModelEventListene
 
     public static final String ID = "org.l2x6.eircc.ui.editor.IrcChannelEditor";
     private SashForm accountsDetailsSplitter;
-    private IrcChannel channel;
+    private AbstractIrcChannel channel;
     private StyledText historyWidget;
     private StyledText inputWidget;
 
@@ -229,7 +229,7 @@ public class IrcChannelEditor extends EditorPart implements IrcModelEventListene
         IrcUtils.assertUiThread();
         switch (e.getEventType()) {
         case CHANNEL_JOINED_CHANGED:
-            IrcChannel ch = (IrcChannel) e.getModelObject();
+            AbstractIrcChannel ch = (AbstractIrcChannel) e.getModelObject();
             if (ch == channel) {
                 updateTitle();
             }
@@ -278,7 +278,7 @@ public class IrcChannelEditor extends EditorPart implements IrcModelEventListene
     private boolean isBeingRead() {
         Shell myShell = getEditorSite().getShell();
         boolean windowActive = myShell.getDisplay().getActiveShell() == myShell;
-        return windowActive && historyWidget.isVisible();
+        return windowActive && historyWidget != null && historyWidget.isVisible();
     }
 
     /**
@@ -309,12 +309,15 @@ public class IrcChannelEditor extends EditorPart implements IrcModelEventListene
      *
      */
     public void updateReadMessages() {
-        if (channel != null && channel.getLog() != null) {
-            if (isBeingRead()) {
-                channel.getLog().allRead();
-            } else {
-                /* let us update the channel state */
-                channel.getLog().updateState();
+        if (channel != null) {
+            IrcLog log = channel.getLog();
+            if (log != null) {
+                if (isBeingRead()) {
+                    log.allRead();
+                } else {
+                    /* let us update the channel state */
+                    log.updateState();
+                }
             }
             updateTitle();
         }

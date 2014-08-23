@@ -10,7 +10,6 @@ package org.l2x6.eircc.core.client;
 
 import java.io.IOException;
 import java.security.cert.X509Certificate;
-import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -25,6 +24,7 @@ import java.util.concurrent.TimeUnit;
 import org.eclipse.swt.widgets.Display;
 import org.l2x6.eircc.core.IrcController;
 import org.l2x6.eircc.core.IrcException;
+import org.l2x6.eircc.core.model.AbstractIrcChannel;
 import org.l2x6.eircc.core.model.IrcAccount;
 import org.l2x6.eircc.core.model.IrcAccount.IrcAccountState;
 import org.l2x6.eircc.core.model.IrcChannel;
@@ -34,7 +34,7 @@ import org.l2x6.eircc.core.model.IrcServer;
 import org.l2x6.eircc.core.model.IrcUser;
 import org.l2x6.eircc.core.util.IrcUtils;
 import org.l2x6.eircc.ui.EirccUi;
-import org.l2x6.eircc.ui.IrcUiMessages;
+import org.schwering.irc.lib.IRCCommand;
 import org.schwering.irc.lib.IRCConnection;
 import org.schwering.irc.lib.IRCEventListener;
 import org.schwering.irc.lib.IRCModeParser;
@@ -159,7 +159,7 @@ public class IrcClient {
                 @Override
                 public void run() {
                     IrcController controller = IrcController.getInstance();
-                    IrcChannel channel = controller.getOrCreateAccountChannel(account, channelName);
+                    AbstractIrcChannel channel = controller.getOrCreateAccountChannel(account, channelName);
                     IrcServer server = account.getServer();
                     StringTokenizer st = new StringTokenizer(msg, " ");
                     List<String> unseenNicks = new ArrayList<String>();
@@ -243,23 +243,17 @@ public class IrcClient {
             Display.getDefault().asyncExec(new Runnable() {
                 @Override
                 public void run() {
-                    IrcChannel channel = IrcController.getInstance().getOrCreateAccountChannel(account, chan);
-                    String text = null;
+                    AbstractIrcChannel channel = IrcController.getInstance().getOrCreateAccountChannel(account, chan);
                     String nick = user.getNick();
                     if (nick.equals(account.getAcceptedNick())) {
                         /* It is me who joined */
                         channel.setJoined(true);
-                        text = MessageFormat.format(IrcUiMessages.Message_You_joined_as_nick, nick);
                     } else {
                         IrcController controller = IrcController.getInstance();
                         /* make sure the user info is stored in server */
                         controller.getOrCreateUser(account.getServer(), nick, user.getUsername());
                         channel.addNick(nick);
-                        text = MessageFormat.format(IrcUiMessages.Message_x_joined, nick);
                     }
-                    IrcLog log = channel.getLog();
-                    IrcMessage m = new IrcMessage(log, System.currentTimeMillis(), text);
-                    log.appendMessage(m);
                 }
             });
         }
@@ -325,7 +319,7 @@ public class IrcClient {
             Display.getDefault().asyncExec(new Runnable() {
                 @Override
                 public void run() {
-                    IrcChannel channel = IrcController.getInstance().getAccountChannel(account, chan);
+                    AbstractIrcChannel channel = IrcController.getInstance().getAccountChannel(account, chan);
                     if (channel != null) {
                         IrcController.getInstance().userLeft(channel, user.getNick(), msg);
                     }
@@ -353,8 +347,14 @@ public class IrcClient {
                 @Override
                 public void run() {
                     IrcController controller = IrcController.getInstance();
-                    IrcChannel channel = controller
-                            .getOrCreateAccountChannel(account, channelName, isP2p ? user : null);
+                    AbstractIrcChannel channel;
+                    if (!isP2p) {
+                        channel = controller
+                                .getOrCreateAccountChannel(account, channelName);
+                    } else {
+                        IrcUser p2pUser = controller.getOrCreateUser(account.getServer(), user.getNick(), user.getUsername());
+                        channel = controller.getOrCreateP2pChannel(p2pUser);
+                    }
                     channel.setJoined(true);
                     IrcLog log = channel.getLog();
                     IrcUser ircUser = controller.getOrCreateUser(account.getServer(), user.getNick(),
@@ -540,7 +540,7 @@ public class IrcClient {
      * @param channel
      * @throws IOException
      */
-    public void joinChannel(final IrcChannel channel) throws IrcException {
+    public void joinChannel(final AbstractIrcChannel channel) throws IrcException {
         IrcUtils.assertUiThread();
         ensureConnected();
         executor.submit(new Runnable() {
@@ -565,7 +565,7 @@ public class IrcClient {
     /**
      * @param channel
      */
-    public void partChannel(final IrcChannel channel) {
+    public void partChannel(final AbstractIrcChannel channel) {
         IrcUtils.assertUiThread();
         if (isConnected()) {
             executor.submit(new Runnable() {
@@ -583,14 +583,13 @@ public class IrcClient {
      * @throws IOException
      *
      */
-    public void postMessage(final IrcChannel channel, final String message) throws IrcException {
+    public void postMessage(final AbstractIrcChannel channel, final String message) throws IrcException {
         IrcUtils.assertUiThread();
         ensureConnected();
         executor.submit(new Runnable() {
             @Override
             public void run() {
                 connection.doPrivmsg(channel.getName(), message);
-
                 /*
                  * post back to model only after the above has not thrown an
                  * exception

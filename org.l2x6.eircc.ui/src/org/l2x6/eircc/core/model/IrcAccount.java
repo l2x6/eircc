@@ -12,9 +12,9 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
-import java.util.Collection;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
-import java.util.TreeMap;
 import java.util.UUID;
 
 import org.l2x6.eircc.core.IrcException;
@@ -33,7 +33,7 @@ public class IrcAccount extends IrcObject {
             public Object fromString(String value) {
                 return Boolean.valueOf(value);
             }
-        },//
+        }, //
         createdOn(IrcUiMessages.Account_Created_on) {
             @Override
             public Object fromString(String value) {
@@ -60,6 +60,7 @@ public class IrcAccount extends IrcObject {
         username(IrcUiMessages.Account_Username)//
         ;//
         private final String label_;
+
         /**
          * @param label_
          */
@@ -70,6 +71,7 @@ public class IrcAccount extends IrcObject {
         public Object fromString(String value) {
             return value;
         }
+
         public String getLabel() {
             return label_;
         }
@@ -84,13 +86,13 @@ public class IrcAccount extends IrcObject {
     private boolean autoConnect = false;
 
     /** Kept or joined channels */
-    private final Map<String, IrcChannel> channels = new TreeMap<String, IrcChannel>();
+    private final List<AbstractIrcChannel> channels = new ArrayList<AbstractIrcChannel>();
     private long createdOn;
 
     private String host;
     protected final UUID id;
 
-    private IrcChannel[] keptChannelsArray;
+    private AbstractIrcChannel[] keptChannelsArray;
     private String label;
     private IrcException lastException;
     private IrcUser me;
@@ -109,6 +111,7 @@ public class IrcAccount extends IrcObject {
     public IrcAccount(IrcModel model, UUID id, String label) {
         this(model, id, label, -1);
     }
+
     /**
      * @param model
      * @param label
@@ -122,17 +125,17 @@ public class IrcAccount extends IrcObject {
         this.server = new IrcServer(this);
     }
 
-    public void addChannel(IrcChannel channel) {
+    public void addChannel(AbstractIrcChannel channel) {
         if (channel.getAccount() != this) {
             throw new IllegalArgumentException("Cannot add channel with parent distinct from this "
                     + this.getClass().getSimpleName());
         }
         String channelName = channel.getName();
-        if (channels.get(channelName) != null) {
+        if (findOwnChannel(channelName) != null) {
             throw new IllegalArgumentException("Channel with name '" + channelName
                     + "' already available under account '" + this.label + "'");
         }
-        channels.put(channelName, channel);
+        channels.add(channel);
         keptChannelsArray = null;
         model.fire(new IrcModelEvent(EventType.KEPT_CHANNEL_ADDED, channel));
     }
@@ -140,12 +143,17 @@ public class IrcAccount extends IrcObject {
     public IrcChannel createChannel(String name) {
         return new IrcChannel(this, name);
     }
+
+    public P2pIrcChannel createP2pChannel(IrcUser p2pUser) {
+        return new P2pIrcChannel(p2pUser);
+    }
+
     /**
      * @see org.l2x6.eircc.core.model.IrcObject#dispose()
      */
     @Override
     public void dispose() {
-        for (IrcChannel channel : channels.values()) {
+        for (AbstractIrcChannel channel : channels) {
             channel.dispose();
         }
         keptChannelsArray = null;
@@ -154,9 +162,9 @@ public class IrcAccount extends IrcObject {
     /**
      * @param result
      */
-    public void ensureChannelKept(IrcChannel channel) {
+    public void ensureChannelListed(AbstractIrcChannel channel) {
         String channelName = channel.getName();
-        IrcChannel availableChannel = channels.get(channelName);
+        AbstractIrcChannel availableChannel = findOwnChannel(channelName);
         if (availableChannel == channel) {
             return;
         } else if (availableChannel != null) {
@@ -165,6 +173,7 @@ public class IrcAccount extends IrcObject {
         }
         addChannel(channel);
     }
+
     @Override
     public boolean equals(Object obj) {
         if (this == obj)
@@ -181,12 +190,32 @@ public class IrcAccount extends IrcObject {
             return false;
         return true;
     }
-    public IrcChannel findChannel(String channelName) {
-        IrcChannel result = channels.get(channelName);
-        if (result == null) {
-            result = server.findChannel(channelName);
+
+    private IrcChannel findOwnChannel(String channelName) {
+        for (AbstractIrcChannel channel : channels) {
+            if (channel instanceof IrcChannel && channel.getName().equals(channelName)) {
+                return (IrcChannel) channel;
+            }
         }
-        return result;
+        return null;
+    }
+
+    public IrcChannel findChannel(String channelName) {
+        for (AbstractIrcChannel channel : channels) {
+            if (channel instanceof IrcChannel && channel.getName().equals(channelName)) {
+                return (IrcChannel) channel;
+            }
+        }
+        return server.findChannel(channelName);
+    }
+
+    public P2pIrcChannel findP2pChannel(IrcUser p2pUser) {
+        for (AbstractIrcChannel channel : channels) {
+            if (channel instanceof P2pIrcChannel && ((P2pIrcChannel) channel).getP2pUser().equals(p2pUser)) {
+                return (P2pIrcChannel) channel;
+            }
+        }
+        return null;
     }
 
     public String getAcceptedNick() {
@@ -196,10 +225,9 @@ public class IrcAccount extends IrcObject {
     /**
      * @see org.l2x6.eircc.core.model.IrcObject#getChannels()
      */
-    public IrcChannel[] getChannels() {
+    public AbstractIrcChannel[] getChannels() {
         if (keptChannelsArray == null) {
-            Collection<IrcChannel> chans = channels.values();
-            keptChannelsArray = chans.toArray(new IrcChannel[chans.size()]);
+            keptChannelsArray = channels.toArray(new AbstractIrcChannel[channels.size()]);
         }
         return keptChannelsArray;
     }
@@ -209,7 +237,11 @@ public class IrcAccount extends IrcObject {
      * @return
      */
     public File getChannelsDir(File parentDir) {
-        return new File(parentDir, id.toString() +"-channels");
+        return new File(parentDir, id.toString() + "-channels");
+    }
+
+    public File getUsersDir(File parentDir) {
+        return new File(parentDir, id.toString() + "-users");
     }
 
     public long getCreatedOn() {
@@ -286,7 +318,7 @@ public class IrcAccount extends IrcObject {
      */
     @Override
     protected File getSaveFile(File parentDir) {
-        return new File(parentDir, id.toString() + "-"+ label + FILE_EXTENSION);
+        return new File(parentDir, id.toString() + "-" + label + FILE_EXTENSION);
     }
 
     public IrcServer getServer() {
@@ -338,17 +370,32 @@ public class IrcAccount extends IrcObject {
         if (channelsDir.exists()) {
             for (File channelPropsFile : channelsDir.listFiles()) {
                 String fileName = channelPropsFile.getName();
-                if (channelPropsFile.isFile() && fileName.endsWith(IrcChannel.FILE_EXTENSION)) {
-                    String chName = fileName.substring(0, fileName.length() - IrcChannel.FILE_EXTENSION.length());
-                        IrcChannel channel = new IrcChannel(this, chName);
-                        channel.load(channelPropsFile);
-                        channels.put(channel.getName(), channel);
+                if (channelPropsFile.isFile() && fileName.endsWith(AbstractIrcChannel.FILE_EXTENSION)) {
+                    String chName = fileName.substring(0,
+                            fileName.length() - AbstractIrcChannel.FILE_EXTENSION.length());
+                    IrcChannel channel = new IrcChannel(this, chName);
+                    channel.load(channelPropsFile);
+                    channels.add(channel);
+                }
+            }
+        }
+        File usersDir = getUsersDir(accountPropsFile.getParentFile());
+        if (usersDir.exists()) {
+            for (File userPropsFile : usersDir.listFiles()) {
+                String fileName = userPropsFile.getName();
+                if (userPropsFile.isFile() && fileName.endsWith(IrcUser.FILE_EXTENSION)) {
+                    String uid = fileName.substring(0,
+                            fileName.length() - IrcUser.FILE_EXTENSION.length());
+                    UUID uuid = UUID.fromString(uid);
+                    IrcUser user = new IrcUser(server, uuid);
+                    user.load(userPropsFile);
+                    server.getUsers().put(user.getId(), user);
                 }
             }
         }
     }
 
-    public void removeChannel(IrcChannel channel) {
+    public void removeChannel(AbstractIrcChannel channel) {
         channels.remove(channel);
         keptChannelsArray = null;
         model.fire(new IrcModelEvent(EventType.KEPT_CHANNEL_REMOVED, channel));
@@ -359,8 +406,17 @@ public class IrcAccount extends IrcObject {
         super.save(parentDir);
         if (!channels.isEmpty()) {
             File channelsDir = getChannelsDir(parentDir);
-            for (IrcChannel channel : channels.values()) {
-                channel.save(channelsDir);
+            for (AbstractIrcChannel channel : channels) {
+                if (channel.isKept()) {
+                    channel.save(channelsDir);
+                }
+            }
+        }
+        Map<UUID, IrcUser> users = server.getUsers();
+        if (!users.isEmpty()) {
+            File usersDir = getUsersDir(parentDir);
+            for (IrcUser user : users.values()) {
+                user.save(usersDir);
             }
         }
     }
@@ -412,6 +468,7 @@ public class IrcAccount extends IrcObject {
     public void setSsl(boolean ssl) {
         this.ssl = ssl;
     }
+
     public void setState(IrcAccountState state) {
         IrcAccountState oldState = this.state;
         this.state = state;
@@ -420,16 +477,28 @@ public class IrcAccount extends IrcObject {
         }
         if (oldState != state) {
             model.fire(new IrcModelEvent(EventType.ACCOUNT_STATE_CHANGED, this));
+
+            /* and leave all channels if necessary */
+            switch (state) {
+            case OFFLINE:
+            case OFFLINE_AFTER_ERROR:
+                for (AbstractIrcChannel channel : keptChannelsArray) {
+                    channel.setJoined(false);
+                }
+                break;
+            default:
+                break;
+            }
         }
     }
 
     public void setUsername(String user) {
         this.username = user;
     }
+
     @Override
     public String toString() {
         return label;
     }
-
 
 }

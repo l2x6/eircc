@@ -12,16 +12,18 @@ package org.l2x6.eircc.core.model;
 /**
  * @author <a href="mailto:ppalaga@redhat.com">Peter Palaga</a>
  */
-public class IrcChannel extends AbstractIrcChannel {
-    private final String name;
+public class P2pIrcChannel extends AbstractIrcChannel {
+
+    private IrcUser p2pUser;
+
     /**
      * @param account
-     * @param name
+     * @param p2pUser
      */
-    public IrcChannel(IrcAccount account, String name) {
-        super(account);
-        this.name = name;
-        this.kept = true;
+    public P2pIrcChannel(IrcUser p2pUser) {
+        super(p2pUser.getServer().getAccount());
+        this.p2pUser = p2pUser;
+        this.kept = false;
     }
 
     /**
@@ -29,7 +31,6 @@ public class IrcChannel extends AbstractIrcChannel {
      */
     @Override
     public void dispose() {
-        super.dispose();
     }
 
     @Override
@@ -40,22 +41,30 @@ public class IrcChannel extends AbstractIrcChannel {
             return false;
         if (getClass() != obj.getClass())
             return false;
-        IrcChannel other = (IrcChannel) obj;
+        P2pIrcChannel other = (P2pIrcChannel) obj;
         if (account == null) {
             if (other.account != null)
                 return false;
         } else if (!account.equals(other.account))
             return false;
-        if (name == null) {
-            if (other.name != null)
+        if (p2pUser == null) {
+            if (other.p2pUser != null)
                 return false;
-        } else if (!name.equals(other.name))
+        } else if (!p2pUser.equals(other.p2pUser))
             return false;
         return true;
     }
 
+    /**
+     * @see org.l2x6.eircc.core.model.AbstractIrcChannel#getName()
+     */
+    @Override
     public String getName() {
-        return name;
+        return p2pUser.getNick();
+    }
+
+    public IrcUser getP2pUser() {
+        return p2pUser;
     }
 
     @Override
@@ -63,7 +72,7 @@ public class IrcChannel extends AbstractIrcChannel {
         final int prime = 31;
         int result = 1;
         result = prime * result + ((account == null) ? 0 : account.hashCode());
-        result = prime * result + ((name == null) ? 0 : name.hashCode());
+        result = prime * result + ((p2pUser == null) ? 0 : p2pUser.hashCode());
         return result;
     }
 
@@ -72,6 +81,20 @@ public class IrcChannel extends AbstractIrcChannel {
      */
     @Override
     public boolean isP2p() {
-        return false;
+        return true;
     }
+
+    /**
+     * @param p2p
+     */
+    public void setP2pUser(IrcUser p2pUser) {
+        // IrcUser oldUser = this.p2pUser;
+        this.p2pUser = p2pUser;
+        // if (!oldUser.equals(p2pUser)) {
+        // account.getModel().fire(new
+        // IrcModelEvent(EventType.CHANNEL_P2P_USER_CHANGED, this));
+        // }
+    }
+
+
 }

@@ -42,7 +42,7 @@ public class IrcTray implements IrcModelEventListener {
          */
         @Override
         public void run() {
-            /* make sure that this is not an obsolette flasher */
+            /* make sure that this is not an obsolete flasher */
             if (IrcTray.this.flasher == this && trayItem != null && !trayItem.isDisposed()) {
                 trayItem.setImage(images[flashIndex]);
                 flashIndex++;
@@ -120,7 +120,11 @@ public class IrcTray implements IrcModelEventListener {
                 this.flasher.run();
             } else {
                 this.flasher = null;
-                trayItem.setImage(images[0]);
+                try {
+                    trayItem.setImage(images[0]);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
             }
         }
     }
