@@ -68,6 +68,9 @@ public class IrcMessage {
         if (isSystemMessage()) {
             return false;
         }
+        if (!isFromMe() && getLog().getChannel().isP2p()) {
+            return true;
+        }
         if (!tokenized) {
             tokenize();
         }

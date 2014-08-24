@@ -358,11 +358,13 @@ public class IrcAccountsView extends ViewPart implements IrcModelEventListener {
                 setEmptyLabelVisible(true);
             }
             break;
-        case KEPT_CHANNEL_ADDED:
+        case ACCOUNT_CHANNEL_ADDED:
             accountsTreeViewer.refresh();
             accountsTreeViewer.expandAll();
             break;
-        case KEPT_CHANNEL_REMOVED:
+        case ACCOUNT_CHANNEL_REMOVED:
+            accountsTreeViewer.refresh();
+            break;
         case ACCOUNT_STATE_CHANGED:
             accountsTreeViewer.refresh();
             IrcAccount account = (IrcAccount) e.getModelObject();

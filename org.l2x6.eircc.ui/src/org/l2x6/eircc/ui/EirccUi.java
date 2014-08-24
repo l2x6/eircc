@@ -122,7 +122,7 @@ public class EirccUi extends AbstractUIPlugin implements IrcModelEventListener, 
                 log(e1);
             }
             break;
-        case KEPT_CHANNEL_ADDED:
+        case ACCOUNT_CHANNEL_ADDED:
             try {
                 AbstractIrcChannel channel = (AbstractIrcChannel)e.getModelObject();
                 if (channel.isKept()) {

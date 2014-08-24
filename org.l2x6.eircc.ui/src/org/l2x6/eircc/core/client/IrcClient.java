@@ -342,23 +342,21 @@ public class IrcClient {
         @Override
         public void onPrivmsg(String target, final IRCUser user, final String msg) {
             final boolean isP2p = target.equals(account.getAcceptedNick());
-            final String channelName = isP2p ? user.getNick() : target;
             Display.getDefault().asyncExec(new Runnable() {
                 @Override
                 public void run() {
                     IrcController controller = IrcController.getInstance();
+                    IrcUser ircUser = controller.getOrCreateUser(account.getServer(), user.getNick(),
+                            user.getUsername());
                     AbstractIrcChannel channel;
                     if (!isP2p) {
                         channel = controller
-                                .getOrCreateAccountChannel(account, channelName);
+                                .getOrCreateAccountChannel(account, target);
                     } else {
-                        IrcUser p2pUser = controller.getOrCreateUser(account.getServer(), user.getNick(), user.getUsername());
-                        channel = controller.getOrCreateP2pChannel(p2pUser);
+                        channel = controller.getOrCreateP2pChannel(ircUser);
                     }
                     channel.setJoined(true);
                     IrcLog log = channel.getLog();
-                    IrcUser ircUser = controller.getOrCreateUser(account.getServer(), user.getNick(),
-                            user.getUsername());
                     IrcMessage message = new IrcMessage(log, System.currentTimeMillis(), ircUser, msg);
                     log.appendMessage(message);
                 }

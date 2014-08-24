@@ -9,8 +9,9 @@
 package org.l2x6.eircc.core.model;
 
 import java.io.File;
-import java.util.LinkedHashSet;
-import java.util.Set;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.ListIterator;
 import java.util.StringTokenizer;
 import java.util.UUID;
 
@@ -22,7 +23,7 @@ import org.l2x6.eircc.core.model.event.IrcModelEvent.EventType;
  */
 public class IrcUser extends IrcObject {
     public enum IrcUserField implements TypedField {
-        host, nick, username, previousNicksString;
+        host, nick, previousNicksString, username;
 
         @Override
         public Object fromString(String value) {
@@ -37,7 +38,7 @@ public class IrcUser extends IrcObject {
 
     private String nick;
 
-    private final Set<String> previousNicks;
+    private final List<String> previousNicks;
     private final IrcServer server;
 
     private String username;
@@ -52,7 +53,7 @@ public class IrcUser extends IrcObject {
     public IrcUser(IrcServer server, UUID id) {
         this.server = server;
         this.id = id;
-        this.previousNicks = new LinkedHashSet<String>();
+        this.previousNicks = new ArrayList<String>();
     }
 
     public IrcUser(IrcServer server, UUID id, String nick, String username) {
@@ -109,10 +110,10 @@ public class IrcUser extends IrcObject {
      * @return
      */
     public String getPreviousNick() {
-        for (String previousNick : previousNicks) {
-            return previousNick;
+        if (previousNicks == null || previousNicks.isEmpty()) {
+            return null;
         }
-        return null;
+        return previousNicks.get(previousNicks.size() - 1);
     }
 
     public String getPreviousNicksString() {
@@ -151,7 +152,16 @@ public class IrcUser extends IrcObject {
         if (nick == null) {
             return false;
         }
-        return nick.equals(this.nick) || previousNicks.stream().anyMatch(previousNick -> nick.equals(previousNick));
+        if (nick.equals(this.nick)) {
+            return true;
+        }
+        ListIterator<String> it = previousNicks.listIterator(previousNicks.size());
+        while (it.hasPrevious()) {
+            if (nick.equals(it.previous())) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public void setHost(String host) {

@@ -19,7 +19,6 @@ import org.l2x6.eircc.core.client.IrcClient;
 import org.l2x6.eircc.core.model.AbstractIrcChannel;
 import org.l2x6.eircc.core.model.IrcAccount;
 import org.l2x6.eircc.core.model.IrcAccount.IrcAccountState;
-import org.l2x6.eircc.core.model.IrcChannel;
 import org.l2x6.eircc.core.model.IrcServer;
 import org.l2x6.eircc.core.model.IrcUser;
 import org.l2x6.eircc.core.util.IrcUtils;
@@ -159,7 +158,15 @@ public class IrcController {
     public void partChannel(AbstractIrcChannel channel) throws IrcException {
         IrcUtils.assertUiThread();
         if (channel.isJoined()) {
-            getClientOrConnect(channel.getAccount()).partChannel(channel);
+            if (!channel.isP2p()) {
+                getClientOrConnect(channel.getAccount()).partChannel(channel);
+            } else {
+                /*
+                 * simply mark as disconnected and remove from account list
+                 */
+                channel.setJoined(false);
+                channel.getAccount().removeChannel(channel);
+            }
         }
     }
 

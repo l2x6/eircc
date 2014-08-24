@@ -110,8 +110,13 @@ public class IrcTreeAction<E> extends Action implements Listener {
         try {
             IrcController controller = IrcController.getInstance();
             IrcUser p2pUser = controller.getOrCreateUser(user.getChannel().getAccount().getServer(), user.getNick(), null);
-            AbstractIrcChannel channel = controller.getOrCreateP2pChannel(p2pUser);
-            EirccUi.getDefault().openChannelEditor(channel);
+            AbstractIrcChannel ch = controller.getOrCreateP2pChannel(p2pUser);
+            if (!ch.isJoined()) {
+                /* this should both join and open the editor */
+                IrcController.getInstance().joinChannel(ch);
+            } else {
+                EirccUi.getDefault().openChannelEditor(ch);
+            }
         } catch (Exception e) {
             EirccUi.log(e);
         }};

@@ -131,13 +131,15 @@ public class IrcAccount extends IrcObject {
                     + this.getClass().getSimpleName());
         }
         String channelName = channel.getName();
-        if (findOwnChannel(channelName) != null) {
+        AbstractIrcChannel availableChannel = channel.isP2p() ? findP2pChannel(((P2pIrcChannel) channel).getP2pUser())
+                : findOwnChannel(channelName);
+        if (availableChannel != null) {
             throw new IllegalArgumentException("Channel with name '" + channelName
                     + "' already available under account '" + this.label + "'");
         }
         channels.add(channel);
         keptChannelsArray = null;
-        model.fire(new IrcModelEvent(EventType.KEPT_CHANNEL_ADDED, channel));
+        model.fire(new IrcModelEvent(EventType.ACCOUNT_CHANNEL_ADDED, channel));
     }
 
     public IrcChannel createChannel(String name) {
@@ -164,7 +166,8 @@ public class IrcAccount extends IrcObject {
      */
     public void ensureChannelListed(AbstractIrcChannel channel) {
         String channelName = channel.getName();
-        AbstractIrcChannel availableChannel = findOwnChannel(channelName);
+        AbstractIrcChannel availableChannel = channel.isP2p() ? findP2pChannel(((P2pIrcChannel) channel).getP2pUser())
+                : findOwnChannel(channelName);
         if (availableChannel == channel) {
             return;
         } else if (availableChannel != null) {
@@ -384,8 +387,7 @@ public class IrcAccount extends IrcObject {
             for (File userPropsFile : usersDir.listFiles()) {
                 String fileName = userPropsFile.getName();
                 if (userPropsFile.isFile() && fileName.endsWith(IrcUser.FILE_EXTENSION)) {
-                    String uid = fileName.substring(0,
-                            fileName.length() - IrcUser.FILE_EXTENSION.length());
+                    String uid = fileName.substring(0, fileName.length() - IrcUser.FILE_EXTENSION.length());
                     UUID uuid = UUID.fromString(uid);
                     IrcUser user = new IrcUser(server, uuid);
                     user.load(userPropsFile);
@@ -398,7 +400,7 @@ public class IrcAccount extends IrcObject {
     public void removeChannel(AbstractIrcChannel channel) {
         channels.remove(channel);
         keptChannelsArray = null;
-        model.fire(new IrcModelEvent(EventType.KEPT_CHANNEL_REMOVED, channel));
+        model.fire(new IrcModelEvent(EventType.ACCOUNT_CHANNEL_REMOVED, channel));
     }
 
     @Override
@@ -442,6 +444,11 @@ public class IrcAccount extends IrcObject {
      */
     public void setMe(IrcUser me) {
         this.me = me;
+        for (AbstractIrcChannel channel : channels) {
+            if (channel.isP2p() && !channel.isPresent(me.getNick())) {
+                channel.addNick(me.getNick());
+            }
+        }
     }
 
     public void setName(String name) {

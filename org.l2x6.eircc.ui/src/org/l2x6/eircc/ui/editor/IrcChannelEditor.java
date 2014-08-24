@@ -11,6 +11,7 @@ package org.l2x6.eircc.ui.editor;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.SashForm;
+import org.eclipse.swt.custom.StyleRange;
 import org.eclipse.swt.custom.StyledText;
 import org.eclipse.swt.events.KeyEvent;
 import org.eclipse.swt.events.KeyListener;
@@ -33,6 +34,8 @@ import org.l2x6.eircc.core.model.event.IrcModelEventListener;
 import org.l2x6.eircc.core.util.IrcUtils;
 import org.l2x6.eircc.ui.EirccUi;
 import org.l2x6.eircc.ui.IrcImages;
+import org.l2x6.eircc.ui.IrcPreferences;
+import org.l2x6.eircc.ui.utils.ExtendedTextStyle;
 import org.l2x6.eircc.ui.views.IrcLabelProvider;
 
 /**
@@ -144,6 +147,15 @@ public class IrcChannelEditor extends EditorPart implements IrcModelEventListene
 
     };
 
+    private void append(String token, ExtendedTextStyle style) {
+        if (token != null && token.length() > 0) {
+            int offset = historyWidget.getCharCount();
+            historyWidget.append(token);
+            StyleRange range = style.createRange(offset, token.length());
+            historyWidget.setStyleRange(range);
+        }
+    }
+
     /**
      * @param m
      */
@@ -151,7 +163,22 @@ public class IrcChannelEditor extends EditorPart implements IrcModelEventListene
         if (historyWidget.getCharCount() > 0) {
             historyWidget.append("\n");
         }
-        historyWidget.append(m.toString());
+        IrcPreferences prefs = IrcPreferences.getInstance();
+        append(IrcUtils.toTimeString(m.getPostedOn()), prefs.getMessageTimeStyle());
+        historyWidget.append(" ");
+        if (m.isSystemMessage()) {
+            append(m.getText(), prefs.getSystemMessageStyle());
+        } else {
+            String nickToken = m.getUser().getNick() + ":";
+            if (m.isMeNamed()) {
+                append(nickToken, prefs.getNamedMeSenderStyle());
+            } else {
+                historyWidget.append(nickToken);
+            }
+            historyWidget.append(" ");
+            historyWidget.append(m.getText());
+        }
+
         historyWidget.setTopIndex(historyWidget.getLineCount() - 1);
     }
 

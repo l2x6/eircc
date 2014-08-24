@@ -14,6 +14,7 @@ import org.eclipse.ui.IMemento;
 import org.eclipse.ui.IPersistableElement;
 import org.l2x6.eircc.core.model.AbstractIrcChannel;
 import org.l2x6.eircc.core.model.IrcModel;
+import org.l2x6.eircc.core.model.IrcUser;
 import org.l2x6.eircc.core.model.P2pIrcChannel;
 import org.l2x6.eircc.ui.IrcImages;
 import org.l2x6.eircc.ui.views.IrcLabelProvider;
@@ -22,7 +23,13 @@ import org.l2x6.eircc.ui.views.IrcLabelProvider;
  * @author <a href="mailto:ppalaga@redhat.com">Peter Palaga</a>
  */
 public class IrcChannelEditorInput implements IEditorInput, IPersistableElement {
-    public enum IrcChannelEditorInputField {CHANNEL_NAME, ACCOUNT_LABEL, P2P_USER_ID, P2P_NICK, P2P_USERNAME};
+    public enum IrcChannelEditorInputField {ACCOUNT_LABEL, CHANNEL_NAME, P2P_NICK, P2P_USER_ID, P2P_USERNAME};
+
+    private static void safePut(IMemento memento, IrcChannelEditorInputField field, String value) {
+        if (value != null) {
+            memento.putString(field.name(), value);
+        }
+    }
 
     private final AbstractIrcChannel channel;
 
@@ -60,6 +67,14 @@ public class IrcChannelEditorInput implements IEditorInput, IPersistableElement 
 
     public AbstractIrcChannel getChannel() {
         return channel;
+    }
+
+    /**
+     * @see org.eclipse.ui.IPersistableElement#getFactoryId()
+     */
+    @Override
+    public String getFactoryId() {
+        return IrcChannelElementFactory.ID;
     }
 
     /**
@@ -106,18 +121,13 @@ public class IrcChannelEditorInput implements IEditorInput, IPersistableElement 
     public void saveState(IMemento memento) {
         memento.putString(IrcChannelEditorInputField.ACCOUNT_LABEL.name(), channel.getAccount().getLabel());
         if (channel.isP2p()) {
-            memento.putString(IrcChannelEditorInputField.P2P_USER_ID.name(), ((P2pIrcChannel) channel).getP2pUser().getId().toString());
+            IrcUser p2pUser = ((P2pIrcChannel) channel).getP2pUser();
+            safePut(memento, IrcChannelEditorInputField.P2P_USER_ID, p2pUser.getId().toString());
+            safePut(memento, IrcChannelEditorInputField.P2P_NICK, p2pUser.getNick());
+            safePut(memento, IrcChannelEditorInputField.P2P_USERNAME, p2pUser.getUsername());
         } else {
-            memento.putString(IrcChannelEditorInputField.CHANNEL_NAME.name(), channel.getName());
+            safePut(memento, IrcChannelEditorInputField.CHANNEL_NAME, channel.getName());
         }
-    }
-
-    /**
-     * @see org.eclipse.ui.IPersistableElement#getFactoryId()
-     */
-    @Override
-    public String getFactoryId() {
-        return IrcChannelElementFactory.ID;
     }
 
 }

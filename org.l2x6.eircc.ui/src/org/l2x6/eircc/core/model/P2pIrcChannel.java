@@ -24,6 +24,11 @@ public class P2pIrcChannel extends AbstractIrcChannel {
         super(p2pUser.getServer().getAccount());
         this.p2pUser = p2pUser;
         this.kept = false;
+        addNickInternal(p2pUser.getNick());
+        IrcUser me = account.getMe();
+        if (me != null) {
+            addNickInternal(me.getNick());
+        }
     }
 
     /**
@@ -83,18 +88,5 @@ public class P2pIrcChannel extends AbstractIrcChannel {
     public boolean isP2p() {
         return true;
     }
-
-    /**
-     * @param p2p
-     */
-    public void setP2pUser(IrcUser p2pUser) {
-        // IrcUser oldUser = this.p2pUser;
-        this.p2pUser = p2pUser;
-        // if (!oldUser.equals(p2pUser)) {
-        // account.getModel().fire(new
-        // IrcModelEvent(EventType.CHANNEL_P2P_USER_CHANGED, this));
-        // }
-    }
-
 
 }
