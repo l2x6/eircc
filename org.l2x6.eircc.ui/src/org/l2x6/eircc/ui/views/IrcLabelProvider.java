@@ -14,8 +14,8 @@ import org.l2x6.eircc.core.model.AbstractIrcChannel;
 import org.l2x6.eircc.core.model.IrcAccountsStatistics;
 import org.l2x6.eircc.core.model.IrcModel;
 import org.l2x6.eircc.core.model.IrcObject;
-import org.l2x6.eircc.ui.IrcImages;
 import org.l2x6.eircc.ui.IrcUiMessages;
+import org.l2x6.eircc.ui.misc.IrcImages;
 
 public class IrcLabelProvider extends LabelProvider {
 
@@ -51,8 +51,7 @@ public class IrcLabelProvider extends LabelProvider {
     public String getTooltipText(IrcObject object) {
         if (object == null) {
             return null;
-        }
-        else if (object instanceof IrcModel) {
+        } else if (object instanceof IrcModel) {
             IrcModel model = (IrcModel) object;
             StringBuilder sb = new StringBuilder();
             IrcAccountsStatistics stats = model.getAccountsStatistics();
@@ -64,10 +63,9 @@ public class IrcLabelProvider extends LabelProvider {
             }
             sb.append(IrcUiMessages.Eclipse_IRC_Client);
             return sb.toString();
-        }
-        else if (object instanceof AbstractIrcChannel) {
+        } else if (object instanceof AbstractIrcChannel) {
             AbstractIrcChannel channel = (AbstractIrcChannel) object;
-            return channel.getName() + "@"+ channel.getAccount().getLabel() + " - "+ getChannelJoinedLabel(channel);
+            return channel.getName() + "@" + channel.getAccount().getLabel() + " - " + getChannelJoinedLabel(channel);
         }
         return object.toString();
     }

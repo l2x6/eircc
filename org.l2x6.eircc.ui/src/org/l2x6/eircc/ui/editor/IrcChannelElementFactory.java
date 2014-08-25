@@ -27,6 +27,7 @@ import org.l2x6.eircc.ui.editor.IrcChannelEditorInput.IrcChannelEditorInputField
  */
 public class IrcChannelElementFactory implements IElementFactory {
     public static final String ID = "org.l2x6.eircc.ui.editor.IrcChannelElementFactory";
+
     /**
      * @see org.eclipse.ui.IElementFactory#createElement(org.eclipse.ui.IMemento)
      */

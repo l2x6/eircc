@@ -6,7 +6,7 @@
  * http://www.eclipse.org/legal/epl-v10.html
  */
 
-package org.l2x6.eircc.ui;
+package org.l2x6.eircc.ui.misc;
 
 import java.text.MessageFormat;
 
@@ -36,8 +36,7 @@ import org.l2x6.eircc.core.IrcException;
 import org.l2x6.eircc.core.model.IrcAccount;
 import org.l2x6.eircc.core.model.IrcAccount.IrcAccountField;
 import org.l2x6.eircc.core.model.IrcModel;
-import org.l2x6.eircc.ui.utils.GdBuilder;
-import org.l2x6.eircc.ui.utils.GlFactory;
+import org.l2x6.eircc.ui.IrcUiMessages;
 
 /**
  * @author <a href="mailto:ppalaga@redhat.com">Peter Palaga</a>

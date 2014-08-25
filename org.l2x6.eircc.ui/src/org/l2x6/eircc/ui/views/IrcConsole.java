@@ -6,7 +6,7 @@
  * http://www.eclipse.org/legal/epl-v10.html
  */
 
-package org.l2x6.eircc.ui;
+package org.l2x6.eircc.ui.views;
 
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.ui.IWorkbenchPage;
@@ -22,22 +22,18 @@ import org.eclipse.ui.console.MessageConsole;
 import org.eclipse.ui.console.MessageConsoleStream;
 import org.l2x6.eircc.core.client.TrafficLoggerFactory;
 import org.l2x6.eircc.core.model.IrcAccount;
+import org.l2x6.eircc.ui.EirccUi;
+import org.l2x6.eircc.ui.IrcUiMessages;
 import org.schwering.irc.lib.TrafficLogger;
 
 /**
  * @author <a href="mailto:ppalaga@redhat.com">Peter Palaga</a>
  */
 public class IrcConsole implements TrafficLoggerFactory {
-    private static final IrcConsole INSTANCE = new IrcConsole();
-
-
-    public static IrcConsole getInstance() {
-        return INSTANCE;
-    }
-
     public static class ConsoleTrafficLogger implements TrafficLogger {
-        private final MessageConsoleStream consoleStream;
         private MessageConsole console;
+        private final MessageConsoleStream consoleStream;
+
         /**
          * @param consoleStream
          */
@@ -53,7 +49,7 @@ public class IrcConsole implements TrafficLoggerFactory {
         @Override
         public void in(String line) {
             reveal();
-            consoleStream.println("> "+ line);
+            consoleStream.println("> " + line);
         }
 
         /**
@@ -62,22 +58,7 @@ public class IrcConsole implements TrafficLoggerFactory {
         @Override
         public void out(String line) {
             reveal();
-            consoleStream.println("< "+ line);
-        }
-
-        public void uiReveal() {
-            IWorkbenchWindow win = PlatformUI.getWorkbench().getActiveWorkbenchWindow();
-            if (win != null) {
-                IWorkbenchPage page = win.getActivePage();
-                if (page != null) {
-                    try {
-                        IConsoleView view = (IConsoleView) page.showView(IConsoleConstants.ID_CONSOLE_VIEW);
-                        view.display(console);
-                    } catch (PartInitException e) {
-                        EirccUi.log(e);
-                    }
-                }
-            }
+            consoleStream.println("< " + line);
         }
 
         public void reveal() {
@@ -92,7 +73,36 @@ public class IrcConsole implements TrafficLoggerFactory {
                 uiReveal();
             }
         }
+
+        public void uiReveal() {
+            IWorkbenchWindow win = PlatformUI.getWorkbench().getActiveWorkbenchWindow();
+            if (win != null) {
+                IWorkbenchPage page = win.getActivePage();
+                if (page != null) {
+                    try {
+                        IConsoleView view = (IConsoleView) page.findView(IConsoleConstants.ID_CONSOLE_VIEW);
+                        if (view == null) {
+                            /*
+                             * this steals the focus so let us use it as little
+                             * as possible
+                             */
+                            view = (IConsoleView) page.showView(IConsoleConstants.ID_CONSOLE_VIEW);
+                        }
+                        view.display(console);
+                    } catch (PartInitException e) {
+                        EirccUi.log(e);
+                    }
+                }
+            }
+        }
     }
+
+    private static final IrcConsole INSTANCE = new IrcConsole();
+
+    public static IrcConsole getInstance() {
+        return INSTANCE;
+    }
+
     /**
      * @see org.l2x6.eircc.core.client.TrafficLoggerFactory#createTrafficLogger(org.l2x6.eircc.core.model.IrcAccount)
      */
@@ -108,11 +118,11 @@ public class IrcConsole implements TrafficLoggerFactory {
         IConsoleManager conMan = plugin.getConsoleManager();
         IConsole[] existing = conMan.getConsoles();
         for (int i = 0; i < existing.length; i++)
-           if (name.equals(existing[i].getName()))
-              return (MessageConsole) existing[i];
+            if (name.equals(existing[i].getName()))
+                return (MessageConsole) existing[i];
         MessageConsole myConsole = new MessageConsole(name, null);
-        conMan.addConsoles(new IConsole[]{myConsole});
+        conMan.addConsoles(new IConsole[] { myConsole });
         return myConsole;
-     }
+    }
 
 }

@@ -8,19 +8,19 @@
 
 package org.l2x6.eircc.core.client;
 
-
 /**
  * @author <a href="mailto:ppalaga@redhat.com">Peter Palaga</a>
  */
 public interface IrcNickGenerator {
     public static IrcNickGenerator DEFAULT = new IrcNickGenerator() {
         private static final int MAX_UNDERSCORES = 16;
+
         public String newNick(String oldNick) {
             if (oldNick == null) {
                 return null;
             }
             int underscores = 0;
-            for (int i = oldNick.length() -1; i >= 0; i--) {
+            for (int i = oldNick.length() - 1; i >= 0; i--) {
                 if (oldNick.charAt(i) == '_') {
                     underscores++;
                 }

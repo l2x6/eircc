@@ -9,12 +9,15 @@
 package org.l2x6.eircc.core.model;
 
 import java.io.File;
+import java.time.OffsetDateTime;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.TreeMap;
 
 import org.l2x6.eircc.core.model.event.IrcModelEvent;
 import org.l2x6.eircc.core.model.event.IrcModelEvent.EventType;
+import org.l2x6.eircc.ui.misc.Colors;
 
 /**
  * @author <a href="mailto:ppalaga@redhat.com">Peter Palaga</a>
@@ -35,26 +38,42 @@ public abstract class AbstractIrcChannel extends IrcObject {
 
     /**  */
     protected static final String FILE_EXTENSION = ".channel.properties";
-    protected final IrcAccount account;
 
+    /**
+     * @param f
+     * @return
+     */
+    public static boolean isChannelFile(File f) {
+        return f.isFile() && f.getName().endsWith(AbstractIrcChannel.FILE_EXTENSION);
+    }
+
+    protected final IrcAccount account;
     private boolean autoJoin = true;
     private boolean joined;
     protected boolean kept;
     private IrcLog log;
+    private File logsDirectory;
+    private final Map<String, Integer> seenUsers = new HashMap<String, Integer>();
     /** Users by nick */
     protected final Map<String, IrcChannelUser> users = new TreeMap<String, IrcChannelUser>();
     protected IrcChannelUser[] usersArray;
+
     /**
      * @param account
      */
     public AbstractIrcChannel(IrcAccount account) {
-        super();
+        super(account.getChannelsDirectory());
         this.account = account;
+        this.seenUsers.put(account.getAcceptedNick(), Colors.MY_INDEX);
     }
+
     /**
      * @param result
      */
     public void addNick(String nick) {
+        if (seenUsers.get(nick) == null) {
+            seenUsers.put(nick, seenUsers.size());
+        }
         addNickInternal(nick);
         account.getModel().fire(new IrcModelEvent(EventType.CHANNEL_USER_JOINED, new IrcChannelUser(this, nick)));
     }
@@ -83,7 +102,12 @@ public abstract class AbstractIrcChannel extends IrcObject {
      * @param users2
      */
     public void addNicks(Collection<String> nicks) {
-        nicks.forEach(nick -> addNickInternal(nick));
+        for (String nick : nicks) {
+            addNickInternal(nick);
+            if (seenUsers.get(nick) == null) {
+                seenUsers.put(nick, seenUsers.size());
+            }
+        }
         account.getModel().fire(new IrcModelEvent(EventType.CHANNEL_USERS_CHANGED, this));
     }
 
@@ -92,8 +116,10 @@ public abstract class AbstractIrcChannel extends IrcObject {
      * @param newUser
      */
     public void changeNick(String oldNick, String newNick) {
+        Integer i = seenUsers.get(oldNick);
         users.remove(oldNick);
         addNickInternal(newNick);
+        seenUsers.put(newNick, i != null ? i : Integer.valueOf(seenUsers.size()));
         account.getModel().fire(new IrcModelEvent(EventType.CHANNEL_USERS_CHANGED, this));
     }
 
@@ -130,11 +156,38 @@ public abstract class AbstractIrcChannel extends IrcObject {
     /**
      * @return
      */
+    public File getLogsDirectory() {
+        if (this.logsDirectory == null) {
+            this.logsDirectory = new File(saveDirectory, getName() + "-logs");
+        }
+        return this.logsDirectory;
+    }
+
+    /**
+     * @return
+     */
     public abstract String getName();
 
     @Override
-    protected File getSaveFile(File parentDir) {
-        return new File(parentDir, getName() + FILE_EXTENSION);
+    protected File getSaveFile() {
+        return new File(saveDirectory, getName() + FILE_EXTENSION);
+    }
+
+    /**
+     * @param user
+     * @return
+     */
+    public int getUserIndex(String nick) {
+        if (nick.equals(getAccount().getAcceptedNick())) {
+            return Colors.MY_INDEX;
+        } else {
+            Integer result = seenUsers.get(nick);
+            if (result == null) {
+                result = seenUsers.size();
+                seenUsers.put(nick, result);
+            }
+            return result.intValue();
+        }
     }
 
     /**
@@ -161,6 +214,11 @@ public abstract class AbstractIrcChannel extends IrcObject {
     }
 
     /**
+     * @return
+     */
+    public abstract boolean isP2p();
+
+    /**
      * @param user
      * @return
      */
@@ -185,21 +243,19 @@ public abstract class AbstractIrcChannel extends IrcObject {
         this.joined = joined;
         if (oldState != joined) {
             if (joined && log == null) {
-                log = new IrcLog(this, System.currentTimeMillis());
+                log = new IrcLog(this, OffsetDateTime.now());
             }
             account.getModel().fire(new IrcModelEvent(EventType.CHANNEL_JOINED_CHANGED, this));
         }
     }
+
     public void setKept(boolean kept) {
         this.kept = kept;
     }
+
     @Override
     public String toString() {
         return getName();
     }
-    /**
-     * @return
-     */
-    public abstract boolean isP2p();
 
 }

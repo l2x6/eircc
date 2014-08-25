@@ -28,18 +28,31 @@ import org.l2x6.eircc.ui.EirccUi;
  * @author <a href="mailto:ppalaga@redhat.com">Peter Palaga</a>
  */
 public abstract class IrcObject {
-    public IrcObject() {
-        super();
+    protected File saveDirectory;
+
+    /**
+     * @param parentDir
+     */
+    protected IrcObject() {
     }
+
+    protected IrcObject(File parentDir) {
+        super();
+        this.saveDirectory = parentDir;
+    }
+
     public abstract void dispose();
 
     public abstract Enum<?>[] getFields();
 
+    File getSaveDirectory() {
+        return saveDirectory;
+    }
+
     /**
-     * @param parentDir
      * @return
      */
-    protected abstract File getSaveFile(File parentDir);
+    protected abstract File getSaveFile();
 
     /**
      * @throws IOException
@@ -47,7 +60,7 @@ public abstract class IrcObject {
      * @throws UnsupportedEncodingException
      *
      */
-    public void load(File propsFile) throws UnsupportedEncodingException, FileNotFoundException, IOException {
+    protected void load(File propsFile) throws UnsupportedEncodingException, FileNotFoundException, IOException {
         try (Reader reader = new InputStreamReader(new FileInputStream(propsFile), "utf-8")) {
             Properties props = new Properties();
             props.load(reader);
@@ -69,7 +82,8 @@ public abstract class IrcObject {
      * @throws FileNotFoundException
      * @throws UnsupportedEncodingException
      */
-    public void save(File parentDir) throws UnsupportedEncodingException, FileNotFoundException, IOException {
+    public void save() throws UnsupportedEncodingException, FileNotFoundException, IOException {
+        File parentDir = getSaveDirectory();
         Enum<?>[] fields = getFields();
         if (fields.length > 0) {
             parentDir.mkdirs();
@@ -84,11 +98,11 @@ public abstract class IrcObject {
                         props.put(fieldName, val.toString());
                     }
                 } catch (Exception e) {
-                    EirccUi.log("Could not save "+ val +" to "+ this.getClass().getSimpleName() + "."+ fieldName);
+                    EirccUi.log("Could not save " + val + " to " + this.getClass().getSimpleName() + "." + fieldName);
                     EirccUi.log(e);
                 }
             }
-            File file = getSaveFile(parentDir);
+            File file = getSaveFile();
             File backupFile = null;
             if (file.exists()) {
                 backupFile = new File(file.getParent(), file.getName() + ".backup");

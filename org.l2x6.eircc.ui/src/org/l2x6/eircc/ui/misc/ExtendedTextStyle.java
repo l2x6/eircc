@@ -6,7 +6,7 @@
  * http://www.eclipse.org/legal/epl-v10.html
  */
 
-package org.l2x6.eircc.ui.utils;
+package org.l2x6.eircc.ui.misc;
 
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.StyleRange;
@@ -26,9 +26,16 @@ public class ExtendedTextStyle extends TextStyle {
     public ExtendedTextStyle() {
         super();
     }
+
     public ExtendedTextStyle(Color foreground) {
         super();
         this.foreground = foreground;
+    }
+
+    public ExtendedTextStyle(Color foreground, int fontStyle) {
+        super();
+        this.foreground = foreground;
+        this.fontStyle = fontStyle;
     }
 
     /**
@@ -62,5 +69,4 @@ public class ExtendedTextStyle extends TextStyle {
         range.length = length;
         return range;
     }
-
 }

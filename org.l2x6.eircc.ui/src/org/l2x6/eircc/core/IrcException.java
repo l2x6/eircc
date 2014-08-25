@@ -26,6 +26,7 @@ public class IrcException extends Exception {
         super(message);
         this.modelObject = modelObject;
     }
+
     /**
      * @param message
      * @param cause
@@ -35,10 +36,9 @@ public class IrcException extends Exception {
         super(message, cause);
         this.modelObject = modelObject;
     }
+
     public IrcObject getModelObject() {
         return modelObject;
     }
-
-
 
 }

@@ -49,7 +49,7 @@
                         </goals>
                         <configuration>
                             <outputDirectory>${basedir}/lib</outputDirectory>
-                            <includeArtifactIds>irclib</includeArtifactIds>
+                            <includeArtifactIds>irclib, commons-math3</includeArtifactIds>
                         </configuration>
                     </execution>
                 </executions>

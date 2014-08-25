@@ -17,14 +17,15 @@ public class IrcAccountsStatistics {
     private final int channelsOfflineAfterError;
     private final int channelsOnline;
     private final int channelsWithUnreadMessages;
+
     /**
      * @param channelsOnline
      * @param channelsOffline
      * @param channelsWithUnseenMessages
      * @param channelsOfflineAfterError
      */
-    public IrcAccountsStatistics(int channelsOnline, int channelsOffline, int channelsWithUnseenMessages, int channelsNamingMe,
-            int channelsOfflineAfterError) {
+    public IrcAccountsStatistics(int channelsOnline, int channelsOffline, int channelsWithUnseenMessages,
+            int channelsNamingMe, int channelsOfflineAfterError) {
         super();
         this.channelsOnline = channelsOnline;
         this.channelsOffline = channelsOffline;
@@ -32,33 +33,43 @@ public class IrcAccountsStatistics {
         this.channelsNamingMe = channelsNamingMe;
         this.channelsOfflineAfterError = channelsOfflineAfterError;
     }
+
     public int getChannelsNamingMe() {
         return channelsNamingMe;
     }
+
     public int getChannelsOffline() {
         return channelsOffline;
     }
+
     public int getChannelsOfflineAfterError() {
         return channelsOfflineAfterError;
     }
+
     public int getChannelsOnline() {
         return channelsOnline;
     }
+
     public int getChannelsWithUnreadMessages() {
         return channelsWithUnreadMessages;
     }
+
     public boolean hasChannelsNamingMe() {
         return channelsNamingMe > 0;
     }
+
     public boolean hasChannelsOffline() {
         return channelsOffline > 0;
     }
+
     public boolean hasChannelsOfflineAfterError() {
         return channelsOfflineAfterError > 0;
     }
+
     public boolean hasChannelsOnline() {
         return channelsOnline > 0;
     }
+
     public boolean hasChannelsWithUnreadMessages() {
         return channelsWithUnreadMessages > 0;
     }

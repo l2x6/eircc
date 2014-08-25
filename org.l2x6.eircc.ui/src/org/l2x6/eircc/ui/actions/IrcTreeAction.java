@@ -26,8 +26,8 @@ import org.l2x6.eircc.core.model.IrcAccount.IrcAccountState;
 import org.l2x6.eircc.core.model.IrcChannelUser;
 import org.l2x6.eircc.core.model.IrcUser;
 import org.l2x6.eircc.ui.EirccUi;
-import org.l2x6.eircc.ui.IrcImages;
-import org.l2x6.eircc.ui.IrcImages.ImageKey;
+import org.l2x6.eircc.ui.misc.IrcImages;
+import org.l2x6.eircc.ui.misc.IrcImages.ImageKey;
 import org.l2x6.eircc.ui.IrcUiMessages;
 
 /**
@@ -39,63 +39,67 @@ public class IrcTreeAction<E> extends Action implements Listener {
         Predicate<? super TreeItem> predicate = treeItem -> treeItem.getData() instanceof IrcAccount
                 && ((IrcAccount) treeItem.getData()).getState() != IrcAccountState.ONLINE;
         Consumer<IrcAccount> itemAction = account -> {
-        try {
-            IrcController.getInstance().connect(account);
-        } catch (IrcException e) {
-            EirccUi.log(e);
-        }};
-        return new IrcTreeAction<IrcAccount>(tree, IrcUiMessages.ConnectIrcChannelAction_label, ImageKey.CONNECT, predicate,
-                itemAction);
+            try {
+                IrcController.getInstance().connect(account);
+            } catch (IrcException e) {
+                EirccUi.log(e);
+            }
+        };
+        return new IrcTreeAction<IrcAccount>(tree, IrcUiMessages.ConnectIrcChannelAction_label, ImageKey.CONNECT,
+                predicate, itemAction);
     }
 
     public static IrcTreeAction<IrcAccount> createDisonnectAccountAction(Tree tree) {
         Predicate<? super TreeItem> predicate = treeItem -> treeItem.getData() instanceof IrcAccount
                 && ((IrcAccount) treeItem.getData()).getState() == IrcAccountState.ONLINE;
         Consumer<IrcAccount> itemAction = account -> {
-        try {
-            IrcController.getInstance().quit(account);
-        } catch (Exception e) {
-            EirccUi.log(e);
-        }};
-        return new IrcTreeAction<IrcAccount>(tree, IrcUiMessages.DisconnectIrcChannelAction_label, ImageKey.DISCONNECT, predicate,
-                itemAction);
+            try {
+                IrcController.getInstance().quit(account);
+            } catch (Exception e) {
+                EirccUi.log(e);
+            }
+        };
+        return new IrcTreeAction<IrcAccount>(tree, IrcUiMessages.DisconnectIrcChannelAction_label, ImageKey.DISCONNECT,
+                predicate, itemAction);
     }
 
     public static IrcTreeAction<AbstractIrcChannel> createJoinChannelAction(Tree tree) {
         Predicate<? super TreeItem> predicate = treeItem -> treeItem.getData() instanceof AbstractIrcChannel
                 && !((AbstractIrcChannel) treeItem.getData()).isJoined();
         Consumer<AbstractIrcChannel> itemAction = channel -> {
-        try {
-            IrcController.getInstance().joinChannel(channel);
-        } catch (IrcException e) {
-            EirccUi.log(e);
-        }};
-        return new IrcTreeAction<AbstractIrcChannel>(tree, IrcUiMessages.JoinIrcChannelAction_label, ImageKey.JOIN_CHANNEL, predicate,
-                itemAction);
+            try {
+                IrcController.getInstance().joinChannel(channel);
+            } catch (IrcException e) {
+                EirccUi.log(e);
+            }
+        };
+        return new IrcTreeAction<AbstractIrcChannel>(tree, IrcUiMessages.JoinIrcChannelAction_label,
+                ImageKey.JOIN_CHANNEL, predicate, itemAction);
     }
-
 
     public static IrcTreeAction<AbstractIrcChannel> createLeaveChannelAction(Tree tree) {
         Predicate<? super TreeItem> predicate = treeItem -> treeItem.getData() instanceof AbstractIrcChannel
                 && ((AbstractIrcChannel) treeItem.getData()).isJoined();
         Consumer<AbstractIrcChannel> itemAction = channel -> {
-        try {
-            IrcController.getInstance().partChannel(channel);
-        } catch (IrcException e) {
-            EirccUi.log(e);
-        }};
-        return new IrcTreeAction<AbstractIrcChannel>(tree, IrcUiMessages.LeaveIrcChannelAction_label, ImageKey.LEAVE_CHANNEL, predicate,
-                itemAction);
+            try {
+                IrcController.getInstance().partChannel(channel);
+            } catch (IrcException e) {
+                EirccUi.log(e);
+            }
+        };
+        return new IrcTreeAction<AbstractIrcChannel>(tree, IrcUiMessages.LeaveIrcChannelAction_label,
+                ImageKey.LEAVE_CHANNEL, predicate, itemAction);
     }
 
     public static IrcTreeAction<IrcAccount> createListChannelsAction(Tree tree) {
         Predicate<? super TreeItem> predicate = treeItem -> treeItem.getData() instanceof IrcAccount;
         Consumer<IrcAccount> itemAction = account -> {
-        try {
-            IrcController.getInstance().listChannels(account);
-        } catch (IrcException e) {
-            EirccUi.log(e);
-        }};
+            try {
+                IrcController.getInstance().listChannels(account);
+            } catch (IrcException e) {
+                EirccUi.log(e);
+            }
+        };
         return new IrcTreeAction<IrcAccount>(tree, IrcUiMessages.ListChannelsAction_label, ImageKey.REFRESH, predicate,
                 itemAction);
     }
@@ -107,22 +111,25 @@ public class IrcTreeAction<E> extends Action implements Listener {
     public static IrcTreeAction<?> createOpenPrivateChatAction(Tree tree) {
         Predicate<? super TreeItem> predicate = treeItem -> treeItem.getData() instanceof IrcChannelUser;
         Consumer<IrcChannelUser> itemAction = user -> {
-        try {
-            IrcController controller = IrcController.getInstance();
-            IrcUser p2pUser = controller.getOrCreateUser(user.getChannel().getAccount().getServer(), user.getNick(), null);
-            AbstractIrcChannel ch = controller.getOrCreateP2pChannel(p2pUser);
-            if (!ch.isJoined()) {
-                /* this should both join and open the editor */
-                IrcController.getInstance().joinChannel(ch);
-            } else {
-                EirccUi.getDefault().openChannelEditor(ch);
+            try {
+                IrcController controller = IrcController.getInstance();
+                IrcUser p2pUser = controller.getOrCreateUser(user.getChannel().getAccount().getServer(),
+                        user.getNick(), null);
+                AbstractIrcChannel ch = controller.getOrCreateP2pChannel(p2pUser);
+                if (!ch.isJoined()) {
+                    /* this should both join and open the editor */
+                    IrcController.getInstance().joinChannel(ch);
+                } else {
+                    EirccUi.getDefault().openChannelEditor(ch);
+                }
+            } catch (Exception e) {
+                EirccUi.log(e);
             }
-        } catch (Exception e) {
-            EirccUi.log(e);
-        }};
-        return new IrcTreeAction<IrcChannelUser>(tree, IrcUiMessages.IrcChannelOutlinePage_Open_Private_Chat, ImageKey.JOIN_CHANNEL, predicate,
-                itemAction);
+        };
+        return new IrcTreeAction<IrcChannelUser>(tree, IrcUiMessages.IrcChannelOutlinePage_Open_Private_Chat,
+                ImageKey.JOIN_CHANNEL, predicate, itemAction);
     }
+
     protected final Predicate<? super TreeItem> enabledPredicate;
     private final Consumer<? super E> itemAction;
 

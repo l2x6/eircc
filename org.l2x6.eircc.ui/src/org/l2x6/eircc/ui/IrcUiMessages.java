@@ -14,23 +14,23 @@ import org.eclipse.osgi.util.NLS;
  * @author <a href="mailto:ppalaga@redhat.com">Peter Palaga</a>
  */
 public class IrcUiMessages extends NLS {
-    private static final String BUNDLE_NAME = "org.l2x6.eircc.ui.IrcUiMessages";//$NON-NLS-1$
-
     public static String Account;
 
-    public static String Account_Created_on;
-    public static String Account_Label;
-    public static String Account_Host;
-    public static String Account_Port;
-    public static String Account_Username;
-    public static String Account_Password;
-    public static String Account_Use_SSL;
-    public static String Account_Nick;
-    public static String Account_Name;
-    public static String Account_Quit_Message;
     public static String Account_Connect_Automatically;
+
+    public static String Account_Created_on;
+    public static String Account_Host;
+    public static String Account_Label;
+    public static String Account_Name;
+    public static String Account_Nick;
+    public static String Account_Password;
+    public static String Account_Port;
+    public static String Account_Quit_Message;
+    public static String Account_Use_SSL;
+    public static String Account_Username;
     public static String AccountPage_title;
     public static String AddIrcAccountAction_label;
+    private static final String BUNDLE_NAME = "org.l2x6.eircc.ui.IrcUiMessages";//$NON-NLS-1$
 
     public static String Channel_Connected;
     public static String Channel_Disconnected;
@@ -48,23 +48,21 @@ public class IrcUiMessages extends NLS {
     public static String IrcChannelOutlinePage_Open_Private_Chat;
     public static String IrcServersView_empty;
     public static String JoinIrcChannelAction_label;
-    public static String ListChannelsAction_label;
     public static String LeaveIrcChannelAction_label;
-
+    public static String ListChannelsAction_label;
 
     public static String Message_x_is_known_as_y;
     public static String Message_x_joined;
     public static String Message_x_left;
     public static String Message_x_left_with_message;
+    public static String Message_You_are_known_as_x;
     public static String Message_You_joined_as_nick;
     public static String Message_You_left;
-    public static String Message_You_are_known_as_x;
-
-
 
     static {
         NLS.initializeMessages(BUNDLE_NAME, IrcUiMessages.class);
     }
+
     private IrcUiMessages() {
     }
 }

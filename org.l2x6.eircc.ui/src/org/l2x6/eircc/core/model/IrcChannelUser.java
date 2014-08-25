@@ -14,19 +14,23 @@ import java.io.File;
  * @author <a href="mailto:ppalaga@redhat.com">Peter Palaga</a>
  */
 public class IrcChannelUser extends IrcObject {
-    public enum IrcChannelUserFields {}
+    public enum IrcChannelUserFields {
+    }
+
     private final AbstractIrcChannel channel;;
     private String leftWithMessage;
     private final String nick;
+
     /**
      * @param channel
      * @param nick
      */
     public IrcChannelUser(AbstractIrcChannel channel, String nick) {
-        super();
+        super(channel.getSaveDirectory());
         this.channel = channel;
         this.nick = nick;
     }
+
     /**
      * @see org.l2x6.eircc.core.model.IrcObject#dispose()
      */
@@ -45,23 +49,27 @@ public class IrcChannelUser extends IrcObject {
     public Enum<?>[] getFields() {
         return IrcChannelUserFields.values();
     }
+
     public String getLeftWithMessage() {
         return leftWithMessage;
     }
+
     public String getNick() {
         return nick;
     }
 
     /**
-     * @see org.l2x6.eircc.core.model.IrcObject#getSaveFile(java.io.File)
+     * @see org.l2x6.eircc.core.model.IrcObject#getSaveFile()
      */
     @Override
-    protected File getSaveFile(File parentDir) {
+    protected File getSaveFile() {
         return null;
     }
+
     public void setLeftWithMessage(String leftWithMessage) {
         this.leftWithMessage = leftWithMessage;
     }
+
     @Override
     public String toString() {
         return nick;

@@ -6,9 +6,10 @@
  * http://www.eclipse.org/legal/epl-v10.html
  */
 
-package org.l2x6.eircc.ui;
+package org.l2x6.eircc.ui.notify;
 
 import java.text.MessageFormat;
+import java.time.ZonedDateTime;
 
 import org.l2x6.eircc.core.model.AbstractIrcChannel;
 import org.l2x6.eircc.core.model.IrcAccount;
@@ -19,6 +20,7 @@ import org.l2x6.eircc.core.model.IrcModel;
 import org.l2x6.eircc.core.model.IrcUser;
 import org.l2x6.eircc.core.model.event.IrcModelEvent;
 import org.l2x6.eircc.core.model.event.IrcModelEventListener;
+import org.l2x6.eircc.ui.IrcUiMessages;
 
 /**
  * @author <a href="mailto:ppalaga@redhat.com">Peter Palaga</a>
@@ -48,9 +50,10 @@ public class IrcSystemMessagesGenerator implements IrcModelEventListener {
             if (!channel.isJoined()) {
                 text = IrcUiMessages.Message_You_left;
             } else {
-                text = MessageFormat.format(IrcUiMessages.Message_You_joined_as_nick, channel.getAccount().getMe().getNick());
+                text = MessageFormat.format(IrcUiMessages.Message_You_joined_as_nick, channel.getAccount().getMe()
+                        .getNick());
             }
-            IrcMessage m = new IrcMessage(log, System.currentTimeMillis(), text);
+            IrcMessage m = new IrcMessage(log, ZonedDateTime.now(), text);
             channel.getLog().appendMessage(m);
         }
     }
@@ -62,7 +65,7 @@ public class IrcSystemMessagesGenerator implements IrcModelEventListener {
         IrcLog log = user.getChannel().getLog();
         if (log != null) {
             String text = MessageFormat.format(IrcUiMessages.Message_x_joined, user.getNick());
-            IrcMessage m = new IrcMessage(log, System.currentTimeMillis(), text);
+            IrcMessage m = new IrcMessage(log, ZonedDateTime.now(), text);
             log.appendMessage(m);
         }
     }
@@ -80,7 +83,7 @@ public class IrcSystemMessagesGenerator implements IrcModelEventListener {
             } else {
                 text = MessageFormat.format(IrcUiMessages.Message_x_left, user.getNick());
             }
-            IrcMessage m = new IrcMessage(log, System.currentTimeMillis(), text);
+            IrcMessage m = new IrcMessage(log, ZonedDateTime.now(), text);
             log.appendMessage(m);
 
         }
@@ -127,7 +130,7 @@ public class IrcSystemMessagesGenerator implements IrcModelEventListener {
         } else {
             text = MessageFormat.format(IrcUiMessages.Message_x_is_known_as_y, oldNick, user.getNick());
         }
-        long now = System.currentTimeMillis();
+        ZonedDateTime now = ZonedDateTime.now();
         for (AbstractIrcChannel channel : account.getChannels()) {
             if (channel.isJoined() && channel.isPresent(oldNick)) {
                 channel.changeNick(oldNick, user.getNick());

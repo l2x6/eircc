@@ -6,7 +6,7 @@
  * http://www.eclipse.org/legal/epl-v10.html
  */
 
-package org.l2x6.eircc.ui;
+package org.l2x6.eircc.ui.notify;
 
 import java.io.IOException;
 import java.net.URL;
@@ -21,11 +21,12 @@ import javax.sound.sampled.LineListener;
 import javax.sound.sampled.LineUnavailableException;
 import javax.sound.sampled.UnsupportedAudioFileException;
 
-import org.l2x6.eircc.core.model.IrcLog;
 import org.l2x6.eircc.core.model.IrcLog.LogState;
+import org.l2x6.eircc.core.model.IrcMessage;
+import org.l2x6.eircc.core.model.IrcModel;
 import org.l2x6.eircc.core.model.event.IrcModelEvent;
 import org.l2x6.eircc.core.model.event.IrcModelEventListener;
-import org.l2x6.eircc.core.model.IrcModel;
+import org.l2x6.eircc.ui.EirccUi;
 
 /**
  * @author <a href="mailto:ppalaga@redhat.com">Peter Palaga</a>
@@ -80,9 +81,9 @@ public class IrcSoundNotifier implements IrcModelEventListener {
     public void handle(IrcModelEvent e) {
         try {
             switch (e.getEventType()) {
-            case LOG_STATE_CHANGED:
-                IrcLog log = (IrcLog) e.getModelObject();
-                if (log.getState() == LogState.ME_NAMED) {
+            case NEW_MESSAGE:
+                IrcMessage m = (IrcMessage) e.getModelObject();
+                if (m.isMeNamed() && m.getLog().getState() == LogState.ME_NAMED) {
                     meNamed();
                 }
                 break;
@@ -94,6 +95,10 @@ public class IrcSoundNotifier implements IrcModelEventListener {
         }
     }
 
+    public void meNamed() throws LineUnavailableException, IOException, UnsupportedAudioFileException {
+        play(SoundFile.NOTIFICATION);
+    }
+
     private void play(SoundFile soundFile) throws LineUnavailableException, IOException, UnsupportedAudioFileException {
         String path = SoundFile.NOTIFICATION.getAbsolutePath();
         URL url = this.getClass().getResource(path);
@@ -103,9 +108,5 @@ public class IrcSoundNotifier implements IrcModelEventListener {
         clip.addLineListener(CLIP_AUTOCLOSE);
         clip.open(audioIn);
         clip.start();
-    }
-
-    public void meNamed() throws LineUnavailableException, IOException, UnsupportedAudioFileException {
-        play(SoundFile.NOTIFICATION);
     }
 }

@@ -106,8 +106,8 @@ public class IrcController {
         AbstractIrcChannel result = account.findP2pChannel(p2pUser);
         if (result == null) {
             result = account.createP2pChannel(p2pUser);
+            account.addChannel(result);
         }
-        account.ensureChannelListed(result);
         return result;
     }
 
@@ -211,9 +211,12 @@ public class IrcController {
      */
     public void resolveNicks(IrcServer server, Collection<String> nicks) throws IOException {
         IrcUtils.assertUiThread();
-        //TODO nicks resolving
-        //getClientOrConnect(server.getAccount()).whois(nicks);
+        // TODO nicks resolving
+        // My test server seems to be quite unhappy about serving many whois
+        // requests at once.
+        // getClientOrConnect(server.getAccount()).whois(nicks);
     }
+
     /**
      * @param channel
      * @param nick
@@ -221,7 +224,7 @@ public class IrcController {
     public void userLeft(AbstractIrcChannel channel, String nick, String msg) {
         IrcUtils.assertUiThread();
         if (nick.equals(channel.getAccount().getAcceptedNick())) {
-            /* It is me who left */
+            /* /me left */
             channel.setJoined(false);
         } else {
             if (channel.isPresent(nick)) {
@@ -233,6 +236,7 @@ public class IrcController {
     public void userQuit(IrcAccount account, String nick, String msg) {
         IrcUtils.assertUiThread();
         if (nick.equals(account.getAcceptedNick())) {
+            /* /me has quit */
             account.setState(IrcAccountState.OFFLINE);
         } else {
             /* someone else has quit */

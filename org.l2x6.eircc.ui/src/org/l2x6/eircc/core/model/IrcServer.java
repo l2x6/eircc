@@ -35,6 +35,7 @@ public class IrcServer extends IrcObject {
      * @param account
      */
     public IrcServer(IrcAccount account) {
+        super(account.getSaveDirectory());
         this.account = account;
     }
 
@@ -134,7 +135,14 @@ public class IrcServer extends IrcObject {
      * @return
      */
     public IrcUser findUser(String nick) {
-        return users.values().stream().findFirst().filter(user -> user.getNick().equals(nick)).orElse(null);
+        for (IrcUser user : users.values()) {
+            if (user.getNick().equals(nick)) {
+                return user;
+            }
+            // return users.values().stream().findFirst().filter(user ->
+            // user.getNick().equals(nick)).orElse(null);
+        }
+        return null;
     }
 
     public IrcUser findUser(UUID id) {
@@ -165,8 +173,16 @@ public class IrcServer extends IrcObject {
     }
 
     @Override
-    protected File getSaveFile(File parentDir) {
-        return new File(parentDir, account.getId().toString() + "-" + account.getLabel() + ".server.properties");
+    protected File getSaveFile() {
+        return new File(saveDirectory, account.getId().toString() + "-" + account.getLabel() + ".server.properties");
+    }
+
+    /**
+     * @return
+     * @return
+     */
+    Map<UUID, IrcUser> getUsers() {
+        return users;
     }
 
     /**
@@ -188,14 +204,6 @@ public class IrcServer extends IrcObject {
             account.getModel().fire(new IrcModelEvent(EventType.USER_REMOVED, removed));
             removed.dispose();
         }
-    }
-
-    /**
-     * @return
-     * @return
-     */
-    Map<UUID, IrcUser> getUsers() {
-        return users;
     }
 
 }

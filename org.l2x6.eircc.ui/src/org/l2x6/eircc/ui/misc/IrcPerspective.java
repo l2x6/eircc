@@ -6,7 +6,7 @@
  * http://www.eclipse.org/legal/epl-v10.html
  */
 
-package org.l2x6.eircc.ui;
+package org.l2x6.eircc.ui.misc;
 
 import org.eclipse.ui.IFolderLayout;
 import org.eclipse.ui.IPageLayout;
@@ -23,17 +23,16 @@ public class IrcPerspective implements IPerspectiveFactory {
 
         String editorArea = layout.getEditorArea();
 
-        IFolderLayout leftFolder= layout.createFolder("left", IPageLayout.LEFT, (float)0.2, editorArea); //$NON-NLS-1$
+        IFolderLayout leftFolder = layout.createFolder("left", IPageLayout.LEFT, (float) 0.2, editorArea); //$NON-NLS-1$
 
         leftFolder.addView(IrcAccountsView.ID);
 
-        IFolderLayout bottomFolder= layout.createFolder("bottom", IPageLayout.BOTTOM, (float)0.75, editorArea); //$NON-NLS-1$
+        IFolderLayout bottomFolder = layout.createFolder("bottom", IPageLayout.BOTTOM, (float) 0.75, editorArea); //$NON-NLS-1$
         bottomFolder.addPlaceholder(IConsoleConstants.ID_CONSOLE_VIEW);
 
-        layout.addView(IPageLayout.ID_OUTLINE, IPageLayout.RIGHT, (float)0.75, editorArea);
+        layout.addView(IPageLayout.ID_OUTLINE, IPageLayout.RIGHT, (float) 0.75, editorArea);
 
         layout.addActionSet(IPageLayout.ID_NAVIGATE_ACTION_SET);
-
 
         // views
         layout.addShowViewShortcut(IrcAccountsView.ID);

@@ -81,13 +81,13 @@ public class IrcAccountsView extends ViewPart implements IrcModelEventListener {
     private IrcTreeAction<?> leaveAccountChannelAction;
     private IrcTreeAction<?> leaveServerChannelAction;
     private IrcTreeAction<?> listChannelsAction;
-    private IrcTreeAction<?>[] treeActions;
     private List<ISelectionChangedListener> listeners = Collections.emptyList();
     private PageBook pagebook;
     private CLabel serverChannelsLabel;
     private TreeViewer serverChannelsTreeViewer;
     // TODO private TreeViewer serverUsersTreeViewer;
     private ViewForm serverChannelsViewForm;
+    private IrcTreeAction<?>[] treeActions;
 
     private MouseListener treeMouseListener;
 
@@ -108,12 +108,14 @@ public class IrcAccountsView extends ViewPart implements IrcModelEventListener {
 
         @Override
         public void selectionChanged(SelectionChangedEvent event) {
-//            ITreeSelection selection = (ITreeSelection) event.getSelection();
-//            TreePath[] selectedPaths = selection.getPaths();
-//            List<Object> selectedObjects = Arrays.stream(selectedPaths).map(path -> path.getLastSegment())
-//                    .collect(Collectors.toList());
-//            ISelectionService selectionService = getSite().getWorkbenchWindow().getSelectionService();
-//            selectionService.setSelection(selectedObjects);
+            // ITreeSelection selection = (ITreeSelection) event.getSelection();
+            // TreePath[] selectedPaths = selection.getPaths();
+            // List<Object> selectedObjects =
+            // Arrays.stream(selectedPaths).map(path -> path.getLastSegment())
+            // .collect(Collectors.toList());
+            // ISelectionService selectionService =
+            // getSite().getWorkbenchWindow().getSelectionService();
+            // selectionService.setSelection(selectedObjects);
             if (event.getSelectionProvider() == focusedTreeViewer) {
                 for (ISelectionChangedListener l : listeners) {
                     l.selectionChanged(event);
@@ -211,15 +213,8 @@ public class IrcAccountsView extends ViewPart implements IrcModelEventListener {
 
         joinServerChannelAction = IrcTreeAction.createJoinChannelAction(serverChannelsTree);
         leaveServerChannelAction = IrcTreeAction.createLeaveChannelAction(serverChannelsTree);
-        treeActions = new IrcTreeAction[] {
-                listChannelsAction,
-                connectAccountAction,
-                disconnectAccountAction,
-                joinAccountChannelAction,
-                leaveAccountChannelAction,
-                joinServerChannelAction,
-                leaveServerChannelAction
-        };
+        treeActions = new IrcTreeAction[] { listChannelsAction, connectAccountAction, disconnectAccountAction,
+                joinAccountChannelAction, leaveAccountChannelAction, joinServerChannelAction, leaveServerChannelAction };
 
         ToolBarManager serverChannelsTbm = new ToolBarManager(serverChannelsToolbar);
         serverChannelsTbm.add(new Separator(ContextMenuConstants.GROUP_IRC_SERVER_CHANNELS));

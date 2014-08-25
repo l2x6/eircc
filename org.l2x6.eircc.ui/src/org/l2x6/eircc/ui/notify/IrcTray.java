@@ -6,7 +6,7 @@
  * http://www.eclipse.org/legal/epl-v10.html
  */
 
-package org.l2x6.eircc.ui;
+package org.l2x6.eircc.ui.notify;
 
 import java.awt.SystemTray;
 
@@ -18,7 +18,8 @@ import org.eclipse.swt.widgets.TrayItem;
 import org.l2x6.eircc.core.model.IrcModel;
 import org.l2x6.eircc.core.model.event.IrcModelEvent;
 import org.l2x6.eircc.core.model.event.IrcModelEventListener;
-import org.l2x6.eircc.ui.IrcImages.ImageSize;
+import org.l2x6.eircc.ui.misc.IrcImages;
+import org.l2x6.eircc.ui.misc.IrcImages.ImageSize;
 import org.l2x6.eircc.ui.views.IrcLabelProvider;
 
 /**

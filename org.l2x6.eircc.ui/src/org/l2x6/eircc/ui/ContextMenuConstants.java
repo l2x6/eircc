@@ -8,7 +8,6 @@
 
 package org.l2x6.eircc.ui;
 
-
 /**
  * @author <a href="mailto:ppalaga@redhat.com">Peter Palaga</a>
  */

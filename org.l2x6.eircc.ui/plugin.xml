@@ -8,7 +8,7 @@
 
     <extension point="org.eclipse.ui.newWizards">
         <wizard id="org.l2x6.eircc.ui.NewIrcAccountWizard" name="%NewIrcAccountWizard.name"
-            class="org.l2x6.eircc.ui.NewIrcAccountWizard"
+            class="org.l2x6.eircc.ui.misc.NewIrcAccountWizard"
             category="org.l2x6.eircc.ui.newWizardCategory"
             icon="icons/account-new.png">
 
@@ -23,7 +23,7 @@
         <perspective
             id="org.l2x6.eircc.ui.IrcPerspective"
             name="%IrcPerspective.name"
-            class="org.l2x6.eircc.ui.IrcPerspective"
+            class="org.l2x6.eircc.ui.misc.IrcPerspective"
             icon="icons/eircc.png">
         </perspective>
     </extension>

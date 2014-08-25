@@ -25,6 +25,7 @@ public class IrcTokenizer implements Iterable<IrcToken> {
                 offset++;
             }
         }
+
         /**
          *
          */
@@ -36,6 +37,7 @@ public class IrcTokenizer implements Iterable<IrcToken> {
                 offset++;
             }
         }
+
         /**
          * @see java.util.Iterator#hasNext()
          */
@@ -61,6 +63,7 @@ public class IrcTokenizer implements Iterable<IrcToken> {
             consumeToken();
             return new IrcToken(input, tokenStart, offset - tokenStart);
         }
+
         /**
          * @see java.util.Iterator#remove()
          */

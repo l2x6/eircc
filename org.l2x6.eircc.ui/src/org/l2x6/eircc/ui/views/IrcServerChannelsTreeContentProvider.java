@@ -25,21 +25,6 @@ public class IrcServerChannelsTreeContentProvider implements ITreeContentProvide
     }
 
     /**
-     * @see org.eclipse.jface.viewers.IContentProvider#inputChanged(org.eclipse.jface.viewers.Viewer, java.lang.Object, java.lang.Object)
-     */
-    @Override
-    public void inputChanged(Viewer viewer, Object oldInput, Object newInput) {
-    }
-
-    /**
-     * @see org.eclipse.jface.viewers.ITreeContentProvider#getElements(java.lang.Object)
-     */
-    @Override
-    public Object[] getElements(Object inputElement) {
-        return ((IrcServer) inputElement).getChannels();
-    }
-
-    /**
      * @see org.eclipse.jface.viewers.ITreeContentProvider#getChildren(java.lang.Object)
      */
     @Override
@@ -48,6 +33,14 @@ public class IrcServerChannelsTreeContentProvider implements ITreeContentProvide
             return ((IrcServer) parentElement).getChannels();
         }
         return null;
+    }
+
+    /**
+     * @see org.eclipse.jface.viewers.ITreeContentProvider#getElements(java.lang.Object)
+     */
+    @Override
+    public Object[] getElements(Object inputElement) {
+        return ((IrcServer) inputElement).getChannels();
     }
 
     /**
@@ -67,6 +60,14 @@ public class IrcServerChannelsTreeContentProvider implements ITreeContentProvide
             return ((IrcServer) element).hasChannels();
         }
         return false;
+    }
+
+    /**
+     * @see org.eclipse.jface.viewers.IContentProvider#inputChanged(org.eclipse.jface.viewers.Viewer,
+     *      java.lang.Object, java.lang.Object)
+     */
+    @Override
+    public void inputChanged(Viewer viewer, Object oldInput, Object newInput) {
     }
 
 }

@@ -10,6 +10,7 @@ package org.l2x6.eircc.core.client;
 
 import java.io.IOException;
 import java.security.cert.X509Certificate;
+import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -34,7 +35,6 @@ import org.l2x6.eircc.core.model.IrcServer;
 import org.l2x6.eircc.core.model.IrcUser;
 import org.l2x6.eircc.core.util.IrcUtils;
 import org.l2x6.eircc.ui.EirccUi;
-import org.schwering.irc.lib.IRCCommand;
 import org.schwering.irc.lib.IRCConnection;
 import org.schwering.irc.lib.IRCEventListener;
 import org.schwering.irc.lib.IRCModeParser;
@@ -78,6 +78,11 @@ public class IrcClient {
 
     }
 
+    /**
+     * A place where the <i>Man in the Middle</i> likes to reside.
+     *
+     * @author <a href="mailto:ppalaga@redhat.com">Peter Palaga</a>
+     */
     private static class MitmLounge implements SSLTrustManager {
         private X509Certificate[] chain;
 
@@ -141,7 +146,7 @@ public class IrcClient {
             int lastSpace = channelSpec.lastIndexOf(' ');
             String chName;
             if (lastSpace >= 0) {
-                chName = channelSpec.substring(lastSpace+1);
+                chName = channelSpec.substring(lastSpace + 1);
             } else {
                 chName = channelSpec;
             }
@@ -296,7 +301,8 @@ public class IrcClient {
             Display.getDefault().asyncExec(new Runnable() {
                 @Override
                 public void run() {
-                    IrcController.getInstance().changeNick(account.getServer(), user.getNick(), newNick, user.getUsername());
+                    IrcController.getInstance().changeNick(account.getServer(), user.getNick(), newNick,
+                            user.getUsername());
                 }
             });
         }
@@ -341,23 +347,22 @@ public class IrcClient {
          */
         @Override
         public void onPrivmsg(String target, final IRCUser user, final String msg) {
-            final boolean isP2p = target.equals(account.getAcceptedNick());
             Display.getDefault().asyncExec(new Runnable() {
                 @Override
                 public void run() {
+                    final boolean isP2p = target.equals(account.getAcceptedNick());
                     IrcController controller = IrcController.getInstance();
                     IrcUser ircUser = controller.getOrCreateUser(account.getServer(), user.getNick(),
                             user.getUsername());
                     AbstractIrcChannel channel;
                     if (!isP2p) {
-                        channel = controller
-                                .getOrCreateAccountChannel(account, target);
+                        channel = controller.getOrCreateAccountChannel(account, target);
                     } else {
                         channel = controller.getOrCreateP2pChannel(ircUser);
                     }
                     channel.setJoined(true);
                     IrcLog log = channel.getLog();
-                    IrcMessage message = new IrcMessage(log, System.currentTimeMillis(), ircUser, msg);
+                    IrcMessage message = new IrcMessage(log, ZonedDateTime.now(), ircUser, msg);
                     log.appendMessage(message);
                 }
             });
@@ -504,7 +509,7 @@ public class IrcClient {
         try {
             connection.connect();
         } catch (IOException e) {
-            throw new IrcException("Could not connect to '"+ account.getLabel() +"': "+ e.getMessage(), e, account);
+            throw new IrcException("Could not connect to '" + account.getLabel() + "': " + e.getMessage(), e, account);
         }
         this.account = account;
     }
@@ -521,7 +526,8 @@ public class IrcClient {
             try {
                 connection.connect();
             } catch (IOException e) {
-                throw new IrcException("Could not connect to '"+ account.getLabel() +"': "+ e.getMessage(), e, account);
+                throw new IrcException("Could not connect to '" + account.getLabel() + "': " + e.getMessage(), e,
+                        account);
             }
         }
         throw new IllegalStateException("Must be connected");
@@ -556,6 +562,17 @@ public class IrcClient {
             @Override
             public void run() {
                 connection.doList();
+            }
+        });
+    }
+
+    public void nick(final String newNick) throws IrcException {
+        IrcUtils.assertUiThread();
+        ensureConnected();
+        executor.submit(new Runnable() {
+            @Override
+            public void run() {
+                connection.doNick(newNick);
             }
         });
     }
@@ -595,7 +612,7 @@ public class IrcClient {
                 Display.getDefault().asyncExec(new Runnable() {
                     @Override
                     public void run() {
-                        IrcMessage m = new IrcMessage(channel.getLog(), System.currentTimeMillis(), account.getMe(), message);
+                        IrcMessage m = new IrcMessage(channel.getLog(), ZonedDateTime.now(), account.getMe(), message);
                         channel.getLog().appendMessage(m);
                     }
                 });
@@ -603,13 +620,17 @@ public class IrcClient {
         });
     }
 
-    public void nick(final String newNick) throws IrcException {
+    /**
+     * @param rawCommand
+     * @throws IOException
+     */
+    public void postRaw(final String rawCommand) throws IrcException {
         IrcUtils.assertUiThread();
         ensureConnected();
         executor.submit(new Runnable() {
             @Override
             public void run() {
-                connection.doNick(newNick);
+                connection.send(rawCommand);
             }
         });
     }
@@ -657,21 +678,6 @@ public class IrcClient {
                 });
             }
         }
-    }
-
-    /**
-     * @param rawCommand
-     * @throws IOException
-     */
-    public void postRaw(final String rawCommand) throws IrcException {
-        IrcUtils.assertUiThread();
-        ensureConnected();
-        executor.submit(new Runnable() {
-            @Override
-            public void run() {
-                connection.send(rawCommand);
-            }
-        });
     }
 
 }

@@ -15,6 +15,7 @@ import org.l2x6.eircc.core.model.IrcModel;
  */
 public class EirccCore {
     private static final EirccCore instance = new EirccCore();
+
     public static EirccCore getInstance() {
         return instance;
     }

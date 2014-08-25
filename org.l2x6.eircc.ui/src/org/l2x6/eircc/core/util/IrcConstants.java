@@ -14,8 +14,8 @@ package org.l2x6.eircc.core.util;
 public class IrcConstants {
     /**
      * <cite>Most IRC clients require commands to be preceded by a slash
-     * ("/")</cite> - and so we do. Cited from <a
-     * href="http://en.wikipedia.org/wiki/List_of_Internet_Relay_Chat_commands"
+     * ("/")</cite> - and so we do. Cited from <a href=
+     * "http://en.wikipedia.org/wiki/List_of_Internet_Relay_Chat_commands"
      * >http://en.wikipedia.org/wiki/List_of_Internet_Relay_Chat_commands</a>
      */
     public static final char COMMAND_MARKER = '/';

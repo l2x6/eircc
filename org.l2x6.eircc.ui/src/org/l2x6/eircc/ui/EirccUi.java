@@ -24,6 +24,7 @@ import org.l2x6.eircc.core.EirccCore;
 import org.l2x6.eircc.core.IrcController;
 import org.l2x6.eircc.core.model.AbstractIrcChannel;
 import org.l2x6.eircc.core.model.IrcAccount;
+import org.l2x6.eircc.core.model.IrcMessage;
 import org.l2x6.eircc.core.model.IrcAccount.IrcAccountState;
 import org.l2x6.eircc.core.model.IrcModel;
 import org.l2x6.eircc.core.model.IrcUser;
@@ -32,6 +33,11 @@ import org.l2x6.eircc.core.model.event.IrcModelEventListener;
 import org.l2x6.eircc.core.util.IrcUtils;
 import org.l2x6.eircc.ui.editor.IrcChannelEditor;
 import org.l2x6.eircc.ui.editor.IrcChannelEditorInput;
+import org.l2x6.eircc.ui.misc.IrcImages;
+import org.l2x6.eircc.ui.notify.IrcSoundNotifier;
+import org.l2x6.eircc.ui.notify.IrcSystemMessagesGenerator;
+import org.l2x6.eircc.ui.notify.IrcTray;
+import org.l2x6.eircc.ui.views.IrcConsole;
 import org.l2x6.eircc.ui.views.IrcLabelProvider;
 import org.osgi.framework.BundleContext;
 
@@ -83,6 +89,10 @@ public class EirccUi extends AbstractUIPlugin implements IrcModelEventListener, 
         getDefault().getLog().log(status);
     }
 
+    private File getDefaultStorageRoot() {
+        return new File(System.getProperty("user.home"), ".eircc");
+    }
+
     /**
      * @see org.l2x6.eircc.core.model.event.IrcModelEventListener#handle(org.l2x6.eircc.core.model.event.IrcModelEvent)
      */
@@ -91,7 +101,7 @@ public class EirccUi extends AbstractUIPlugin implements IrcModelEventListener, 
         switch (e.getEventType()) {
         case ACCOUNT_ADDED:
             try {
-                ((IrcAccount)e.getModelObject()).save(getDefaultStorageRoot());
+                ((IrcAccount) e.getModelObject()).save();
             } catch (Exception e1) {
                 log(e1);
             }
@@ -124,10 +134,9 @@ public class EirccUi extends AbstractUIPlugin implements IrcModelEventListener, 
             break;
         case ACCOUNT_CHANNEL_ADDED:
             try {
-                AbstractIrcChannel channel = (AbstractIrcChannel)e.getModelObject();
+                AbstractIrcChannel channel = (AbstractIrcChannel) e.getModelObject();
                 if (channel.isKept()) {
-                    File channelsDir = channel.getAccount().getChannelsDir(getDefaultStorageRoot());
-                    channel.save(channelsDir);
+                    channel.save();
                 }
             } catch (Exception e1) {
                 log(e1);
@@ -135,9 +144,16 @@ public class EirccUi extends AbstractUIPlugin implements IrcModelEventListener, 
             break;
         case USER_ADDED:
             try {
-                IrcUser user = (IrcUser)e.getModelObject();
-                File usersDir = user.getServer().getAccount().getUsersDir(getDefaultStorageRoot());
-                user.save(usersDir);
+                IrcUser user = (IrcUser) e.getModelObject();
+                user.save();
+            } catch (Exception e1) {
+                log(e1);
+            }
+            break;
+        case NEW_MESSAGE:
+            try {
+                IrcMessage m = (IrcMessage) e.getModelObject();
+                m.getLog().save();
             } catch (Exception e1) {
                 log(e1);
             }
@@ -181,10 +197,6 @@ public class EirccUi extends AbstractUIPlugin implements IrcModelEventListener, 
         IrcSystemMessagesGenerator.getInstance();
 
         PlatformUI.getWorkbench().addWindowListener(this);
-    }
-
-    private File getDefaultStorageRoot() {
-        return new File(System.getProperty("user.home"), ".eircc");
     }
 
     /**
@@ -254,17 +266,17 @@ public class EirccUi extends AbstractUIPlugin implements IrcModelEventListener, 
     }
 
     /**
-     * @see org.eclipse.ui.IWindowListener#windowDeactivated(org.eclipse.ui.IWorkbenchWindow)
-     */
-    @Override
-    public void windowDeactivated(IWorkbenchWindow window) {
-    }
-
-    /**
      * @see org.eclipse.ui.IWindowListener#windowClosed(org.eclipse.ui.IWorkbenchWindow)
      */
     @Override
     public void windowClosed(IWorkbenchWindow window) {
+    }
+
+    /**
+     * @see org.eclipse.ui.IWindowListener#windowDeactivated(org.eclipse.ui.IWorkbenchWindow)
+     */
+    @Override
+    public void windowDeactivated(IWorkbenchWindow window) {
     }
 
     /**

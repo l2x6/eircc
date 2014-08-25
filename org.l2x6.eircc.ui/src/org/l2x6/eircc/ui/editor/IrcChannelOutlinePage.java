@@ -9,28 +9,26 @@
 package org.l2x6.eircc.ui.editor;
 
 import org.eclipse.jface.action.MenuManager;
+import org.eclipse.jface.viewers.DelegatingStyledCellLabelProvider;
+import org.eclipse.jface.viewers.DelegatingStyledCellLabelProvider.IStyledLabelProvider;
 import org.eclipse.jface.viewers.DoubleClickEvent;
 import org.eclipse.jface.viewers.IDoubleClickListener;
 import org.eclipse.jface.viewers.ITreeContentProvider;
-import org.eclipse.jface.viewers.ITreeSelection;
+import org.eclipse.jface.viewers.StyledString;
 import org.eclipse.jface.viewers.TreeViewer;
 import org.eclipse.jface.viewers.Viewer;
-import org.eclipse.swt.events.MouseEvent;
-import org.eclipse.swt.events.MouseListener;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Menu;
 import org.eclipse.swt.widgets.Tree;
-import org.eclipse.swt.widgets.TreeItem;
 import org.eclipse.ui.views.contentoutline.ContentOutlinePage;
-import org.l2x6.eircc.core.IrcController;
 import org.l2x6.eircc.core.model.AbstractIrcChannel;
-import org.l2x6.eircc.core.model.IrcChannel;
+import org.l2x6.eircc.core.model.IrcChannelUser;
 import org.l2x6.eircc.core.model.IrcModel;
 import org.l2x6.eircc.core.model.event.IrcModelEvent;
 import org.l2x6.eircc.core.model.event.IrcModelEventListener;
 import org.l2x6.eircc.ui.EirccUi;
-import org.l2x6.eircc.ui.IrcUiMessages;
 import org.l2x6.eircc.ui.actions.IrcTreeAction;
+import org.l2x6.eircc.ui.prefs.IrcPreferences;
 import org.l2x6.eircc.ui.views.IrcLabelProvider;
 
 /**
@@ -58,10 +56,11 @@ public class IrcChannelOutlinePage extends ContentOutlinePage implements IDouble
         }
 
         /**
-         * @see org.eclipse.jface.viewers.IContentProvider#inputChanged(org.eclipse.jface.viewers.Viewer, java.lang.Object, java.lang.Object)
+         * @see org.eclipse.jface.viewers.ITreeContentProvider#getChildren(java.lang.Object)
          */
         @Override
-        public void inputChanged(Viewer viewer, Object oldInput, Object newInput) {
+        public Object[] getChildren(Object parentElement) {
+            return null;
         }
 
         /**
@@ -70,14 +69,6 @@ public class IrcChannelOutlinePage extends ContentOutlinePage implements IDouble
         @Override
         public Object[] getElements(Object inputElement) {
             return channel.getUsers();
-        }
-
-        /**
-         * @see org.eclipse.jface.viewers.ITreeContentProvider#getChildren(java.lang.Object)
-         */
-        @Override
-        public Object[] getChildren(Object parentElement) {
-            return null;
         }
 
         /**
@@ -96,10 +87,44 @@ public class IrcChannelOutlinePage extends ContentOutlinePage implements IDouble
             return false;
         }
 
+        /**
+         * @see org.eclipse.jface.viewers.IContentProvider#inputChanged(org.eclipse.jface.viewers.Viewer,
+         *      java.lang.Object, java.lang.Object)
+         */
+        @Override
+        public void inputChanged(Viewer viewer, Object oldInput, Object newInput) {
+        }
+
+    }
+
+    private static class UsersLabelProvider extends IrcLabelProvider implements IStyledLabelProvider {
+        private final AbstractIrcChannel channel;
+
+        /**
+         * @param channel
+         */
+        public UsersLabelProvider(AbstractIrcChannel channel) {
+            super();
+            this.channel = channel;
+        }
+
+        /**
+         * @see org.eclipse.jface.viewers.DelegatingStyledCellLabelProvider.IStyledLabelProvider#getStyledText(java.lang.Object)
+         */
+        @Override
+        public StyledString getStyledText(Object element) {
+            if (element instanceof IrcChannelUser) {
+                int index = channel.getUserIndex(((IrcChannelUser) element).getNick());
+                return new StyledString(super.getText(element), IrcPreferences.getInstance().getUserStyler(index));
+            }
+            return new StyledString(super.getText(element));
+        }
+
     }
 
     private final AbstractIrcChannel channel;
     private IrcTreeAction<?> openPrivateChatAction;
+
     /**
      * @param ircChannelEditor
      */
@@ -117,7 +142,7 @@ public class IrcChannelOutlinePage extends ContentOutlinePage implements IDouble
         // Init tree viewer
         TreeViewer viewer = getTreeViewer();
         viewer.setContentProvider(new IrcChannelOutlineContentProvider(channel));
-        viewer.setLabelProvider(IrcLabelProvider.getInstance());
+        viewer.setLabelProvider(new DelegatingStyledCellLabelProvider(new UsersLabelProvider(channel)));
         viewer.addSelectionChangedListener(this);
         viewer.addDoubleClickListener(this);
         viewer.setInput(channel);
@@ -133,14 +158,6 @@ public class IrcChannelOutlinePage extends ContentOutlinePage implements IDouble
 
     }
 
-    /**
-     * @see org.eclipse.jface.viewers.IDoubleClickListener#doubleClick(org.eclipse.jface.viewers.DoubleClickEvent)
-     */
-    @Override
-    public void doubleClick(DoubleClickEvent event) {
-        openPrivateChatAction.run();
-    }
-
     @Override
     public void dispose() {
         try {
@@ -149,6 +166,14 @@ public class IrcChannelOutlinePage extends ContentOutlinePage implements IDouble
             EirccUi.log(e);
         }
         super.dispose();
+    }
+
+    /**
+     * @see org.eclipse.jface.viewers.IDoubleClickListener#doubleClick(org.eclipse.jface.viewers.DoubleClickEvent)
+     */
+    @Override
+    public void doubleClick(DoubleClickEvent event) {
+        openPrivateChatAction.run();
     }
 
     /**

@@ -16,14 +16,16 @@ import org.l2x6.eircc.core.model.AbstractIrcChannel;
 import org.l2x6.eircc.core.model.IrcModel;
 import org.l2x6.eircc.core.model.IrcUser;
 import org.l2x6.eircc.core.model.P2pIrcChannel;
-import org.l2x6.eircc.ui.IrcImages;
+import org.l2x6.eircc.ui.misc.IrcImages;
 import org.l2x6.eircc.ui.views.IrcLabelProvider;
 
 /**
  * @author <a href="mailto:ppalaga@redhat.com">Peter Palaga</a>
  */
 public class IrcChannelEditorInput implements IEditorInput, IPersistableElement {
-    public enum IrcChannelEditorInputField {ACCOUNT_LABEL, CHANNEL_NAME, P2P_NICK, P2P_USER_ID, P2P_USERNAME};
+    public enum IrcChannelEditorInputField {
+        ACCOUNT_LABEL, CHANNEL_NAME, P2P_NICK, P2P_USER_ID, P2P_USERNAME
+    };
 
     private static void safePut(IMemento memento, IrcChannelEditorInputField field, String value) {
         if (value != null) {
@@ -98,7 +100,7 @@ public class IrcChannelEditorInput implements IEditorInput, IPersistableElement 
      */
     @Override
     public IPersistableElement getPersistable() {
-        return this;
+        return channel != null && !channel.isP2p() ? this : null;
     }
 
     /**

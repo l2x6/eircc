@@ -28,10 +28,16 @@ public class IrcAccountsTreeContentProvider implements ITreeContentProvider {
     }
 
     /**
-     * @see org.eclipse.jface.viewers.IContentProvider#inputChanged(org.eclipse.jface.viewers.Viewer, java.lang.Object, java.lang.Object)
+     * @see org.eclipse.jface.viewers.ITreeContentProvider#getChildren(java.lang.Object)
      */
     @Override
-    public void inputChanged(Viewer viewer, Object oldInput, Object newInput) {
+    public Object[] getChildren(Object parentElement) {
+        if (parentElement instanceof IrcModel) {
+            return ((IrcModel) parentElement).getAccounts();
+        } else if (parentElement instanceof IrcAccount) {
+            return ((IrcAccount) parentElement).getChannels();
+        }
+        return null;
     }
 
     /**
@@ -40,20 +46,6 @@ public class IrcAccountsTreeContentProvider implements ITreeContentProvider {
     @Override
     public Object[] getElements(Object inputElement) {
         return ((IrcModel) inputElement).getAccounts();
-    }
-
-    /**
-     * @see org.eclipse.jface.viewers.ITreeContentProvider#getChildren(java.lang.Object)
-     */
-    @Override
-    public Object[] getChildren(Object parentElement) {
-        if (parentElement instanceof IrcModel) {
-            return ((IrcModel) parentElement).getAccounts();
-        }
-        else if (parentElement instanceof IrcAccount) {
-            return ((IrcAccount) parentElement).getChannels();
-        }
-        return null;
     }
 
     /**
@@ -74,11 +66,18 @@ public class IrcAccountsTreeContentProvider implements ITreeContentProvider {
     public boolean hasChildren(Object element) {
         if (element instanceof IrcModel) {
             return ((IrcModel) element).hasAccounts();
-        }
-        else if (element instanceof IrcAccount) {
+        } else if (element instanceof IrcAccount) {
             return ((IrcAccount) element).hasChannels();
         }
         return false;
+    }
+
+    /**
+     * @see org.eclipse.jface.viewers.IContentProvider#inputChanged(org.eclipse.jface.viewers.Viewer,
+     *      java.lang.Object, java.lang.Object)
+     */
+    @Override
+    public void inputChanged(Viewer viewer, Object oldInput, Object newInput) {
     }
 
 }

@@ -72,6 +72,7 @@ public class IrcModel extends IrcObject {
         List<IrcModelEventListener> newList = new ArrayList<IrcModelEventListener>(listeners.size() + 1);
         newList.addAll(listeners);
         newList.add(listener);
+        Collections.sort(newList, IrcModelEventListener.COMPARATOR);
         listeners = newList;
     }
 
@@ -94,6 +95,7 @@ public class IrcModel extends IrcObject {
      * @param ircModelEvent
      */
     void fire(IrcModelEvent ircModelEvent) {
+        IrcUtils.assertUiThread();
         for (IrcModelEventListener listener : listeners) {
             try {
                 listener.handle(ircModelEvent);
@@ -171,8 +173,8 @@ public class IrcModel extends IrcObject {
     }
 
     @Override
-    protected File getSaveFile(File parentDir) {
-        return new File(parentDir, "model.properties");
+    protected File getSaveFile() {
+        return new File(saveDirectory, "model.properties");
     }
 
     public boolean hasAccounts() {
@@ -180,20 +182,12 @@ public class IrcModel extends IrcObject {
     }
 
     public void load(File storageRoot) throws IOException {
+        this.saveDirectory = storageRoot;
         if (storageRoot.exists()) {
             for (File f : storageRoot.listFiles()) {
-                String fileName = f.getName();
-                if (f.isFile() && fileName.endsWith(IrcAccount.FILE_EXTENSION)) {
-                    String bareName = fileName.substring(0, fileName.length() - IrcAccount.FILE_EXTENSION.length());
-                    int minusPos = bareName.lastIndexOf('-');
-                    if (minusPos >= 0) {
-                        String uuidString = bareName.substring(0, minusPos);
-                        UUID uuid = UUID.fromString(uuidString);
-                        String label = bareName.substring(minusPos + 1);
-                        IrcAccount account = new IrcAccount(this, uuid, label);
-                        account.load(f);
-                        accounts.put(account.getLabel(), account);
-                    }
+                if (IrcAccount.isAccountFile(f)) {
+                    IrcAccount account = new IrcAccount(this, f);
+                    accounts.put(account.getLabel(), account);
                 }
             }
         }
@@ -240,9 +234,9 @@ public class IrcModel extends IrcObject {
         listeners = newList;
     }
 
-    public void save(File storageRoot) throws UnsupportedEncodingException, FileNotFoundException, IOException {
+    public void save() throws UnsupportedEncodingException, FileNotFoundException, IOException {
         for (IrcAccount account : accounts.values()) {
-            account.save(storageRoot);
+            account.save();
         }
     }
 

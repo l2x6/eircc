@@ -6,7 +6,7 @@
  * http://www.eclipse.org/legal/epl-v10.html
  */
 
-package org.l2x6.eircc.ui;
+package org.l2x6.eircc.ui.misc;
 
 import java.awt.Dimension;
 import java.net.URL;
@@ -98,7 +98,7 @@ public class IrcImages {
 
         /*
          * (non-Javadoc)
-         *
+         * 
          * @see Object#equals(Object)
          */
         @Override
@@ -109,7 +109,7 @@ public class IrcImages {
 
         /*
          * (non-Javadoc)
-         *
+         * 
          * @see ImageDescriptor#getImageData()
          */
         @Override
@@ -119,7 +119,7 @@ public class IrcImages {
 
         /*
          * (non-Javadoc)
-         *
+         * 
          * @see Object#hashCode()
          */
         @Override
@@ -489,6 +489,44 @@ public class IrcImages {
         return result;
     }
 
+    private ImageKey[] getOverlays(AbstractIrcChannel channel) {
+        boolean hasOverlays = false;
+        ImageKey topLeftOverlay = null;
+        ImageKey topRightOverlay = null;
+        ImageKey bottomLeftOverlay = null;
+        ImageKey bottomRightOverlay = null;
+        ImageKey underlay = null;
+        IrcLog log = channel.getLog();
+        if (log != null) {
+            switch (log.getState()) {
+            case ME_NAMED:
+                topRightOverlay = ImageKey.SMILEY_OVERLAY;
+                hasOverlays = true;
+                break;
+            case UNREAD_MESSAGES:
+                topRightOverlay = ImageKey.BLUE_BALL_OVERLAY;
+                hasOverlays = true;
+                break;
+            case NONE:
+                if (channel.isJoined()) {
+                    topRightOverlay = ImageKey.GREEN_BALL_OVERLAY;
+                    hasOverlays = true;
+                }
+                break;
+            }
+        } else if (channel.isJoined()) {
+            topRightOverlay = ImageKey.GREEN_BALL_OVERLAY;
+            hasOverlays = true;
+        }
+
+        if (hasOverlays) {
+            return new ImageKey[] { ImageKey.CHANNEL, topLeftOverlay, topRightOverlay, bottomLeftOverlay,
+                    bottomRightOverlay, underlay };
+        } else {
+            return new ImageKey[] { ImageKey.CHANNEL };
+        }
+    }
+
     private ImageKey[] getOverlays(IrcAccount account) {
         boolean hasOverlays = false;
         ImageKey topLeftOverlay = null;
@@ -548,44 +586,6 @@ public class IrcImages {
                     underlay };
         } else {
             return new ImageKey[] { base };
-        }
-    }
-
-    private ImageKey[] getOverlays(AbstractIrcChannel channel) {
-        boolean hasOverlays = false;
-        ImageKey topLeftOverlay = null;
-        ImageKey topRightOverlay = null;
-        ImageKey bottomLeftOverlay = null;
-        ImageKey bottomRightOverlay = null;
-        ImageKey underlay = null;
-        IrcLog log = channel.getLog();
-        if (log != null) {
-            switch (log.getState()) {
-            case ME_NAMED:
-                topRightOverlay = ImageKey.SMILEY_OVERLAY;
-                hasOverlays = true;
-                break;
-            case UNREAD_MESSAGES:
-                topRightOverlay = ImageKey.BLUE_BALL_OVERLAY;
-                hasOverlays = true;
-                break;
-            case NONE:
-                if (channel.isJoined()) {
-                    topRightOverlay = ImageKey.GREEN_BALL_OVERLAY;
-                    hasOverlays = true;
-                }
-                break;
-            }
-        } else if (channel.isJoined()) {
-            topRightOverlay = ImageKey.GREEN_BALL_OVERLAY;
-            hasOverlays = true;
-        }
-
-        if (hasOverlays) {
-            return new ImageKey[] { ImageKey.CHANNEL, topLeftOverlay, topRightOverlay, bottomLeftOverlay,
-                    bottomRightOverlay, underlay };
-        } else {
-            return new ImageKey[] { ImageKey.CHANNEL };
         }
     }
 

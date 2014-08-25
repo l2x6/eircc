@@ -9,6 +9,9 @@
 package org.l2x6.eircc.core.model;
 
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.ListIterator;
@@ -22,6 +25,19 @@ import org.l2x6.eircc.core.model.event.IrcModelEvent.EventType;
  * @author <a href="mailto:ppalaga@redhat.com">Peter Palaga</a>
  */
 public class IrcUser extends IrcObject {
+    public static class IrcHistoricUser extends IrcUser {
+        /**
+         * @param server
+         * @param id
+         * @param nick
+         * @param username
+         */
+        public IrcHistoricUser(String nick) {
+            super(null, null, nick, null);
+        }
+
+    }
+
     public enum IrcUserField implements TypedField {
         host, nick, previousNicksString, username;
 
@@ -33,15 +49,41 @@ public class IrcUser extends IrcObject {
 
     public static final String FILE_EXTENSION = ".user.properties";
 
+    /**
+     * @return
+     */
+    public static boolean isUserFile(File userPropsFile) {
+        return userPropsFile.isFile() && userPropsFile.getName().endsWith(IrcUser.FILE_EXTENSION);
+    }
+
     private String host;
+
     private final UUID id;
 
     private String nick;
-
     private final List<String> previousNicks;
+
     private final IrcServer server;
 
     private String username;
+
+    /**
+     * @param server2
+     * @param userPropsFile
+     * @throws IOException
+     * @throws FileNotFoundException
+     * @throws UnsupportedEncodingException
+     */
+    public IrcUser(IrcServer server, File userPropsFile) throws UnsupportedEncodingException, FileNotFoundException,
+            IOException {
+        super(server.getAccount().getUsersDirectory());
+        this.server = server;
+        String fName = userPropsFile.getName();
+        String uid = fName.substring(0, fName.length() - IrcUser.FILE_EXTENSION.length());
+        this.id = UUID.fromString(uid);
+        this.previousNicks = new ArrayList<String>();
+        load(userPropsFile);
+    }
 
     /**
      * @param id
@@ -51,6 +93,7 @@ public class IrcUser extends IrcObject {
      * @param realName
      */
     public IrcUser(IrcServer server, UUID id) {
+        super(server.getAccount().getUsersDirectory());
         this.server = server;
         this.id = id;
         this.previousNicks = new ArrayList<String>();
@@ -128,8 +171,8 @@ public class IrcUser extends IrcObject {
     }
 
     @Override
-    protected File getSaveFile(File parentDir) {
-        return new File(parentDir, id.toString() + FILE_EXTENSION);
+    protected File getSaveFile() {
+        return new File(saveDirectory, id.toString() + FILE_EXTENSION);
     }
 
     public IrcServer getServer() {
