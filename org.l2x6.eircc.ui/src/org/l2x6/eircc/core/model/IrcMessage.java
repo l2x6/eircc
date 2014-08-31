@@ -9,12 +9,13 @@
 package org.l2x6.eircc.core.model;
 
 import java.io.IOException;
-import java.io.Reader;
-import java.io.Writer;
-import java.time.ZonedDateTime;
+import java.io.PushbackReader;
+import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 
+import org.eclipse.jface.text.BadLocationException;
+import org.eclipse.jface.text.IDocument;
 import org.l2x6.eircc.core.model.IrcUser.IrcHistoricUser;
 import org.l2x6.eircc.core.util.IrcToken;
 import org.l2x6.eircc.core.util.IrcTokenizer;
@@ -26,8 +27,9 @@ import org.l2x6.eircc.ui.misc.Colors;
  */
 public class IrcMessage {
     private static final char FIELD_DELIMITER = ' ';
+    private static final char MULTILINE_MARKER = ' ';
     private static final char RECORD_DELIMITER = '\n';
-    private final ZonedDateTime arrivedAt;
+    private final OffsetDateTime arrivedAt;
     private final boolean historic;
     private final IrcLog log;
     private boolean meNamed;
@@ -36,25 +38,13 @@ public class IrcMessage {
     private final IrcUser user;
     private final int userColorIndex;
 
-    public IrcMessage(IrcLog log, Reader in) throws IOException {
-        this.log = log;
-        this.historic = true;
-        String timeString = IrcUtils.read(in, FIELD_DELIMITER);
-        this.arrivedAt = ZonedDateTime.parse(timeString, DateTimeFormatter.ISO_ZONED_DATE_TIME);
-        String index = IrcUtils.read(in, FIELD_DELIMITER);
-        this.userColorIndex = Integer.parseInt(index);
-        String nick = IrcUtils.read(in, FIELD_DELIMITER);
-        this.user = nick == null || nick.isEmpty() ? null : new IrcHistoricUser(nick);
-        this.text = IrcUtils.read(in, RECORD_DELIMITER);
-    }
-
     /**
      * @param log
      * @param arrivedAt
      * @param user
      * @param text
      */
-    public IrcMessage(IrcLog log, ZonedDateTime arrivedAt, IrcUser user, String text) {
+    public IrcMessage(IrcLog log, OffsetDateTime arrivedAt, IrcUser user, String text) {
         super();
         this.log = log;
         this.historic = false;
@@ -64,11 +54,26 @@ public class IrcMessage {
         this.userColorIndex = user != null ? log.getChannel().getUserIndex(user.getNick()) : Colors.INVALID_INDEX;
     }
 
-    public IrcMessage(IrcLog log, ZonedDateTime arrivedAt, String text) {
+    public IrcMessage(IrcLog log, OffsetDateTime arrivedAt, String text) {
         this(log, arrivedAt, null, text);
     }
 
-    public ZonedDateTime getArrivedAt() {
+    public IrcMessage(IrcLog log, PushbackReader in) throws IOException {
+        this.log = log;
+        this.historic = true;
+        String timeString = IrcUtils.read(in, FIELD_DELIMITER, MULTILINE_MARKER);
+        this.arrivedAt = OffsetDateTime.parse(timeString, DateTimeFormatter.ISO_ZONED_DATE_TIME);
+        String nick = IrcUtils.read(in, FIELD_DELIMITER, MULTILINE_MARKER);
+        this.user = nick == null || nick.isEmpty() ? null : new IrcHistoricUser(nick);
+        String txt = IrcUtils.read(in, RECORD_DELIMITER, MULTILINE_MARKER);
+
+        int lastDelim = txt.lastIndexOf(FIELD_DELIMITER);
+        String index = txt.substring(lastDelim + 1);
+        this.userColorIndex = Integer.parseInt(index);
+        this.text = txt.substring(0, lastDelim);
+    }
+
+    public OffsetDateTime getArrivedAt() {
         return arrivedAt;
     }
 
@@ -149,16 +154,27 @@ public class IrcMessage {
         return sb.toString();
     }
 
-    public void write(Writer out) throws IOException {
-        out.write(arrivedAt.format(DateTimeFormatter.ISO_ZONED_DATE_TIME));
-        out.write(FIELD_DELIMITER);
-        out.write(String.valueOf(userColorIndex));
-        out.write(FIELD_DELIMITER);
-        if (user != null) {
-            out.write(user.getNick());
+    public void write(IDocument document) {
+        try {
+            StringBuilder out = new StringBuilder();
+            out.append(arrivedAt.format(DateTimeFormatter.ISO_ZONED_DATE_TIME));
+            out.append(FIELD_DELIMITER);
+            if (user != null) {
+                out.append(user.getNick());
+            }
+            out.append(FIELD_DELIMITER);
+            IrcUtils.append(text, out, FIELD_DELIMITER);
+            out.append(String.valueOf(userColorIndex));
+            out.append(RECORD_DELIMITER);
+
+            document.replace(document.getLength(), 0, out.toString());
+        } catch (IOException e) {
+            /* Should not happen as StringBuilder.append() never throws IOException */
+            throw new RuntimeException(e);
+        } catch (BadLocationException e) {
+            /* Should not happen as we only insert at the very end an IDocument */
+            throw new RuntimeException(e);
         }
-        out.write(FIELD_DELIMITER);
-        IrcUtils.write(text, out, RECORD_DELIMITER);
     }
 
 }

@@ -8,7 +8,6 @@
 
 package org.l2x6.eircc.core.model;
 
-import java.io.File;
 import java.util.Collection;
 import java.util.Map;
 import java.util.TreeMap;
@@ -21,8 +20,6 @@ import org.l2x6.eircc.core.model.event.IrcModelEvent.EventType;
  * @author <a href="mailto:ppalaga@redhat.com">Peter Palaga</a>
  */
 public class IrcServer extends IrcObject {
-    public enum IrcServerField {
-    };
 
     private final IrcAccount account;
     private final Map<String, IrcChannel> channels = new TreeMap<String, IrcChannel>();
@@ -35,7 +32,7 @@ public class IrcServer extends IrcObject {
      * @param account
      */
     public IrcServer(IrcAccount account) {
-        super(account.getSaveDirectory());
+        super(account.getModel(), account.getParentFolderPath());
         this.account = account;
     }
 
@@ -162,19 +159,6 @@ public class IrcServer extends IrcObject {
             channelsArray = chans.toArray(new IrcChannel[chans.size()]);
         }
         return channelsArray;
-    }
-
-    /**
-     * @see org.l2x6.eircc.core.model.IrcObject#getFields()
-     */
-    @Override
-    public IrcServerField[] getFields() {
-        return IrcServerField.values();
-    }
-
-    @Override
-    protected File getSaveFile() {
-        return new File(saveDirectory, account.getId().toString() + "-" + account.getLabel() + ".server.properties");
     }
 
     /**

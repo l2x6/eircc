@@ -8,7 +8,6 @@
 
 package org.l2x6.eircc.core.model;
 
-import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
@@ -18,13 +17,18 @@ import java.util.ListIterator;
 import java.util.StringTokenizer;
 import java.util.UUID;
 
+import org.eclipse.core.resources.IFile;
+import org.eclipse.core.resources.IResource;
+import org.eclipse.core.runtime.CoreException;
+import org.eclipse.core.runtime.IPath;
 import org.l2x6.eircc.core.model.event.IrcModelEvent;
 import org.l2x6.eircc.core.model.event.IrcModelEvent.EventType;
+import org.l2x6.eircc.core.util.TypedField;
 
 /**
  * @author <a href="mailto:ppalaga@redhat.com">Peter Palaga</a>
  */
-public class IrcUser extends IrcObject {
+public class IrcUser extends IrcObject implements PersistentIrcObject {
     public static class IrcHistoricUser extends IrcUser {
         /**
          * @param server
@@ -41,9 +45,17 @@ public class IrcUser extends IrcObject {
     public enum IrcUserField implements TypedField {
         host, nick, previousNicksString, username;
 
+        private final TypedFieldData typedFieldData;
+
+        /**
+         * @param typedFieldData
+         */
+        private IrcUserField() {
+            this.typedFieldData = new TypedFieldData(name(), IrcUser.class);
+        }
         @Override
-        public Object fromString(String value) {
-            return value;
+        public TypedFieldData getTypedFieldData() {
+            return typedFieldData;
         }
     }
 
@@ -52,8 +64,8 @@ public class IrcUser extends IrcObject {
     /**
      * @return
      */
-    public static boolean isUserFile(File userPropsFile) {
-        return userPropsFile.isFile() && userPropsFile.getName().endsWith(IrcUser.FILE_EXTENSION);
+    public static boolean isUserFile(IResource f) {
+        return f.getType() == IResource.FILE && f.getName().endsWith(IrcUser.FILE_EXTENSION);
     }
 
     private String host;
@@ -61,6 +73,8 @@ public class IrcUser extends IrcObject {
     private final UUID id;
 
     private String nick;
+    private IPath path;
+
     private final List<String> previousNicks;
 
     private final IrcServer server;
@@ -73,10 +87,11 @@ public class IrcUser extends IrcObject {
      * @throws IOException
      * @throws FileNotFoundException
      * @throws UnsupportedEncodingException
+     * @throws CoreException
      */
-    public IrcUser(IrcServer server, File userPropsFile) throws UnsupportedEncodingException, FileNotFoundException,
-            IOException {
-        super(server.getAccount().getUsersDirectory());
+    public IrcUser(IrcServer server, IFile userPropsFile) throws UnsupportedEncodingException, FileNotFoundException,
+            IOException, CoreException {
+        super(server.getAccount().getModel(), server.getAccount().getUsersFolderPath());
         this.server = server;
         String fName = userPropsFile.getName();
         String uid = fName.substring(0, fName.length() - IrcUser.FILE_EXTENSION.length());
@@ -93,7 +108,7 @@ public class IrcUser extends IrcObject {
      * @param realName
      */
     public IrcUser(IrcServer server, UUID id) {
-        super(server.getAccount().getUsersDirectory());
+        super(server.getAccount().getModel(), server.getAccount().getUsersFolderPath());
         this.server = server;
         this.id = id;
         this.previousNicks = new ArrayList<String>();
@@ -149,6 +164,14 @@ public class IrcUser extends IrcObject {
         return nick;
     }
 
+    @Override
+    public IPath getPath() {
+        if (path == null) {
+            path = parentFolderPath.append(id.toString() + FILE_EXTENSION);
+        }
+        return path;
+    }
+
     /**
      * @return
      */
@@ -168,11 +191,6 @@ public class IrcUser extends IrcObject {
             return sb.toString();
         }
         return null;
-    }
-
-    @Override
-    protected File getSaveFile() {
-        return new File(saveDirectory, id.toString() + FILE_EXTENSION);
     }
 
     public IrcServer getServer() {

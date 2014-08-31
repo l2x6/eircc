@@ -8,10 +8,12 @@
 
 package org.l2x6.eircc.core.model;
 
-import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+
+import org.eclipse.core.resources.IFile;
+import org.eclipse.core.runtime.CoreException;
 
 /**
  * @author <a href="mailto:ppalaga@redhat.com">Peter Palaga</a>
@@ -25,9 +27,10 @@ public class IrcChannel extends AbstractIrcChannel {
      * @throws IOException
      * @throws FileNotFoundException
      * @throws UnsupportedEncodingException
+     * @throws CoreException
      */
-    public IrcChannel(IrcAccount account, File channelPropsFile) throws UnsupportedEncodingException,
-            FileNotFoundException, IOException {
+    public IrcChannel(IrcAccount account, IFile channelPropsFile) throws UnsupportedEncodingException,
+            FileNotFoundException, IOException, CoreException {
         super(account);
         String fName = channelPropsFile.getName();
         this.name = fName.substring(0, fName.length() - AbstractIrcChannel.FILE_EXTENSION.length());

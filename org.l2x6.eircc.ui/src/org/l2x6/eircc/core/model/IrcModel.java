@@ -8,22 +8,28 @@
 
 package org.l2x6.eircc.core.model;
 
-import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.UUID;
 
+import org.eclipse.core.resources.IFile;
+import org.eclipse.core.resources.IProject;
+import org.eclipse.core.resources.IResource;
+import org.eclipse.core.resources.IWorkspaceRoot;
+import org.eclipse.core.runtime.CoreException;
+import org.eclipse.core.runtime.IProgressMonitor;
 import org.l2x6.eircc.core.client.IrcClient;
 import org.l2x6.eircc.core.client.TrafficLoggerFactory;
 import org.l2x6.eircc.core.model.event.IrcModelEvent;
-import org.l2x6.eircc.core.model.event.IrcModelEventListener;
 import org.l2x6.eircc.core.model.event.IrcModelEvent.EventType;
+import org.l2x6.eircc.core.model.event.IrcModelEventListener;
 import org.l2x6.eircc.core.util.IrcUtils;
 import org.l2x6.eircc.ui.EirccUi;
 import org.l2x6.eircc.ui.IrcUiMessages;
@@ -34,9 +40,7 @@ import org.schwering.irc.lib.TrafficLogger;
  *
  * @author <a href="mailto:ppalaga@redhat.com">Peter Palaga</a>
  */
-public class IrcModel extends IrcObject {
-    public enum IrcModelField {
-    };
+public class IrcModel extends IrcBase {
 
     private static final IrcModel INSTANCE = new IrcModel();
 
@@ -49,6 +53,8 @@ public class IrcModel extends IrcObject {
 
     private IrcAccount[] accountsArray;
     private List<IrcModelEventListener> listeners = Collections.emptyList();
+
+    private IProject project;
 
     private TrafficLoggerFactory trafficLoggerFactory;
 
@@ -164,31 +170,30 @@ public class IrcModel extends IrcObject {
                 channelsOfflineAfterError);
     }
 
-    /**
-     * @see org.l2x6.eircc.core.model.IrcObject#getFields()
-     */
-    @Override
-    public IrcModelField[] getFields() {
-        return IrcModelField.values();
+    public IProject getProject() {
+        return project;
+    }
+    public IWorkspaceRoot getRoot() {
+        return project.getWorkspace().getRoot();
     }
 
-    @Override
-    protected File getSaveFile() {
-        return new File(saveDirectory, "model.properties");
+    /**
+     * @return
+     */
+    public Collection<IrcAccount> getSearchableAccounts() {
+        return new ArrayList<IrcAccount>(accounts.values());
     }
 
     public boolean hasAccounts() {
         return !accounts.isEmpty();
     }
 
-    public void load(File storageRoot) throws IOException {
-        this.saveDirectory = storageRoot;
-        if (storageRoot.exists()) {
-            for (File f : storageRoot.listFiles()) {
-                if (IrcAccount.isAccountFile(f)) {
-                    IrcAccount account = new IrcAccount(this, f);
-                    accounts.put(account.getLabel(), account);
-                }
+    public void load(IProject project) throws IOException, CoreException {
+        this.project = project;
+        for (IResource r : project.members()) {
+            if (IrcAccount.isAccountFile(r)) {
+                IrcAccount account = new IrcAccount(this, (IFile) r);
+                accounts.put(account.getLabel(), account);
             }
         }
     }
@@ -234,9 +239,9 @@ public class IrcModel extends IrcObject {
         listeners = newList;
     }
 
-    public void save() throws UnsupportedEncodingException, FileNotFoundException, IOException {
+    public void save(IProgressMonitor monitor) throws UnsupportedEncodingException, FileNotFoundException, IOException, CoreException {
         for (IrcAccount account : accounts.values()) {
-            account.save();
+            account.save(monitor);
         }
     }
 

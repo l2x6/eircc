@@ -8,31 +8,42 @@
 
 package org.l2x6.eircc.core.model;
 
-import java.io.File;
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
+import org.eclipse.core.resources.IFile;
+import org.eclipse.core.resources.IFolder;
+import org.eclipse.core.resources.IResource;
+import org.eclipse.core.runtime.CoreException;
+import org.eclipse.core.runtime.IPath;
 import org.l2x6.eircc.core.model.event.IrcModelEvent;
 import org.l2x6.eircc.core.model.event.IrcModelEvent.EventType;
+import org.l2x6.eircc.core.util.TypedField;
 import org.l2x6.eircc.ui.misc.Colors;
 
 /**
  * @author <a href="mailto:ppalaga@redhat.com">Peter Palaga</a>
  */
-public abstract class AbstractIrcChannel extends IrcObject {
+public abstract class AbstractIrcChannel extends IrcObject implements PersistentIrcObject {
+
 
     public enum IrcChannelField implements TypedField {
-        autoJoin {
-            @Override
-            public Object fromString(String value) {
-                return Boolean.valueOf(value);
-            }
-        };
-        public Object fromString(String value) {
-            return value;
+        autoJoin;
+        private final org.l2x6.eircc.core.util.TypedField.TypedFieldData typedFieldData;
+        /**
+         * @param typedFieldData
+         */
+        private IrcChannelField() {
+            this.typedFieldData = new TypedFieldData(name(), AbstractIrcChannel.class);
+        }
+        @Override
+        public TypedFieldData getTypedFieldData() {
+            return typedFieldData;
         }
     }
 
@@ -43,8 +54,8 @@ public abstract class AbstractIrcChannel extends IrcObject {
      * @param f
      * @return
      */
-    public static boolean isChannelFile(File f) {
-        return f.isFile() && f.getName().endsWith(AbstractIrcChannel.FILE_EXTENSION);
+    public static boolean isChannelFile(IResource f) {
+        return f.getType() == IResource.FILE && f.getName().endsWith(AbstractIrcChannel.FILE_EXTENSION);
     }
 
     protected final IrcAccount account;
@@ -52,7 +63,8 @@ public abstract class AbstractIrcChannel extends IrcObject {
     private boolean joined;
     protected boolean kept;
     private IrcLog log;
-    private File logsDirectory;
+    private IPath logsFolderPath;
+    private IPath path;
     private final Map<String, Integer> seenUsers = new HashMap<String, Integer>();
     /** Users by nick */
     protected final Map<String, IrcChannelUser> users = new TreeMap<String, IrcChannelUser>();
@@ -62,7 +74,7 @@ public abstract class AbstractIrcChannel extends IrcObject {
      * @param account
      */
     public AbstractIrcChannel(IrcAccount account) {
-        super(account.getChannelsDirectory());
+        super(account.getModel(), account.getChannelsFolderPath());
         this.account = account;
         this.seenUsers.put(account.getAcceptedNick(), Colors.MY_INDEX);
     }
@@ -156,11 +168,11 @@ public abstract class AbstractIrcChannel extends IrcObject {
     /**
      * @return
      */
-    public File getLogsDirectory() {
-        if (this.logsDirectory == null) {
-            this.logsDirectory = new File(saveDirectory, getName() + "-logs");
+    public IPath getLogsFolderPath() {
+        if (this.logsFolderPath == null) {
+            this.logsFolderPath = parentFolderPath.append(getName() + "-logs");
         }
-        return this.logsDirectory;
+        return this.logsFolderPath;
     }
 
     /**
@@ -169,8 +181,11 @@ public abstract class AbstractIrcChannel extends IrcObject {
     public abstract String getName();
 
     @Override
-    protected File getSaveFile() {
-        return new File(saveDirectory, getName() + FILE_EXTENSION);
+    public IPath getPath() {
+        if (path == null) {
+            path = parentFolderPath.append(getName() + FILE_EXTENSION);
+        }
+        return path;
     }
 
     /**
@@ -224,6 +239,22 @@ public abstract class AbstractIrcChannel extends IrcObject {
      */
     public boolean isPresent(String nick) {
         return users.containsKey(nick);
+    }
+
+    /**
+     * @return
+     * @throws CoreException
+     */
+    public Collection<IFile> listSearchableLogFiles() throws CoreException {
+        List<IFile> result = new ArrayList<IFile>();
+        IPath logsDir = getLogsFolderPath();
+        IFolder logsFolder = model.getRoot().getFolder(logsDir);
+        for (IResource r : logsFolder.members()) {
+            if (IrcLog.isLogFile(r)) {
+                result.add((IFile) r);
+            }
+        }
+        return result;
     }
 
     public void removeNick(String nick, String leftWithMessage) {

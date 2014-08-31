@@ -81,6 +81,7 @@ public class IrcAccountsView extends ViewPart implements IrcModelEventListener {
     private IrcTreeAction<?> leaveAccountChannelAction;
     private IrcTreeAction<?> leaveServerChannelAction;
     private IrcTreeAction<?> listChannelsAction;
+
     private List<ISelectionChangedListener> listeners = Collections.emptyList();
     private PageBook pagebook;
     private CLabel serverChannelsLabel;
@@ -88,7 +89,6 @@ public class IrcAccountsView extends ViewPart implements IrcModelEventListener {
     // TODO private TreeViewer serverUsersTreeViewer;
     private ViewForm serverChannelsViewForm;
     private IrcTreeAction<?>[] treeActions;
-
     private MouseListener treeMouseListener;
 
     private FocusListener treesFocusListener = new FocusListener() {
@@ -288,6 +288,11 @@ public class IrcAccountsView extends ViewPart implements IrcModelEventListener {
             };
         }
         return accountsTreeSelectionListener;
+    }
+
+    @Override
+    public Object getAdapter(@SuppressWarnings("rawtypes") Class adapter) {
+        return super.getAdapter(adapter);
     }
 
     /**

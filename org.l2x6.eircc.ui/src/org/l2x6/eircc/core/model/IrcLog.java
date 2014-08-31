@@ -8,16 +8,14 @@
 
 package org.l2x6.eircc.core.model;
 
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
 import java.io.PushbackReader;
 import java.io.UnsupportedEncodingException;
-import java.io.Writer;
 import java.time.OffsetDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
@@ -25,15 +23,46 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
 
+import org.eclipse.core.filebuffers.FileBuffers;
+import org.eclipse.core.filebuffers.ITextFileBuffer;
+import org.eclipse.core.filebuffers.ITextFileBufferManager;
+import org.eclipse.core.filebuffers.LocationKind;
+import org.eclipse.core.resources.IFile;
+import org.eclipse.core.resources.IResource;
+import org.eclipse.core.runtime.CoreException;
+import org.eclipse.core.runtime.IPath;
+import org.eclipse.core.runtime.IProgressMonitor;
+import org.eclipse.core.runtime.SubProgressMonitor;
+import org.eclipse.jface.text.IDocument;
 import org.l2x6.eircc.core.model.event.IrcModelEvent;
 import org.l2x6.eircc.core.model.event.IrcModelEvent.EventType;
+import org.l2x6.eircc.core.util.IrcUtils;
+import org.l2x6.eircc.core.util.TypedField;
 import org.l2x6.eircc.ui.EirccUi;
 
 /**
  * @author <a href="mailto:ppalaga@redhat.com">Peter Palaga</a>
  */
-public class IrcLog extends IrcObject implements Iterable<IrcMessage> {
-    public enum IrcLogField {
+public class IrcLog extends IrcObject implements Iterable<IrcMessage>, PersistentIrcObject {
+
+    public enum IrcLogField implements TypedField {
+        ;
+        private final TypedFieldData typedFieldData;
+
+        /**
+         * @param typedFieldData
+         */
+        private IrcLogField() {
+            this.typedFieldData = new TypedFieldData(name(), IrcLog.class);
+        }
+
+        /**
+         * @see org.l2x6.eircc.core.util.TypedField#getTypedFieldData()
+         */
+        @Override
+        public TypedFieldData getTypedFieldData() {
+            return typedFieldData;
+        }
     };
 
     public enum LogState {
@@ -49,7 +78,16 @@ public class IrcLog extends IrcObject implements Iterable<IrcMessage> {
         }
     }
 
-    private static final String FILE_EXTENSION = ".txt";
+    private static final String FILE_EXTENSION = ".irc.log";
+    private static final int NOTHING_SAVED = -1;
+
+    /**
+     * @param f
+     * @return
+     */
+    public static boolean isLogFile(IResource f) {
+        return f.getType() == IResource.FILE && f.getName().endsWith(FILE_EXTENSION);
+    }
 
     private final AbstractIrcChannel channel;
     private int lastNonSystemMessageIndex = -1;
@@ -57,15 +95,17 @@ public class IrcLog extends IrcObject implements Iterable<IrcMessage> {
     private int lastReadIndex = -1;
     /** The time of the last non-system message that arrived */
     // private Instant lastMessageTime = Instant.MIN;
-    private int lastSavedMessageIndex = -1;
+    private int lastSavedMessageIndex = NOTHING_SAVED;
     private final List<IrcMessage> messages = new ArrayList<IrcMessage>();
+    private IPath path;
     // private Instant readTill = Instant.MIN;
     private final OffsetDateTime startedOn;
+
     private LogState state = LogState.NONE;
 
     public IrcLog(AbstractIrcChannel channel, File logFile) throws UnsupportedEncodingException, FileNotFoundException,
             IOException {
-        super(channel.getLogsDirectory());
+        super(channel.getModel(), channel.getLogsFolderPath());
         this.channel = channel;
         String fileName = logFile.getName();
         String startedOnString = fileName.substring(0, fileName.length() - FILE_EXTENSION.length());
@@ -91,7 +131,7 @@ public class IrcLog extends IrcObject implements Iterable<IrcMessage> {
      * @param startedOn
      */
     public IrcLog(AbstractIrcChannel channel, OffsetDateTime startedOn) {
-        super(channel.getLogsDirectory());
+        super(channel.getModel(), channel.getLogsFolderPath());
         this.channel = channel;
         this.startedOn = startedOn.truncatedTo(ChronoUnit.SECONDS);
     }
@@ -119,6 +159,44 @@ public class IrcLog extends IrcObject implements Iterable<IrcMessage> {
     public void dispose() {
     }
 
+    public void ensureAllSaved(IProgressMonitor monitor) throws CoreException {
+        if (lastSavedMessageIndex == messages.size() - 1) {
+            return;
+        }
+        IPath path = getPath();
+        IFile file = model.getRoot().getFile(path);
+
+        ITextFileBufferManager fbm = FileBuffers.getTextFileBufferManager();
+        if (!file.exists()) {
+            IrcUtils.mkdirs(file.getParent(), monitor);
+            file.create(new ByteArrayInputStream(new byte[0]), true, monitor);
+            fbm.connect(path, LocationKind.IFILE, monitor);
+        }
+
+        ITextFileBuffer buffer = fbm.getTextFileBuffer(file.getFullPath(),
+                LocationKind.NORMALIZE);
+        monitor.beginTask("", 2); //$NON-NLS-1$
+
+        IDocument document = buffer.getDocument();
+
+        if (lastSavedMessageIndex == NOTHING_SAVED) {
+            document.set("");
+        }
+
+        // boolean newFile = lastSavedMessageIndex < 0 || !path.exists();
+        /* append unsaved messages */
+        for (int i = lastSavedMessageIndex + 1; i < messages.size(); i++) {
+            IrcMessage m = messages.get(i);
+            m.write(document);
+            // out.flush();
+        }
+
+        buffer.commit(new SubProgressMonitor(monitor, 1), false);
+        file.refreshLocal(IResource.DEPTH_ONE, new SubProgressMonitor(monitor, 1));
+        monitor.done();
+
+    }
+
     public AbstractIrcChannel getChannel() {
         return channel;
     }
@@ -136,8 +214,11 @@ public class IrcLog extends IrcObject implements Iterable<IrcMessage> {
     }
 
     @Override
-    protected File getSaveFile() {
-        return new File(saveDirectory, startedOn.toString() + FILE_EXTENSION);
+    public IPath getPath() {
+        if (path == null) {
+            path = parentFolderPath.append(startedOn.toString() + FILE_EXTENSION);
+        }
+        return path;
     }
 
     public OffsetDateTime getStartedOn() {
@@ -173,22 +254,15 @@ public class IrcLog extends IrcObject implements Iterable<IrcMessage> {
         };
     }
 
+    /**
+     * Saves all overwriting the previous file.
+     * @see #ensureAllSaved(IProgressMonitor)
+     * @see org.l2x6.eircc.core.model.PersistentIrcObject#save(org.eclipse.core.runtime.IProgressMonitor)
+     */
     @Override
-    public void save() throws UnsupportedEncodingException, FileNotFoundException, IOException {
-        if (lastSavedMessageIndex == messages.size() - 1) {
-            return;
-        }
-        File saveFile = getSaveFile();
-        saveFile.getParentFile().mkdirs();
-        boolean newFile = lastSavedMessageIndex < 0 || !saveFile.exists();
-        try (Writer out = new OutputStreamWriter(new FileOutputStream(saveFile, !newFile), "utf-8")) {
-            /* append unsaved messages */
-            for (int i = lastSavedMessageIndex + 1; i < messages.size(); i++) {
-                IrcMessage m = messages.get(i);
-                m.write(out);
-                out.flush();
-            }
-        }
+    public void save(IProgressMonitor monitor) throws CoreException {
+        lastSavedMessageIndex = -1;
+        ensureAllSaved(monitor);
     }
 
     public void setState(LogState state) {

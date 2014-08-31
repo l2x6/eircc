@@ -43,6 +43,49 @@
            <command commandId="org.eclipse.ui.navigate.collapseAll"></command>
         </menuContribution>
     </extension>
+       <extension
+         point="org.eclipse.ui.commands">
+      <category
+            name="%IrcCommands.category.name"
+            description="%IrcCommands.category.description"
+            id="org.l2x6.eircc.ui.IrcCommandsCategory">
+      </category>
+    </extension>
+
+    <extension point="org.eclipse.ui.actionSets">
+        <actionSet label="%IrcSearchActionSet.label"
+                   description="%IrcSearchActionSet.description"
+                   visible="true"
+                   id="org.l2x6.eircc.ui.IrcSearchActionSet">
+            <!-- see http://bugs.eclipse.org/bugs/show_bug.cgi?id=15684    -->
+            <!-- Note: The menu (re-) definition has to be here due to bug: -->
+            <!-- =================================================================== -->
+            <!-- Search Menu                                                         -->
+            <!-- =================================================================== -->
+            <menu label="Search" path="navigate" id="org.eclipse.search.menu">
+                <groupMarker name="internalDialogGroup" />
+                <!-- not to be used by clients  -->
+                <groupMarker name="dialogGroup" />
+                <!-- to be used by clients      -->
+                <separator name="fileSearchContextMenuActionsGroup" />
+                <!-- to be used by clients      -->
+                <separator name="contextMenuActionsGroup" />
+                <!-- to be used by clients -->
+                <separator name="occurencesActionsGroup" />
+                <!-- to be used by clients -->
+                <separator name="extraSearchGroup" />
+                <!-- to be used by clients -->
+            </menu>
+            <!-- dialog group  -->
+            <action label="%OpenIrcSearchPageCommand.name"
+                    icon="icons/irc-search.png"
+                    class="org.l2x6.eircc.ui.actions.OpenIrcSearchPageAction"
+                    menubarPath="org.eclipse.search.menu/dialogGroup"
+                    id="org.eclipse.pde.ui.actions.OpenPluginSearchPage">
+            </action>
+        </actionSet>
+    </extension>
+
     <extension
         point = "org.eclipse.ui.elementFactories">
         <factory
@@ -50,4 +93,17 @@
            class="org.l2x6.eircc.ui.editor.IrcChannelElementFactory">
         </factory>
     </extension>
+
+    <extension point="org.eclipse.search.searchPages">
+      <page
+         id="org.l2x6.eircc.ui.search.IrcSearchPage"
+         label="%IrcSearchPage.label"
+         icon="icons/irc-search.png"
+         sizeHint="250,160"
+         tabPosition="1"
+         extensions="*:1"
+         showScopeSection="false"
+         class="org.l2x6.eircc.ui.search.IrcSearchPage">
+      </page>
+   </extension>
 </plugin>

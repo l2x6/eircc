@@ -8,25 +8,34 @@
 
 package org.l2x6.eircc.core.model;
 
-import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import org.eclipse.core.resources.IFile;
+import org.eclipse.core.resources.IFolder;
+import org.eclipse.core.resources.IResource;
+import org.eclipse.core.resources.IWorkspaceRoot;
+import org.eclipse.core.runtime.CoreException;
+import org.eclipse.core.runtime.IPath;
+import org.eclipse.core.runtime.IProgressMonitor;
 import org.l2x6.eircc.core.IrcException;
 import org.l2x6.eircc.core.model.event.IrcModelEvent;
 import org.l2x6.eircc.core.model.event.IrcModelEvent.EventType;
+import org.l2x6.eircc.core.util.TypedField;
 import org.l2x6.eircc.ui.IrcUiMessages;
 import org.schwering.irc.lib.TrafficLogger;
 
 /**
  * @author <a href="mailto:ppalaga@redhat.com">Peter Palaga</a>
  */
-public class IrcAccount extends IrcObject {
+public class IrcAccount extends IrcObject implements PersistentIrcObject {
+
     public enum IrcAccountField implements TypedField {
         autoConnect(IrcUiMessages.Account_Connect_Automatically) {
             @Override
@@ -60,12 +69,14 @@ public class IrcAccount extends IrcObject {
         username(IrcUiMessages.Account_Username)//
         ;//
         private final String label_;
+        private final TypedFieldData typedFieldData;
 
         /**
          * @param label_
          */
         private IrcAccountField(String label) {
             this.label_ = label;
+            this.typedFieldData = new TypedFieldData(name(), IrcAccount.class);
         }
 
         public Object fromString(String value) {
@@ -74,6 +85,14 @@ public class IrcAccount extends IrcObject {
 
         public String getLabel() {
             return label_;
+        }
+
+        /**
+         * @see org.l2x6.eircc.core.util.TypedField#getTypedFieldData()
+         */
+        @Override
+        public TypedFieldData getTypedFieldData() {
+            return typedFieldData;
         }
     }
 
@@ -87,15 +106,15 @@ public class IrcAccount extends IrcObject {
      * @param f
      * @return
      */
-    public static boolean isAccountFile(File f) {
-        return f.isFile() && f.getName().endsWith(IrcAccount.FILE_EXTENSION);
+    public static boolean isAccountFile(IResource r) {
+        return r.getType() == IResource.FILE && r.getName().endsWith(IrcAccount.FILE_EXTENSION);
     }
 
     private boolean autoConnect = false;
     /** Kept or joined channels */
     private final List<AbstractIrcChannel> channels = new ArrayList<AbstractIrcChannel>();
 
-    private final File channelsDirectory;
+    private final IPath channelsFolderPath;
     private long createdOn;
 
     private String host;
@@ -106,10 +125,12 @@ public class IrcAccount extends IrcObject {
     private IrcUser me;
     private final IrcModel model;
     private String password;
+    private IPath path;
     private int port;
     private String preferedNick;
     private String realName;
     private final IrcServer server;
+
     private boolean ssl;
 
     private IrcAccountState state = IrcAccountState.OFFLINE;
@@ -117,18 +138,19 @@ public class IrcAccount extends IrcObject {
     private TrafficLogger trafficLogger;
 
     private String username;
-
-    private final File usersDirectory;
+    private final IPath usersFolderPath;
 
     /**
      * @param model
      * @param f
+     * @param monitor
      * @throws IOException
      * @throws FileNotFoundException
      * @throws UnsupportedEncodingException
+     * @throws CoreException
      */
-    public IrcAccount(IrcModel model, File f) throws UnsupportedEncodingException, FileNotFoundException, IOException {
-        super(model.getSaveDirectory());
+    public IrcAccount(IrcModel model, IFile f) throws UnsupportedEncodingException, FileNotFoundException, IOException, CoreException {
+        super(model, model.getProject().getFullPath());
         this.model = model;
         this.server = new IrcServer(this);
 
@@ -138,30 +160,34 @@ public class IrcAccount extends IrcObject {
         if (minusPos >= 0) {
             String uuidString = bareName.substring(0, minusPos);
             this.id = UUID.fromString(uuidString);
-            this.channelsDirectory = new File(saveDirectory, id.toString() + "-channels");
-            this.usersDirectory = new File(saveDirectory, id.toString() + "-users");
+            this.channelsFolderPath = parentFolderPath.append(id.toString() + "-channels");
+            this.usersFolderPath = parentFolderPath.append(id.toString() + "-users");
             this.label = bareName.substring(minusPos + 1);
             load(f);
 
-            if (channelsDirectory.exists()) {
-                for (File channelPropsFile : channelsDirectory.listFiles()) {
-                    if (AbstractIrcChannel.isChannelFile(channelPropsFile)) {
-                        IrcChannel channel = new IrcChannel(this, channelPropsFile);
+
+            IWorkspaceRoot root = model.getRoot();
+            if (root.exists(channelsFolderPath)) {
+                IFolder channelsFolder = root.getFolder(channelsFolderPath);
+                for (IResource m : channelsFolder.members()) {
+                    if (AbstractIrcChannel.isChannelFile(m)) {
+                        IrcChannel channel = new IrcChannel(this, (IFile) m);
                         channels.add(channel);
                     }
                 }
             }
-            if (usersDirectory.exists()) {
-                for (File userPropsFile : usersDirectory.listFiles()) {
-                    if (IrcUser.isUserFile(userPropsFile)) {
-                        IrcUser user = new IrcUser(server, userPropsFile);
+            if (root.exists(usersFolderPath)) {
+                IFolder usersFolder = root.getFolder(usersFolderPath);
+                for (IResource m : usersFolder.members()) {
+                    if (IrcUser.isUserFile(m)) {
+                        IrcUser user = new IrcUser(server, (IFile) m);
                         server.getUsers().put(user.getId(), user);
                     }
                 }
             }
 
         } else {
-            throw new IllegalStateException(f.getAbsolutePath() + "should contain '-' in the file name.");
+            throw new IllegalStateException(f.getLocation().toOSString() + "should contain '-' in the file name.");
         }
     }
 
@@ -174,9 +200,9 @@ public class IrcAccount extends IrcObject {
      * @param label
      */
     public IrcAccount(IrcModel model, UUID id, String label, long createdOn) {
-        super(model.getSaveDirectory());
-        this.channelsDirectory = new File(saveDirectory, id.toString() + "-channels");
-        this.usersDirectory = new File(saveDirectory, id.toString() + "-users");
+        super(model, model.getProject().getFullPath());
+        this.channelsFolderPath = parentFolderPath.append(id.toString() + "-channels");
+        this.usersFolderPath = parentFolderPath.append(id.toString() + "-users");
         this.id = id;
         this.model = model;
         this.label = label;
@@ -294,8 +320,8 @@ public class IrcAccount extends IrcObject {
         return keptChannelsArray;
     }
 
-    protected File getChannelsDirectory() {
-        return channelsDirectory;
+    protected IPath getChannelsFolderPath() {
+        return channelsFolderPath;
     }
 
     public long getCreatedOn() {
@@ -348,6 +374,17 @@ public class IrcAccount extends IrcObject {
         return password;
     }
 
+    /**
+     * @see org.l2x6.eircc.core.model.IrcObject#getPath()
+     */
+    @Override
+    public IPath getPath() {
+        if (path == null) {
+            path = parentFolderPath.append(id.toString() + "-" + label + FILE_EXTENSION);
+        }
+        return path;
+    }
+
     public int getPort() {
         return port;
     }
@@ -368,11 +405,10 @@ public class IrcAccount extends IrcObject {
     }
 
     /**
-     * @see org.l2x6.eircc.core.model.IrcObject#getSaveFile()
+     * @return
      */
-    @Override
-    protected File getSaveFile() {
-        return new File(saveDirectory, id.toString() + "-" + label + FILE_EXTENSION);
+    public Collection<AbstractIrcChannel> getSearchableChannels() {
+        return new ArrayList<AbstractIrcChannel>(channels);
     }
 
     public IrcServer getServer() {
@@ -397,8 +433,8 @@ public class IrcAccount extends IrcObject {
         return username;
     }
 
-    protected File getUsersDirectory() {
-        return usersDirectory;
+    protected IPath getUsersFolderPath() {
+        return usersFolderPath;
     }
 
     /**
@@ -428,19 +464,19 @@ public class IrcAccount extends IrcObject {
     }
 
     @Override
-    public void save() throws UnsupportedEncodingException, FileNotFoundException, IOException {
-        super.save();
+    public void save(IProgressMonitor monitor) throws CoreException {
+        PersistentIrcObject.super.save(monitor);
         if (!channels.isEmpty()) {
             for (AbstractIrcChannel channel : channels) {
                 if (channel.isKept()) {
-                    channel.save();
+                    channel.save(monitor);
                 }
             }
         }
         Map<UUID, IrcUser> users = server.getUsers();
         if (!users.isEmpty()) {
             for (IrcUser user : users.values()) {
-                user.save();
+                user.save(monitor);
             }
         }
     }
@@ -511,7 +547,7 @@ public class IrcAccount extends IrcObject {
             switch (state) {
             case OFFLINE:
             case OFFLINE_AFTER_ERROR:
-                for (AbstractIrcChannel channel : keptChannelsArray) {
+                for (AbstractIrcChannel channel : channels) {
                     channel.setJoined(false);
                 }
                 break;

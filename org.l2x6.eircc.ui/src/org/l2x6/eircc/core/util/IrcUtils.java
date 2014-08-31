@@ -12,13 +12,15 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.Reader;
-import java.io.Writer;
-import java.text.SimpleDateFormat;
-import java.util.Date;
+import java.io.PushbackReader;
 import java.util.Locale;
 import java.util.StringTokenizer;
 
+import org.eclipse.core.resources.IContainer;
+import org.eclipse.core.resources.IFolder;
+import org.eclipse.core.resources.IResource;
+import org.eclipse.core.runtime.CoreException;
+import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.swt.widgets.Display;
 import org.schwering.irc.lib.IRCCommand;
 
@@ -26,11 +28,25 @@ import org.schwering.irc.lib.IRCCommand;
  * @author <a href="mailto:ppalaga@redhat.com">Peter Palaga</a>
  */
 public class IrcUtils {
-    private static final SimpleDateFormat FULL_DATE_TIME_FORMAT = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-
     private static final ThreadLocal<Boolean> isShutdownThread = new ThreadLocal<Boolean>();
 
-    private static final SimpleDateFormat TIME_FORMAT = new SimpleDateFormat("HH:mm:ss");
+    public static void append(CharSequence token, Appendable out, char delimiter) throws IOException {
+        for (int i = 0; i < token.length(); i++) {
+            char ch = token.charAt(i);
+            switch (ch) {
+            case '\n':
+                out.append("\n ");
+                break;
+            case '\r':
+                /* ignore */
+                break;
+            default:
+                out.append(ch);
+                break;
+            }
+        }
+        out.append(delimiter);
+    }
 
     public static void assertUiThread() {
         if (Display.getCurrent() == null && !Boolean.TRUE.equals(isShutdownThread.get())) {
@@ -102,71 +118,61 @@ public class IrcUtils {
         isShutdownThread.set(Boolean.TRUE);
     }
 
-    public static String read(Reader in, char delimiter) throws IOException {
+    public static void mkdirs(IContainer container, IProgressMonitor monitor) throws CoreException {
+        switch (container.getType()) {
+        case IResource.ROOT:
+        case IResource.PROJECT:
+            return;
+        case IResource.FOLDER:
+            if (!container.exists()) {
+                IContainer parent = container.getParent();
+                mkdirs(parent, monitor);
+                ((IFolder) container).create(true, true, monitor);
+            }
+            break;
+        default:
+            break;
+        }
+    }
+
+    public static String read(PushbackReader in, char delimiter, char multilineMarker) throws IOException {
         StringBuilder result = new StringBuilder();
         int ch;
-        LOOP: while ((ch = in.read()) >= 0) {
-            switch (ch) {
-            case '\\':
+        while ((ch = in.read()) >= 0) {
+            if (ch == '\n') {
                 int ch2 = in.read();
-                switch (ch2) {
-                case -1:
-                    /* ignore */
-                    break;
-                case 'n':
+                if (ch2 == multilineMarker) {
                     result.append('\n');
+                } else if (ch2 == -1) {
                     break;
-                case 'r':
-                    result.append('\r');
-                    break;
-                default:
-                    result.append(ch);
-                    break;
+                } else {
+                    in.unread(ch2);
+                    if (ch == delimiter) {
+                        break;
+                    }
                 }
+            } else if (ch == delimiter) {
                 break;
-            default:
-                if (ch == delimiter) {
-                    break LOOP;
-                }
+            } else {
                 result.append(ch);
-                break;
             }
         }
         return result.toString();
     }
 
     /**
-     * @param startedOn
+     * @param propType
      * @return
      */
-    public static String toDateTimeString(long unixTs) {
-        assertUiThread();
-        return FULL_DATE_TIME_FORMAT.format(new Date(unixTs));
-    }
-
-    public static String toTimeString(long unixTs) {
-        assertUiThread();
-        return TIME_FORMAT.format(new Date(unixTs));
-    }
-
-    public static void write(CharSequence token, Writer out, char delimiter) throws IOException {
-        for (int i = 0; i < token.length(); i++) {
-            char ch = token.charAt(i);
-            switch (ch) {
-            case '\n':
-                out.write("\\n");
-                break;
-            case '\r':
-                out.write("\\r");
-                break;
-            case '\\':
-                out.write("\\\\");
-                break;
-            default:
-                out.write(ch);
-                break;
-            }
+    public static Class<?> toWrapperType(Class<?> propType) {
+        if (propType == Integer.TYPE) {
+            return Integer.class;
         }
-        out.write(delimiter);
+        String name = propType.getName();
+        try {
+            return Class.forName("java.lang."+ Character.toUpperCase(name.charAt(0)) + name.substring(1));
+        } catch (ClassNotFoundException e) {
+            throw new RuntimeException(e);
+        }
     }
 }

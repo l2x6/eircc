@@ -10,7 +10,7 @@ package org.l2x6.eircc.core.client;
 
 import java.io.IOException;
 import java.security.cert.X509Certificate;
-import java.time.ZonedDateTime;
+import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -362,7 +362,7 @@ public class IrcClient {
                     }
                     channel.setJoined(true);
                     IrcLog log = channel.getLog();
-                    IrcMessage message = new IrcMessage(log, ZonedDateTime.now(), ircUser, msg);
+                    IrcMessage message = new IrcMessage(log, OffsetDateTime.now(), ircUser, msg);
                     log.appendMessage(message);
                 }
             });
@@ -509,7 +509,8 @@ public class IrcClient {
         try {
             connection.connect();
         } catch (IOException e) {
-            throw new IrcException("Could not connect to '" + account.getLabel() + "': " + e.getMessage(), e, account);
+            throw new IrcException("Could not connect to '" + account.getLabel() + "': " + e.getClass().getName()
+                    + ": " + e.getMessage(), e, account);
         }
         this.account = account;
     }
@@ -612,7 +613,7 @@ public class IrcClient {
                 Display.getDefault().asyncExec(new Runnable() {
                     @Override
                     public void run() {
-                        IrcMessage m = new IrcMessage(channel.getLog(), ZonedDateTime.now(), account.getMe(), message);
+                        IrcMessage m = new IrcMessage(channel.getLog(), OffsetDateTime.now(), account.getMe(), message);
                         channel.getLog().appendMessage(m);
                     }
                 });

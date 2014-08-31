@@ -27,6 +27,7 @@ import org.eclipse.swt.graphics.RGB;
 import org.l2x6.eircc.core.model.AbstractIrcChannel;
 import org.l2x6.eircc.core.model.IrcAccount;
 import org.l2x6.eircc.core.model.IrcAccountsStatistics;
+import org.l2x6.eircc.core.model.IrcBase;
 import org.l2x6.eircc.core.model.IrcChannelUser;
 import org.l2x6.eircc.core.model.IrcLog;
 import org.l2x6.eircc.core.model.IrcModel;
@@ -98,7 +99,7 @@ public class IrcImages {
 
         /*
          * (non-Javadoc)
-         * 
+         *
          * @see Object#equals(Object)
          */
         @Override
@@ -109,7 +110,7 @@ public class IrcImages {
 
         /*
          * (non-Javadoc)
-         * 
+         *
          * @see ImageDescriptor#getImageData()
          */
         @Override
@@ -119,7 +120,7 @@ public class IrcImages {
 
         /*
          * (non-Javadoc)
-         * 
+         *
          * @see Object#hashCode()
          */
         @Override
@@ -399,7 +400,7 @@ public class IrcImages {
         return imageRegistry.get(key);
     }
 
-    public Image getImage(IrcObject element) {
+    public Image getImage(IrcBase element) {
         if (element == null) {
             return null;
         }

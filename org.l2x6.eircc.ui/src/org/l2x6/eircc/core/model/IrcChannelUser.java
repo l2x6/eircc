@@ -8,14 +8,11 @@
 
 package org.l2x6.eircc.core.model;
 
-import java.io.File;
 
 /**
  * @author <a href="mailto:ppalaga@redhat.com">Peter Palaga</a>
  */
 public class IrcChannelUser extends IrcObject {
-    public enum IrcChannelUserFields {
-    }
 
     private final AbstractIrcChannel channel;;
     private String leftWithMessage;
@@ -26,7 +23,7 @@ public class IrcChannelUser extends IrcObject {
      * @param nick
      */
     public IrcChannelUser(AbstractIrcChannel channel, String nick) {
-        super(channel.getSaveDirectory());
+        super(channel.getModel(), channel.getParentFolderPath());
         this.channel = channel;
         this.nick = nick;
     }
@@ -42,28 +39,12 @@ public class IrcChannelUser extends IrcObject {
         return channel;
     }
 
-    /**
-     * @see org.l2x6.eircc.core.model.IrcObject#getFields()
-     */
-    @Override
-    public Enum<?>[] getFields() {
-        return IrcChannelUserFields.values();
-    }
-
     public String getLeftWithMessage() {
         return leftWithMessage;
     }
 
     public String getNick() {
         return nick;
-    }
-
-    /**
-     * @see org.l2x6.eircc.core.model.IrcObject#getSaveFile()
-     */
-    @Override
-    protected File getSaveFile() {
-        return null;
     }
 
     public void setLeftWithMessage(String leftWithMessage) {

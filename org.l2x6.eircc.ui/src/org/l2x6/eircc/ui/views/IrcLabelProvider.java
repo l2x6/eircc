@@ -12,6 +12,7 @@ import org.eclipse.jface.viewers.LabelProvider;
 import org.eclipse.swt.graphics.Image;
 import org.l2x6.eircc.core.model.AbstractIrcChannel;
 import org.l2x6.eircc.core.model.IrcAccountsStatistics;
+import org.l2x6.eircc.core.model.IrcBase;
 import org.l2x6.eircc.core.model.IrcModel;
 import org.l2x6.eircc.core.model.IrcObject;
 import org.l2x6.eircc.ui.IrcUiMessages;
@@ -48,7 +49,7 @@ public class IrcLabelProvider extends LabelProvider {
      * @param channel
      * @return
      */
-    public String getTooltipText(IrcObject object) {
+    public String getTooltipText(IrcBase object) {
         if (object == null) {
             return null;
         } else if (object instanceof IrcModel) {

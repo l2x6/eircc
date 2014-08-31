@@ -46,12 +46,25 @@ public class IrcUiMessages extends NLS {
     public static String Error_Input_in_field_x_required;
     public static String IrcAccountsView_serverChannelsLabel_text;
     public static String IrcChannelOutlinePage_Open_Private_Chat;
+    public static String IrcChannelsSelector_delimiter;
+    public static String IrcSearchPage_caseSensitive;
+    public static String IrcSearchPage_channelNamePatterns_hint;
+    public static String IrcSearchPage_containingText_hint;
+
+    public static String IrcSearchPage_containingText_text;
+    public static String IrcSearchPage_regularExpression;
+    public static String IrcSearchPage_Search_in_Channels_label;
+    public static String IrcSearchPage_searchproblems_message;
+    public static String IrcSearchPage_searchproblems_title;
+    public static String IrcSearchPage_Select_button;
+    public static String IrcSearchPage_wholeWord;
+
     public static String IrcServersView_empty;
     public static String JoinIrcChannelAction_label;
     public static String LeaveIrcChannelAction_label;
     public static String ListChannelsAction_label;
-
     public static String Message_x_is_known_as_y;
+
     public static String Message_x_joined;
     public static String Message_x_left;
     public static String Message_x_left_with_message;

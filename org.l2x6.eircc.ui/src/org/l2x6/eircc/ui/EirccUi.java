@@ -7,9 +7,12 @@
  *******************************************************************************/
 package org.l2x6.eircc.ui;
 
-import java.io.File;
-
+import org.eclipse.core.resources.IProject;
+import org.eclipse.core.resources.IWorkspace;
+import org.eclipse.core.resources.ResourcesPlugin;
+import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IStatus;
+import org.eclipse.core.runtime.NullProgressMonitor;
 import org.eclipse.core.runtime.Status;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.ui.IEditorPart;
@@ -24,8 +27,8 @@ import org.l2x6.eircc.core.EirccCore;
 import org.l2x6.eircc.core.IrcController;
 import org.l2x6.eircc.core.model.AbstractIrcChannel;
 import org.l2x6.eircc.core.model.IrcAccount;
-import org.l2x6.eircc.core.model.IrcMessage;
 import org.l2x6.eircc.core.model.IrcAccount.IrcAccountState;
+import org.l2x6.eircc.core.model.IrcMessage;
 import org.l2x6.eircc.core.model.IrcModel;
 import org.l2x6.eircc.core.model.IrcUser;
 import org.l2x6.eircc.core.model.event.IrcModelEvent;
@@ -51,6 +54,8 @@ public class EirccUi extends AbstractUIPlugin implements IrcModelEventListener, 
 
     /** The plugin ID */
     public static final String PLUGIN_ID = "org.l2x6.eircc.ui";
+
+    public static final String PROJECT_NAME = "IRC";
 
     /**
      * Returns the singleton.
@@ -89,8 +94,18 @@ public class EirccUi extends AbstractUIPlugin implements IrcModelEventListener, 
         getDefault().getLog().log(status);
     }
 
-    private File getDefaultStorageRoot() {
-        return new File(System.getProperty("user.home"), ".eircc");
+    private IProject project;
+
+    private IProject getIrcProject() throws CoreException {
+        if (project == null) {
+            IWorkspace ws = ResourcesPlugin.getWorkspace();
+            project = ws.getRoot().getProject(PROJECT_NAME);
+            if (!project.exists())
+                project.create(null);
+            if (!project.isOpen())
+                project.open(null);
+        }
+        return project;
     }
 
     /**
@@ -101,7 +116,7 @@ public class EirccUi extends AbstractUIPlugin implements IrcModelEventListener, 
         switch (e.getEventType()) {
         case ACCOUNT_ADDED:
             try {
-                ((IrcAccount) e.getModelObject()).save();
+                ((IrcAccount) e.getModelObject()).save(new NullProgressMonitor());
             } catch (Exception e1) {
                 log(e1);
             }
@@ -136,7 +151,7 @@ public class EirccUi extends AbstractUIPlugin implements IrcModelEventListener, 
             try {
                 AbstractIrcChannel channel = (AbstractIrcChannel) e.getModelObject();
                 if (channel.isKept()) {
-                    channel.save();
+                    channel.save(new NullProgressMonitor());
                 }
             } catch (Exception e1) {
                 log(e1);
@@ -145,7 +160,7 @@ public class EirccUi extends AbstractUIPlugin implements IrcModelEventListener, 
         case USER_ADDED:
             try {
                 IrcUser user = (IrcUser) e.getModelObject();
-                user.save();
+                user.save(new NullProgressMonitor());
             } catch (Exception e1) {
                 log(e1);
             }
@@ -153,7 +168,7 @@ public class EirccUi extends AbstractUIPlugin implements IrcModelEventListener, 
         case NEW_MESSAGE:
             try {
                 IrcMessage m = (IrcMessage) e.getModelObject();
-                m.getLog().save();
+                m.getLog().ensureAllSaved(new NullProgressMonitor());
             } catch (Exception e1) {
                 log(e1);
             }
@@ -176,10 +191,13 @@ public class EirccUi extends AbstractUIPlugin implements IrcModelEventListener, 
     public void start(BundleContext context) throws Exception {
         super.start(context);
         plugin = this;
+
+        IProject ircProject = getIrcProject();
+
         IrcModel model = IrcModel.getInstance();
         model.setTrafficLogFactory(IrcConsole.getInstance());
         model.addModelEventListener(this);
-        model.load(getDefaultStorageRoot());
+        model.load(ircProject);
         IrcController controller = IrcController.getInstance();
         for (IrcAccount account : model.getAccounts()) {
             if (account.isAutoConnect()) {
