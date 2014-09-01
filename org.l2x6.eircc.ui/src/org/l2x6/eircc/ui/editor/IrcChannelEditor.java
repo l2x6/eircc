@@ -9,11 +9,15 @@
 package org.l2x6.eircc.ui.editor;
 
 import org.eclipse.core.runtime.IProgressMonitor;
+import org.eclipse.jface.text.Document;
+import org.eclipse.jface.text.IDocument;
+import org.eclipse.jface.text.TextViewer;
+import org.eclipse.jface.text.contentassist.ContentAssistant;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.SashForm;
 import org.eclipse.swt.custom.StyledText;
-import org.eclipse.swt.events.KeyEvent;
-import org.eclipse.swt.events.KeyListener;
+import org.eclipse.swt.custom.VerifyKeyListener;
+import org.eclipse.swt.events.VerifyEvent;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.ui.IEditorInput;
@@ -24,6 +28,7 @@ import org.eclipse.ui.PartInitException;
 import org.eclipse.ui.part.EditorPart;
 import org.eclipse.ui.views.contentoutline.IContentOutlinePage;
 import org.l2x6.eircc.core.IrcController;
+import org.l2x6.eircc.core.IrcException;
 import org.l2x6.eircc.core.model.AbstractIrcChannel;
 import org.l2x6.eircc.core.model.IrcLog;
 import org.l2x6.eircc.core.model.IrcMessage;
@@ -44,40 +49,40 @@ public class IrcChannelEditor extends EditorPart implements IrcModelEventListene
     public static final String ID = "org.l2x6.eircc.ui.editor.IrcChannelEditor";
     private SashForm accountsDetailsSplitter;
     private AbstractIrcChannel channel;
+    private ContentAssistant contentAssistant;
     private StyledText historyWidget;
-    private StyledText inputWidget;
 
-    private KeyListener inputWidgetListenet = new KeyListener() {
+    private TextViewer inputViewer;
+    private VerifyKeyListener inputWidgetListenet = new VerifyKeyListener() {
 
         @Override
-        public void keyPressed(KeyEvent e) {
-            if (e.stateMask == 0 && (e.keyCode == SWT.CR || e.keyCode == SWT.LF || e.keyCode == SWT.KEYPAD_CR)) {
-                try {
-                    String text = inputWidget.getText();
-                    if (text.length() > 0) {
-                        int i = text.length() - 1;
-                        for (; i >= 0; i--) {
-                            if (!Character.isWhitespace(text.charAt(i))) {
-                                break;
-                            }
-                        }
-                        i++;
-                        if (i < text.length()) {
-                            text = text.substring(0, i);
-                        }
-                        if (text.length() > 0) {
-                            IrcController.getInstance().postMessage(channel, text);
-                            inputWidget.setText("");
-                        }
+        public void verifyKey(VerifyEvent e) {
+            switch (e.keyCode) {
+            case SWT.CR:
+            case SWT.LF:
+            case SWT.KEYPAD_CR:
+                if (e.stateMask == 0) {
+                    try {
+                        sendMessage();
+                        e.doit = false;
+                    } catch (Exception e1) {
+                        EirccUi.log(e1);
                     }
-                } catch (Exception e1) {
-                    EirccUi.log(e1);
                 }
+                break;
+            case SWT.SPACE:
+                if ((e.stateMask & SWT.CTRL) == SWT.CTRL) {
+                    try {
+                        contentAssistant.showPossibleCompletions();
+                    } catch (Exception e1) {
+                        EirccUi.log(e1);
+                    }
+                }
+                break;
+            default:
+                break;
             }
-        }
 
-        @Override
-        public void keyReleased(KeyEvent e) {
         }
     };
     private IrcChannelOutlinePage outlinePage;
@@ -164,8 +169,16 @@ public class IrcChannelEditor extends EditorPart implements IrcModelEventListene
         accountsDetailsSplitter = new SashForm(parent, SWT.VERTICAL);
         historyWidget = new StyledText(accountsDetailsSplitter, SWT.MULTI | SWT.READ_ONLY | SWT.WRAP | SWT.H_SCROLL
                 | SWT.V_SCROLL);
-        inputWidget = new StyledText(accountsDetailsSplitter, SWT.MULTI | SWT.WRAP | SWT.H_SCROLL | SWT.V_SCROLL);
-        inputWidget.addKeyListener(inputWidgetListenet);
+
+        inputViewer = new TextViewer(accountsDetailsSplitter, SWT.MULTI | SWT.WRAP | SWT.H_SCROLL | SWT.V_SCROLL);
+        inputViewer.setDocument(new Document());
+        inputViewer.appendVerifyKeyListener(inputWidgetListenet);
+
+
+        contentAssistant = new ContentAssistant();
+        contentAssistant.setContentAssistProcessor(new IrcContentAssistProcessor(channel), IDocument.DEFAULT_CONTENT_TYPE);
+        contentAssistant.install(inputViewer);
+
         accountsDetailsSplitter.setWeights(new int[] { 80, 20 });
 
         if (channel.getLog() != null) {
@@ -306,12 +319,34 @@ public class IrcChannelEditor extends EditorPart implements IrcModelEventListene
         return false;
     }
 
+    private void sendMessage() throws IrcException {
+        String text = inputViewer.getDocument().get();
+        if (text.length() > 0) {
+            /* remove the trailing whitespace */
+            int end = text.length() - 1;
+            for (; end >= 0; end--) {
+                if (!Character.isWhitespace(text.charAt(end))) {
+                    break;
+                }
+            }
+            end++;
+
+            if (end < text.length()) {
+                text = text.substring(0, end);
+            }
+            if (text.length() > 0) {
+                IrcController.getInstance().postMessage(channel, text);
+                inputViewer.getDocument().set("");
+            }
+        }
+    }
+
     /**
      * @see org.eclipse.ui.part.WorkbenchPart#setFocus()
      */
     @Override
     public void setFocus() {
-        inputWidget.setFocus();
+        inputViewer.getControl().setFocus();
     }
 
     /**
