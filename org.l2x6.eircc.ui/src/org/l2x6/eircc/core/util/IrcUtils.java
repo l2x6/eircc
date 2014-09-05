@@ -12,7 +12,6 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.PushbackReader;
 import java.util.Locale;
 import java.util.StringTokenizer;
 
@@ -29,24 +28,6 @@ import org.schwering.irc.lib.IRCCommand;
  */
 public class IrcUtils {
     private static final ThreadLocal<Boolean> isShutdownThread = new ThreadLocal<Boolean>();
-
-    public static void append(CharSequence token, Appendable out, char delimiter) throws IOException {
-        for (int i = 0; i < token.length(); i++) {
-            char ch = token.charAt(i);
-            switch (ch) {
-            case '\n':
-                out.append("\n ");
-                break;
-            case '\r':
-                /* ignore */
-                break;
-            default:
-                out.append(ch);
-                break;
-            }
-        }
-        out.append(delimiter);
-    }
 
     public static void assertUiThread() {
         if (Display.getCurrent() == null && !Boolean.TRUE.equals(isShutdownThread.get())) {
@@ -135,31 +116,6 @@ public class IrcUtils {
         }
     }
 
-    public static String read(PushbackReader in, char delimiter, char multilineMarker) throws IOException {
-        StringBuilder result = new StringBuilder();
-        int ch;
-        while ((ch = in.read()) >= 0) {
-            if (ch == '\n') {
-                int ch2 = in.read();
-                if (ch2 == multilineMarker) {
-                    result.append('\n');
-                } else if (ch2 == -1) {
-                    break;
-                } else {
-                    in.unread(ch2);
-                    if (ch == delimiter) {
-                        break;
-                    }
-                }
-            } else if (ch == delimiter) {
-                break;
-            } else {
-                result.append(ch);
-            }
-        }
-        return result.toString();
-    }
-
     /**
      * @param propType
      * @return
@@ -170,7 +126,7 @@ public class IrcUtils {
         }
         String name = propType.getName();
         try {
-            return Class.forName("java.lang."+ Character.toUpperCase(name.charAt(0)) + name.substring(1));
+            return Class.forName("java.lang." + Character.toUpperCase(name.charAt(0)) + name.substring(1));
         } catch (ClassNotFoundException e) {
             throw new RuntimeException(e);
         }

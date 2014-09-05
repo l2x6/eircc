@@ -28,11 +28,11 @@ public class OpenIrcSearchPageAction implements IWorkbenchWindowActionDelegate {
     }
 
     public void dispose() {
-        fWindow= null;
+        fWindow = null;
     }
 
     public void init(IWorkbenchWindow window) {
-        fWindow= window;
+        fWindow = window;
     }
 
     public void run(IAction action) {

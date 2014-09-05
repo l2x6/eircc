@@ -34,8 +34,7 @@ import org.schwering.irc.lib.TrafficLogger;
 /**
  * @author <a href="mailto:ppalaga@redhat.com">Peter Palaga</a>
  */
-public class IrcAccount extends IrcObject implements PersistentIrcObject {
-
+public class IrcAccount extends InitialIrcAccount implements PersistentIrcObject {
     public enum IrcAccountField implements TypedField {
         autoConnect(IrcUiMessages.Account_Connect_Automatically) {
             @Override
@@ -50,7 +49,6 @@ public class IrcAccount extends IrcObject implements PersistentIrcObject {
             }
         }, //
         host(IrcUiMessages.Account_Host), //
-        label(IrcUiMessages.Account_Label), //
         name(IrcUiMessages.Account_Name), //
         password(IrcUiMessages.Account_Password), //
         port(IrcUiMessages.Account_Port) {
@@ -100,7 +98,23 @@ public class IrcAccount extends IrcObject implements PersistentIrcObject {
         OFFLINE, OFFLINE_AFTER_ERROR, ONLINE
     }
 
+    private static final String CHANNELS_FOLDER_SUFFIX = "-channels";
     static final String FILE_EXTENSION = ".account.properties";
+
+    /**
+     * @param f
+     * @return
+     */
+    public static String getAccountName(IFile f) {
+        String fileName = f.getName();
+        String result = fileName.substring(0, fileName.length() - IrcAccount.FILE_EXTENSION.length());
+        return result;
+    }
+
+    public static String getAccountNameFromChannelsFolder(IPath path) {
+        String name = path.lastSegment();
+        return name.substring(0, name.length() - CHANNELS_FOLDER_SUFFIX.length());
+    }
 
     /**
      * @param f
@@ -110,35 +124,40 @@ public class IrcAccount extends IrcObject implements PersistentIrcObject {
         return r.getType() == IResource.FILE && r.getName().endsWith(IrcAccount.FILE_EXTENSION);
     }
 
-    private boolean autoConnect = false;
+    public static boolean isChannelsFolder(IResource resource) {
+        return resource.getType() == IResource.FOLDER && resource.getName().endsWith(CHANNELS_FOLDER_SUFFIX);
+    }
+
     /** Kept or joined channels */
     private final List<AbstractIrcChannel> channels = new ArrayList<AbstractIrcChannel>();
-
     private final IPath channelsFolderPath;
-    private long createdOn;
 
-    private String host;
-    protected final UUID id;
+    private long createdOn;
     private AbstractIrcChannel[] keptChannelsArray;
-    private String label;
+
     private IrcException lastException;
     private IrcUser me;
-    private final IrcModel model;
-    private String password;
     private IPath path;
-    private int port;
-    private String preferedNick;
-    private String realName;
-    private final IrcServer server;
 
-    private boolean ssl;
+    private final IrcServer server;
 
     private IrcAccountState state = IrcAccountState.OFFLINE;
 
     private TrafficLogger trafficLogger;
 
-    private String username;
     private final IPath usersFolderPath;
+
+    public IrcAccount(InitialIrcAccount src) {
+        this(src.getModel(), src.getLabel(), System.currentTimeMillis());
+        this.autoConnect = src.autoConnect;
+        this.host = src.host;
+        this.password = src.password;
+        this.port = src.port;
+        this.preferedNick = src.preferedNick;
+        this.realName = src.realName;
+        this.ssl = src.ssl;
+        this.username = src.username;
+    }
 
     /**
      * @param model
@@ -149,63 +168,43 @@ public class IrcAccount extends IrcObject implements PersistentIrcObject {
      * @throws UnsupportedEncodingException
      * @throws CoreException
      */
-    public IrcAccount(IrcModel model, IFile f) throws UnsupportedEncodingException, FileNotFoundException, IOException, CoreException {
-        super(model, model.getProject().getFullPath());
-        this.model = model;
+    public IrcAccount(IrcModel model, IFile f) throws UnsupportedEncodingException, FileNotFoundException, IOException,
+            CoreException {
+        super(model, getAccountName(f));
         this.server = new IrcServer(this);
+        this.channelsFolderPath = parentFolderPath.append(getLabel() + CHANNELS_FOLDER_SUFFIX);
+        this.usersFolderPath = parentFolderPath.append(getLabel() + "-users");
+        load(f);
 
-        String fileName = f.getName();
-        String bareName = fileName.substring(0, fileName.length() - IrcAccount.FILE_EXTENSION.length());
-        int minusPos = bareName.lastIndexOf('-');
-        if (minusPos >= 0) {
-            String uuidString = bareName.substring(0, minusPos);
-            this.id = UUID.fromString(uuidString);
-            this.channelsFolderPath = parentFolderPath.append(id.toString() + "-channels");
-            this.usersFolderPath = parentFolderPath.append(id.toString() + "-users");
-            this.label = bareName.substring(minusPos + 1);
-            load(f);
-
-
-            IWorkspaceRoot root = model.getRoot();
-            if (root.exists(channelsFolderPath)) {
-                IFolder channelsFolder = root.getFolder(channelsFolderPath);
-                for (IResource m : channelsFolder.members()) {
-                    if (AbstractIrcChannel.isChannelFile(m)) {
-                        IrcChannel channel = new IrcChannel(this, (IFile) m);
-                        channels.add(channel);
-                    }
+        IWorkspaceRoot root = model.getRoot();
+        if (root.exists(channelsFolderPath)) {
+            IFolder channelsFolder = root.getFolder(channelsFolderPath);
+            for (IResource m : channelsFolder.members()) {
+                if (AbstractIrcChannel.isChannelFile(m)) {
+                    IrcChannel channel = new IrcChannel(this, (IFile) m);
+                    channels.add(channel);
                 }
             }
-            if (root.exists(usersFolderPath)) {
-                IFolder usersFolder = root.getFolder(usersFolderPath);
-                for (IResource m : usersFolder.members()) {
-                    if (IrcUser.isUserFile(m)) {
-                        IrcUser user = new IrcUser(server, (IFile) m);
-                        server.getUsers().put(user.getId(), user);
-                    }
-                }
-            }
-
-        } else {
-            throw new IllegalStateException(f.getLocation().toOSString() + "should contain '-' in the file name.");
         }
-    }
-
-    public IrcAccount(IrcModel model, UUID id, String label) {
-        this(model, id, label, -1);
+        if (root.exists(usersFolderPath)) {
+            IFolder usersFolder = root.getFolder(usersFolderPath);
+            for (IResource m : usersFolder.members()) {
+                if (IrcUser.isUserFile(m)) {
+                    IrcUser user = new IrcUser(server, (IFile) m);
+                    server.getUsers().put(user.getId(), user);
+                }
+            }
+        }
     }
 
     /**
      * @param model
      * @param label
      */
-    public IrcAccount(IrcModel model, UUID id, String label, long createdOn) {
-        super(model, model.getProject().getFullPath());
-        this.channelsFolderPath = parentFolderPath.append(id.toString() + "-channels");
-        this.usersFolderPath = parentFolderPath.append(id.toString() + "-users");
-        this.id = id;
-        this.model = model;
-        this.label = label;
+    public IrcAccount(IrcModel model, String label, long createdOn) {
+        super(model, label);
+        this.channelsFolderPath = parentFolderPath.append(getLabel() + CHANNELS_FOLDER_SUFFIX);
+        this.usersFolderPath = parentFolderPath.append(getLabel() + "-users");
         this.createdOn = createdOn;
         this.server = new IrcServer(this);
     }
@@ -220,7 +219,7 @@ public class IrcAccount extends IrcObject implements PersistentIrcObject {
                 : findOwnChannel(channelName);
         if (availableChannel != null) {
             throw new IllegalArgumentException("Channel with name '" + channelName
-                    + "' already available under account '" + this.label + "'");
+                    + "' already available under account '" + this.getLabel() + "'");
         }
         channels.add(channel);
         keptChannelsArray = null;
@@ -244,6 +243,7 @@ public class IrcAccount extends IrcObject implements PersistentIrcObject {
             channel.dispose();
         }
         keptChannelsArray = null;
+        super.dispose();
     }
 
     /**
@@ -257,7 +257,7 @@ public class IrcAccount extends IrcObject implements PersistentIrcObject {
             return;
         } else if (availableChannel != null) {
             throw new IllegalArgumentException("A distinct channel instance with the same name '" + channelName
-                    + "' already available under account '" + this.label + "'");
+                    + "' already available under account '" + this.getLabel() + "'");
         }
         addChannel(channel);
     }
@@ -271,10 +271,11 @@ public class IrcAccount extends IrcObject implements PersistentIrcObject {
         if (getClass() != obj.getClass())
             return false;
         IrcAccount other = (IrcAccount) obj;
-        if (id == null) {
-            if (other.id != null)
+        String label = getLabel();
+        if (label == null) {
+            if (other.getLabel() != null)
                 return false;
-        } else if (!id.equals(other.id))
+        } else if (!label.equals(other.getLabel()))
             return false;
         return true;
     }
@@ -336,18 +337,6 @@ public class IrcAccount extends IrcObject implements PersistentIrcObject {
         return IrcAccountField.values();
     }
 
-    public String getHost() {
-        return host;
-    }
-
-    public UUID getId() {
-        return id;
-    }
-
-    public String getLabel() {
-        return label;
-    }
-
     public IrcException getLastException() {
         return lastException;
     }
@@ -366,35 +355,15 @@ public class IrcAccount extends IrcObject implements PersistentIrcObject {
         return model;
     }
 
-    public String getName() {
-        return realName;
-    }
-
-    public String getPassword() {
-        return password;
-    }
-
     /**
      * @see org.l2x6.eircc.core.model.IrcObject#getPath()
      */
     @Override
     public IPath getPath() {
         if (path == null) {
-            path = parentFolderPath.append(id.toString() + "-" + label + FILE_EXTENSION);
+            path = parentFolderPath.append(getLabel() + FILE_EXTENSION);
         }
         return path;
-    }
-
-    public int getPort() {
-        return port;
-    }
-
-    public String getPreferedNick() {
-        return preferedNick;
-    }
-
-    public String getPreferedNickOrUser() {
-        return preferedNick != null ? preferedNick : username;
     }
 
     /**
@@ -429,10 +398,6 @@ public class IrcAccount extends IrcObject implements PersistentIrcObject {
         return trafficLogger;
     }
 
-    public String getUsername() {
-        return username;
-    }
-
     protected IPath getUsersFolderPath() {
         return usersFolderPath;
     }
@@ -446,15 +411,8 @@ public class IrcAccount extends IrcObject implements PersistentIrcObject {
 
     @Override
     public int hashCode() {
-        return id == null ? 0 : id.hashCode();
-    }
-
-    public boolean isAutoConnect() {
-        return autoConnect;
-    }
-
-    public boolean isSsl() {
-        return ssl;
+        String label = getLabel();
+        return label == null ? 0 : label.hashCode();
     }
 
     public void removeChannel(AbstractIrcChannel channel) {
@@ -481,20 +439,13 @@ public class IrcAccount extends IrcObject implements PersistentIrcObject {
         }
     }
 
-    public void setAutoConnect(boolean autoConnect) {
-        this.autoConnect = autoConnect;
-    }
-
     public void setCreatedOn(long createdOn) {
         this.createdOn = createdOn;
     }
 
-    public void setHost(String host) {
-        this.host = host;
-    }
-
+    @Override
     public void setLabel(String label) {
-        this.label = label;
+        throw new UnsupportedOperationException("label is immutable in " + this.getClass().getName());
     }
 
     /**
@@ -509,29 +460,9 @@ public class IrcAccount extends IrcObject implements PersistentIrcObject {
         }
     }
 
-    public void setName(String name) {
-        this.realName = name;
-    }
-
     public void setOffline(IrcException e) {
         this.lastException = e;
         setState(IrcAccountState.OFFLINE_AFTER_ERROR);
-    }
-
-    public void setPassword(String password) {
-        this.password = password;
-    }
-
-    public void setPort(int port) {
-        this.port = port;
-    }
-
-    public void setPreferedNick(String nick) {
-        this.preferedNick = nick;
-    }
-
-    public void setSsl(boolean ssl) {
-        this.ssl = ssl;
     }
 
     public void setState(IrcAccountState state) {
@@ -555,15 +486,6 @@ public class IrcAccount extends IrcObject implements PersistentIrcObject {
                 break;
             }
         }
-    }
-
-    public void setUsername(String user) {
-        this.username = user;
-    }
-
-    @Override
-    public String toString() {
-        return label;
     }
 
 }

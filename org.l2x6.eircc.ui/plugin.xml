@@ -18,6 +18,7 @@
             name="%NewIrcAccountWizard.category">
         </category>
     </extension>
+
     <extension
         point="org.eclipse.ui.perspectives">
         <perspective
@@ -27,23 +28,51 @@
             icon="icons/eircc.png">
         </perspective>
     </extension>
+
     <extension
         point = "org.eclipse.ui.editors">
         <editor
            id = "org.l2x6.eircc.ui.editor.IrcChannelEditor"
-           name="%IrcChannelEditor_name"
-           icon="icons/channel.gif"
+           name="%IrcChannelEditor.name"
+           icon="icons/channel.png"
            class="org.l2x6.eircc.ui.editor.IrcChannelEditor"
-           extensions="irc.log" >
+        >
+        </editor>
+
+        <editor
+            id="org.l2x6.eircc.ui.editor.IrcLogEditor"
+            name="%IrcLogEditor.name"
+            icon="icons/channel-history.png"
+            class="org.l2x6.eircc.ui.editor.IrcLogEditor"
+            extensions="log"
+            default="true"
+        >
+           <contentTypeBinding
+                 contentTypeId="org.l2x6.eircc.IrcLogContentType">
+           </contentTypeBinding>
         </editor>
     </extension>
+
+    <extension point="org.eclipse.core.contenttype.contentTypes">
+        <content-type id="org.l2x6.eircc.IrcLogContentType"
+            base-type="org.eclipse.core.runtime.text"
+            name="%IrcLogContentType.name"
+            file-extensions="log"
+            priority="high"
+            default-charset="UTF-8"
+        >
+        </content-type>
+    </extension>
+
+
     <extension point="org.eclipse.ui.menus">
         <menuContribution locationURI="toolbar:org.l2x6.eircc.ui.views.IrcAccountsView">
            <command commandId="org.eclipse.ui.navigate.expandAll"></command>
            <command commandId="org.eclipse.ui.navigate.collapseAll"></command>
         </menuContribution>
     </extension>
-       <extension
+
+    <extension
          point="org.eclipse.ui.commands">
       <category
             name="%IrcCommands.category.name"
@@ -105,5 +134,14 @@
          showScopeSection="false"
          class="org.l2x6.eircc.ui.search.IrcSearchPage">
       </page>
-   </extension>
+    </extension>
+
+    <extension
+        point="org.eclipse.search.searchResultViewPages">
+        <viewPage
+            id="org.l2x6.eircc.ui.search.IrcSearchResultPage"
+            searchResultClass="org.l2x6.eircc.ui.search.IrcSearchResult"
+            class="org.l2x6.eircc.ui.search.IrcSearchResultPage">
+        </viewPage>
+</extension>
 </plugin>

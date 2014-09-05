@@ -53,6 +53,7 @@ public class IrcUser extends IrcObject implements PersistentIrcObject {
         private IrcUserField() {
             this.typedFieldData = new TypedFieldData(name(), IrcUser.class);
         }
+
         @Override
         public TypedFieldData getTypedFieldData() {
             return typedFieldData;

@@ -13,8 +13,9 @@ import org.eclipse.jface.resource.JFaceResources;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.widgets.Display;
-import org.l2x6.eircc.core.model.IrcMessage;
+import org.l2x6.eircc.core.model.PlainIrcMessage;
 import org.l2x6.eircc.ui.editor.IrcDefaultMessageFormatter;
+import org.l2x6.eircc.ui.editor.IrcSearchMessageFormatter;
 import org.l2x6.eircc.ui.editor.IrcSystemMessageFormatter;
 import org.l2x6.eircc.ui.misc.Colors;
 import org.l2x6.eircc.ui.misc.ExtendedTextStyle;
@@ -33,11 +34,13 @@ public class IrcPreferences {
 
     private final ExtendedTextStyle messageTimeStyle;
 
+    private IrcSearchMessageFormatter searchFormatter = new IrcSearchMessageFormatter(this);
     private final IrcSystemMessageFormatter systemFormatter = new IrcSystemMessageFormatter(this);
-    private final ExtendedTextStyle systemMessageStyle;
 
+    private final ExtendedTextStyle systemMessageStyle;
     private final IrcUserStyler[] userStylers;
     private final ExtendedTextStyle[] userStyles;
+
     private final ExtendedTextStyle[] userStylesNamingMe;
 
     /**
@@ -75,7 +78,7 @@ public class IrcPreferences {
      * @param m
      * @return
      */
-    public IrcDefaultMessageFormatter getFormatter(IrcMessage m) {
+    public IrcDefaultMessageFormatter getFormatter(PlainIrcMessage m) {
         if (m.isSystemMessage()) {
             return systemFormatter;
         }
@@ -86,11 +89,22 @@ public class IrcPreferences {
         return messageTimeStyle;
     }
 
+    /**
+     * @param message
+     * @return
+     */
+    public IrcSearchMessageFormatter getSearchFormatter(PlainIrcMessage message) {
+        return searchFormatter;
+    }
+
     public ExtendedTextStyle getSystemMessageStyle() {
         return systemMessageStyle;
     }
 
     public ExtendedTextStyle getUserStyle(int index, boolean namingMe) {
+        if (index < 0) {
+            return null;
+        }
         index %= userStylesNamingMe.length;
         return namingMe ? userStylesNamingMe[index] : userStyles[index];
     }

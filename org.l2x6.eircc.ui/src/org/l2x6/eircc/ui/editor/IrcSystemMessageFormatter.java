@@ -8,8 +8,8 @@
 
 package org.l2x6.eircc.ui.editor;
 
-import org.eclipse.swt.custom.StyledText;
-import org.l2x6.eircc.core.model.IrcMessage;
+import org.l2x6.eircc.core.model.PlainIrcMessage;
+import org.l2x6.eircc.ui.misc.StyledWrapper;
 import org.l2x6.eircc.ui.prefs.IrcPreferences;
 
 /**
@@ -25,11 +25,11 @@ public class IrcSystemMessageFormatter extends IrcDefaultMessageFormatter {
     }
 
     @Override
-    public void format(StyledText target, IrcMessage message) {
+    public void format(StyledWrapper target, PlainIrcMessage message, TimeStyle timeStyle) {
         ensureInitialNewline(target, message);
-        appendTime(target, message);
-        appendSpace(target, message);
-        append(target, message.getText(), preferences.getSystemMessageStyle());
+        appendTime(target, message, timeStyle);
+        appendTab(target, message);
+        target.append(message.getText(), preferences.getSystemMessageStyle());
     }
 
 }

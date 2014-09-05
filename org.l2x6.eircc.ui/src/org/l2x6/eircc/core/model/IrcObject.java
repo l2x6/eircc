@@ -23,7 +23,6 @@ public abstract class IrcObject extends IrcBase {
         this.model = model;
     }
 
-
     public IrcModel getModel() {
         return model;
     }

@@ -15,7 +15,6 @@ import org.eclipse.jface.text.TextViewer;
 import org.eclipse.jface.text.contentassist.ContentAssistant;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.SashForm;
-import org.eclipse.swt.custom.StyledText;
 import org.eclipse.swt.custom.VerifyKeyListener;
 import org.eclipse.swt.events.VerifyEvent;
 import org.eclipse.swt.widgets.Composite;
@@ -38,7 +37,6 @@ import org.l2x6.eircc.core.model.event.IrcModelEventListener;
 import org.l2x6.eircc.core.util.IrcUtils;
 import org.l2x6.eircc.ui.EirccUi;
 import org.l2x6.eircc.ui.misc.IrcImages;
-import org.l2x6.eircc.ui.prefs.IrcPreferences;
 import org.l2x6.eircc.ui.views.IrcLabelProvider;
 
 /**
@@ -50,9 +48,8 @@ public class IrcChannelEditor extends EditorPart implements IrcModelEventListene
     private SashForm accountsDetailsSplitter;
     private AbstractIrcChannel channel;
     private ContentAssistant contentAssistant;
-    private StyledText historyWidget;
-
     private TextViewer inputViewer;
+
     private VerifyKeyListener inputWidgetListenet = new VerifyKeyListener() {
 
         @Override
@@ -85,6 +82,7 @@ public class IrcChannelEditor extends EditorPart implements IrcModelEventListene
 
         }
     };
+    private IrcLogViewer logViewer;
     private IrcChannelOutlinePage outlinePage;
     private IPartListener2 readMessagesUpdater = new IPartListener2() {
 
@@ -151,38 +149,27 @@ public class IrcChannelEditor extends EditorPart implements IrcModelEventListene
     };
 
     /**
-     * @param m
-     */
-    private void append(IrcMessage m) {
-        IrcPreferences prefs = IrcPreferences.getInstance();
-        IrcDefaultMessageFormatter formatter = prefs.getFormatter(m);
-        formatter.format(historyWidget, m);
-        historyWidget.setTopIndex(historyWidget.getLineCount() - 1);
-    }
-
-    /**
      * @see org.eclipse.ui.part.WorkbenchPart#createPartControl(org.eclipse.swt.widgets.Composite)
      */
     @Override
     public void createPartControl(Composite parent) {
 
         accountsDetailsSplitter = new SashForm(parent, SWT.VERTICAL);
-        historyWidget = new StyledText(accountsDetailsSplitter, SWT.MULTI | SWT.READ_ONLY | SWT.WRAP | SWT.H_SCROLL
-                | SWT.V_SCROLL);
+        logViewer = new IrcLogViewer(accountsDetailsSplitter);
 
         inputViewer = new TextViewer(accountsDetailsSplitter, SWT.MULTI | SWT.WRAP | SWT.H_SCROLL | SWT.V_SCROLL);
         inputViewer.setDocument(new Document());
         inputViewer.appendVerifyKeyListener(inputWidgetListenet);
 
-
         contentAssistant = new ContentAssistant();
-        contentAssistant.setContentAssistProcessor(new IrcContentAssistProcessor(channel), IDocument.DEFAULT_CONTENT_TYPE);
+        contentAssistant.setContentAssistProcessor(new IrcContentAssistProcessor(channel),
+                IDocument.DEFAULT_CONTENT_TYPE);
         contentAssistant.install(inputViewer);
 
         accountsDetailsSplitter.setWeights(new int[] { 80, 20 });
 
         if (channel.getLog() != null) {
-            initHistory(channel.getLog());
+            initLogViewer(channel.getLog());
         }
     }
 
@@ -259,7 +246,8 @@ public class IrcChannelEditor extends EditorPart implements IrcModelEventListene
         case NEW_MESSAGE:
             IrcMessage m = (IrcMessage) e.getModelObject();
             if (m.getLog().getChannel() == channel) {
-                append(m);
+                logViewer.appendMessage(m);
+                logViewer.scrollToBottom();
                 updateReadMessages();
             }
             break;
@@ -290,17 +278,18 @@ public class IrcChannelEditor extends EditorPart implements IrcModelEventListene
     /**
      * @param log
      */
-    private void initHistory(IrcLog log) {
+    private void initLogViewer(IrcLog log) {
         for (IrcMessage m : log) {
-            append(m);
+            logViewer.appendMessage(m);
         }
+        logViewer.scrollToBottom();
         log.allRead();
     }
 
     private boolean isBeingRead() {
         Shell myShell = getEditorSite().getShell();
         boolean windowActive = myShell.getDisplay().getActiveShell() == myShell;
-        return windowActive && historyWidget != null && historyWidget.isVisible();
+        return windowActive && logViewer != null && logViewer.isVisible();
     }
 
     /**

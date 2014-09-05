@@ -30,6 +30,7 @@ import org.l2x6.eircc.core.model.IrcAccountsStatistics;
 import org.l2x6.eircc.core.model.IrcBase;
 import org.l2x6.eircc.core.model.IrcChannelUser;
 import org.l2x6.eircc.core.model.IrcLog;
+import org.l2x6.eircc.core.model.IrcMessage;
 import org.l2x6.eircc.core.model.IrcModel;
 import org.l2x6.eircc.core.model.IrcObject;
 import org.l2x6.eircc.core.model.IrcUser;
@@ -99,7 +100,7 @@ public class IrcImages {
 
         /*
          * (non-Javadoc)
-         *
+         * 
          * @see Object#equals(Object)
          */
         @Override
@@ -110,7 +111,7 @@ public class IrcImages {
 
         /*
          * (non-Javadoc)
-         *
+         * 
          * @see ImageDescriptor#getImageData()
          */
         @Override
@@ -120,7 +121,7 @@ public class IrcImages {
 
         /*
          * (non-Javadoc)
-         *
+         * 
          * @see Object#hashCode()
          */
         @Override
@@ -133,7 +134,9 @@ public class IrcImages {
         ACCOUNT("account.gif", IrcAccount.class), //
         ACCOUNT_NEW("account-new.png"), //
         BLUE_BALL_OVERLAY("blue-ball-overlay.png", null, SWT.NONE, "blue-ball-overlay.svg", ImageSize._7x7), //
-        CHANNEL("channel.gif", AbstractIrcChannel.class), //
+        CHANNEL("channel.png", AbstractIrcChannel.class, SWT.NONE, "channel.svg", ImageSize._16x16), //
+        CHANNEL_HISTORY("channel-history.png", AbstractIrcChannel.class, SWT.NONE, "channel-history.svg",
+                ImageSize._16x16), //
         CONNECT("connect.gif"), //
         DISCONNECT("disconnect.gif"), //
         GREEN_BALL_OVERLAY("green-ball-overlay.png", null, SWT.NONE, "green-ball-overlay.svg", ImageSize._7x7), //
@@ -141,8 +144,10 @@ public class IrcImages {
         IRC_CLIENT_DISABLED(IRC_CLIENT, SWT.IMAGE_GRAY), //
         JOIN_CHANNEL("join-channel.gif"), //
         LEAVE_CHANNEL("leave-channel.gif"), //
+        MESSAGE("message.png", IrcMessage.class, SWT.NONE, "message.svg", ImageSize._16x16), //
         NEW_OVERLAY("new-overlay.png"), //
         REFRESH("refresh.gif"), //
+        SEARCH("irc-search.png", null, SWT.NONE, "irc-search.svg", ImageSize._16x16), //
         SMILEY_OVERLAY("smiley-overlay.png", null, SWT.NONE, "smiley-overlay.svg", ImageSize._7x7), //
         USER("user.gif", IrcUser.class), //
         WARNING_OVERLAY("warning-overlay.gif", null, SWT.NONE, "warning-overlay.svg", ImageSize._7x8);

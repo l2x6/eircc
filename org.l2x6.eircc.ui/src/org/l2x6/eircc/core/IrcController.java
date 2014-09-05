@@ -13,7 +13,6 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
-import java.util.UUID;
 
 import org.l2x6.eircc.core.client.IrcClient;
 import org.l2x6.eircc.core.model.AbstractIrcChannel;
@@ -34,7 +33,7 @@ public class IrcController {
         return INSTANCE;
     }
 
-    private final Map<UUID, IrcClient> clients = new HashMap<UUID, IrcClient>();
+    private final Map<String, IrcClient> clients = new HashMap<String, IrcClient>();
 
     /**
      *
@@ -68,7 +67,7 @@ public class IrcController {
      * @throws IOException
      */
     private IrcClient getClientOrConnect(IrcAccount account) throws IrcException {
-        IrcClient client = clients.get(account.getId());
+        IrcClient client = clients.get(account.getLabel());
         if (client != null && !client.isConnected()) {
             client.close();
             client = null;
@@ -77,7 +76,7 @@ public class IrcController {
             client = new IrcClient();
             try {
                 client.connect(account);
-                clients.put(account.getId(), client);
+                clients.put(account.getLabel(), client);
             } catch (IrcException e) {
                 account.setOffline(e);
                 throw e;
@@ -189,7 +188,7 @@ public class IrcController {
 
     public void quit(IrcAccount ircAccount) {
         IrcUtils.assertUiThread();
-        IrcClient client = clients.remove(ircAccount.getId());
+        IrcClient client = clients.remove(ircAccount.getLabel());
         if (client != null && client.isConnected()) {
             client.quitAndClose();
         }

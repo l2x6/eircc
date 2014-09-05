@@ -362,7 +362,7 @@ public class IrcClient {
                     }
                     channel.setJoined(true);
                     IrcLog log = channel.getLog();
-                    IrcMessage message = new IrcMessage(log, OffsetDateTime.now(), ircUser, msg);
+                    IrcMessage message = new IrcMessage(log, OffsetDateTime.now(), ircUser, msg, channel.isP2p());
                     log.appendMessage(message);
                 }
             });
@@ -613,7 +613,8 @@ public class IrcClient {
                 Display.getDefault().asyncExec(new Runnable() {
                     @Override
                     public void run() {
-                        IrcMessage m = new IrcMessage(channel.getLog(), OffsetDateTime.now(), account.getMe(), message);
+                        IrcMessage m = new IrcMessage(channel.getLog(), OffsetDateTime.now(), account.getMe(), message,
+                                channel.isP2p());
                         channel.getLog().appendMessage(m);
                     }
                 });

@@ -25,6 +25,7 @@ public interface TypedField {
                 throw new RuntimeException(e);
             }
         }
+
         private final PropertyDescriptor descriptor;
         private final Method valueOfMethod;
 
@@ -57,6 +58,7 @@ public interface TypedField {
             return valueOfMethod;
         }
     }
+
     default Object fromString(String value) {
         if (value == null) {
             return value;

@@ -33,8 +33,9 @@ import org.eclipse.ui.INewWizard;
 import org.eclipse.ui.IWorkbench;
 import org.l2x6.eircc.core.IrcController;
 import org.l2x6.eircc.core.IrcException;
+import org.l2x6.eircc.core.model.InitialIrcAccount;
+import org.l2x6.eircc.core.model.InitialIrcAccount.InitialIrcAccountField;
 import org.l2x6.eircc.core.model.IrcAccount;
-import org.l2x6.eircc.core.model.IrcAccount.IrcAccountField;
 import org.l2x6.eircc.core.model.IrcModel;
 import org.l2x6.eircc.ui.IrcUiMessages;
 
@@ -48,29 +49,37 @@ public class NewIrcAccountWizard extends Wizard implements INewWizard {
 
         public static final String ID = "AccountPage";
 
+        @SuppressWarnings("unused")
         private Button autoConnectCheckbox;
+        @SuppressWarnings("unused")
         private Text hostText;
         private boolean isFirstCheck;
         private Text labelText;
+        @SuppressWarnings("unused")
         private Object nameText;
+        @SuppressWarnings("unused")
         private Text nickText;
+        @SuppressWarnings("unused")
         private Text passwordText;
         private Text portText;
-        private IrcAccount result;
+        private InitialIrcAccount result;
+        @SuppressWarnings("unused")
         private Text usernameText;
 
+        @SuppressWarnings("unused")
         private Button useSslCheckbox;
 
         AccountPage() {
             super(ID, IrcUiMessages.AccountPage_title, null);
         }
 
-        private Button createCheckboxField(Composite composite, DataBindingContext ctx, IrcAccountField ircAccountField) {
+        private Button createCheckboxField(Composite composite, DataBindingContext ctx,
+                InitialIrcAccountField ircAccountField) {
             Button button = new Button(composite, SWT.CHECK);
             button.setText(ircAccountField.getLabel());
             GdBuilder.defaults(button).hSpan(COLUMN_COUNT).apply();
             ctx.bindValue(WidgetProperties.selection().observe(button),
-                    PojoProperties.value(IrcAccount.class, ircAccountField.name()).observe(result));
+                    PojoProperties.value(InitialIrcAccount.class, ircAccountField.name()).observe(result));
             return button;
         }
 
@@ -86,10 +95,10 @@ public class NewIrcAccountWizard extends Wizard implements INewWizard {
             result = IrcModel.getInstance().proposeNextAccount();
             DataBindingContext ctx = new DataBindingContext();
 
-            labelText = createTextField(composite, ctx, IrcAccountField.label);
+            labelText = createTextField(composite, ctx, InitialIrcAccountField.label);
             labelText.setFocus();
-            hostText = createTextField(composite, ctx, IrcAccountField.host);
-            portText = createTextField(composite, ctx, IrcAccountField.port);
+            hostText = createTextField(composite, ctx, InitialIrcAccountField.host);
+            portText = createTextField(composite, ctx, InitialIrcAccountField.port);
             portText.addVerifyListener(new VerifyListener() {
                 @Override
                 public void verifyText(VerifyEvent e) {
@@ -103,13 +112,13 @@ public class NewIrcAccountWizard extends Wizard implements INewWizard {
                 }
             });
 
-            usernameText = createTextField(composite, ctx, IrcAccountField.username);
-            passwordText = createTextField(composite, ctx, IrcAccountField.password);
-            nameText = createTextField(composite, ctx, IrcAccountField.name);
-            nickText = createTextField(composite, ctx, IrcAccountField.preferedNick);
+            usernameText = createTextField(composite, ctx, InitialIrcAccountField.username);
+            passwordText = createTextField(composite, ctx, InitialIrcAccountField.password);
+            nameText = createTextField(composite, ctx, InitialIrcAccountField.name);
+            nickText = createTextField(composite, ctx, InitialIrcAccountField.preferedNick);
 
-            useSslCheckbox = createCheckboxField(composite, ctx, IrcAccountField.ssl);
-            autoConnectCheckbox = createCheckboxField(composite, ctx, IrcAccountField.autoConnect);
+            useSslCheckbox = createCheckboxField(composite, ctx, InitialIrcAccountField.ssl);
+            autoConnectCheckbox = createCheckboxField(composite, ctx, InitialIrcAccountField.autoConnect);
 
             ctx.updateTargets();
 
@@ -134,14 +143,14 @@ public class NewIrcAccountWizard extends Wizard implements INewWizard {
          * @param accountPage_label
          * @return
          */
-        private Text createTextField(Composite composite, DataBindingContext ctx, IrcAccountField ircAccountField) {
+        private Text createTextField(Composite composite, DataBindingContext ctx, InitialIrcAccountField ircAccountField) {
             createLabel(composite, ircAccountField.getLabel());
             Text textControl = new Text(composite, SWT.SINGLE | SWT.BORDER);
             GdBuilder.defaults(textControl).apply();
             textControl.addModifyListener(this);
 
             Binding binding = ctx.bindValue(WidgetProperties.text(SWT.Modify).observe(textControl), PojoProperties
-                    .value(IrcAccount.class, ircAccountField.name()).observe(result));
+                    .value(InitialIrcAccount.class, ircAccountField.name()).observe(result));
             ControlDecorationSupport.create(binding, SWT.TOP | SWT.LEFT);
             return textControl;
         }
@@ -159,11 +168,14 @@ public class NewIrcAccountWizard extends Wizard implements INewWizard {
          */
         public boolean performFinish() {
             IrcModel ircModel = IrcModel.getInstance();
-            ircModel.addAccount(result);
 
-            if (result.isAutoConnect()) {
+            IrcAccount newAccount = result.freeze();
+
+            ircModel.addAccount(newAccount);
+
+            if (newAccount.isAutoConnect()) {
                 try {
-                    IrcController.getInstance().connect(result);
+                    IrcController.getInstance().connect(newAccount);
                 } catch (IrcException e) {
                     setErrorMessage(e.getLocalizedMessage());
                     return false;

@@ -31,16 +31,17 @@ import org.l2x6.eircc.ui.misc.Colors;
  */
 public abstract class AbstractIrcChannel extends IrcObject implements PersistentIrcObject {
 
-
     public enum IrcChannelField implements TypedField {
         autoJoin;
         private final org.l2x6.eircc.core.util.TypedField.TypedFieldData typedFieldData;
+
         /**
          * @param typedFieldData
          */
         private IrcChannelField() {
             this.typedFieldData = new TypedFieldData(name(), AbstractIrcChannel.class);
         }
+
         @Override
         public TypedFieldData getTypedFieldData() {
             return typedFieldData;
@@ -50,12 +51,35 @@ public abstract class AbstractIrcChannel extends IrcObject implements Persistent
     /**  */
     protected static final String FILE_EXTENSION = ".channel.properties";
 
+    private static final String LOGS_FOLDER_SUFFIX = "-logs";
+
+    public static String getChannelName(IPath logsFolderPath) {
+        String name = logsFolderPath.lastSegment();
+        return name.substring(0, name.length() - LOGS_FOLDER_SUFFIX.length());
+    }
+
     /**
      * @param f
      * @return
      */
     public static boolean isChannelFile(IResource f) {
         return f.getType() == IResource.FILE && f.getName().endsWith(AbstractIrcChannel.FILE_EXTENSION);
+    }
+
+    /**
+     * @param resource
+     * @return
+     */
+    public static boolean isChannelLogsFolder(IResource resource) {
+        return resource.getType() == IResource.FOLDER && resource.getName().endsWith(LOGS_FOLDER_SUFFIX);
+    }
+
+    public static boolean isP2pChannel(IPath path) {
+        return isP2pChannel(path.lastSegment());
+    }
+
+    public static boolean isP2pChannel(String channelName) {
+        return channelName.startsWith("#");
     }
 
     protected final IrcAccount account;
@@ -66,8 +90,10 @@ public abstract class AbstractIrcChannel extends IrcObject implements Persistent
     private IPath logsFolderPath;
     private IPath path;
     private final Map<String, Integer> seenUsers = new HashMap<String, Integer>();
+
     /** Users by nick */
     protected final Map<String, IrcChannelUser> users = new TreeMap<String, IrcChannelUser>();
+
     protected IrcChannelUser[] usersArray;
 
     /**
@@ -170,7 +196,7 @@ public abstract class AbstractIrcChannel extends IrcObject implements Persistent
      */
     public IPath getLogsFolderPath() {
         if (this.logsFolderPath == null) {
-            this.logsFolderPath = parentFolderPath.append(getName() + "-logs");
+            this.logsFolderPath = parentFolderPath.append(getName() + LOGS_FOLDER_SUFFIX);
         }
         return this.logsFolderPath;
     }

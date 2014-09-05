@@ -30,15 +30,18 @@ public class IrcUiUtils {
             shell.getDisplay().beep();
         }
     }
+
     /**
      * Returns a width hint for a button control.
-     * @param button The button to calculate the width for
+     * 
+     * @param button
+     *            The button to calculate the width for
      * @return The width of the button
      */
     public static int getButtonWidthHint(Button button) {
         button.setFont(JFaceResources.getDialogFont());
-        PixelConverter converter= new PixelConverter(button);
-        int widthHint= converter.convertHorizontalDLUsToPixels(IDialogConstants.BUTTON_WIDTH);
+        PixelConverter converter = new PixelConverter(button);
+        int widthHint = converter.convertHorizontalDLUsToPixels(IDialogConstants.BUTTON_WIDTH);
         return Math.max(widthHint, button.computeSize(SWT.DEFAULT, SWT.DEFAULT, true).x);
     }
 

@@ -11,10 +11,11 @@ package org.l2x6.eircc.ui.search;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.StringReader;
+import java.time.OffsetDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.regex.PatternSyntaxException;
@@ -37,27 +38,25 @@ import org.eclipse.jface.text.FindReplaceDocumentAdapterContentProposalProvider;
 import org.eclipse.jface.text.ITextSelection;
 import org.eclipse.jface.viewers.ISelection;
 import org.eclipse.jface.viewers.IStructuredSelection;
-import org.eclipse.search.internal.core.text.PatternConstructor;
-import org.eclipse.search.internal.ui.SearchPlugin;
 import org.eclipse.search.ui.ISearchPage;
 import org.eclipse.search.ui.ISearchPageContainer;
 import org.eclipse.search.ui.ISearchQuery;
 import org.eclipse.search.ui.NewSearchUI;
 import org.eclipse.search.ui.text.FileTextSearchScope;
-import org.eclipse.search.ui.text.TextSearchQueryProvider;
-import org.eclipse.search.ui.text.TextSearchQueryProvider.TextSearchInput;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.CLabel;
 import org.eclipse.swt.events.ModifyEvent;
 import org.eclipse.swt.events.ModifyListener;
 import org.eclipse.swt.events.SelectionAdapter;
 import org.eclipse.swt.events.SelectionEvent;
+import org.eclipse.swt.events.SelectionListener;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Combo;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Label;
+import org.eclipse.swt.widgets.Text;
 import org.eclipse.ui.IEditorInput;
 import org.eclipse.ui.IWorkingSet;
 import org.eclipse.ui.IWorkingSetManager;
@@ -68,74 +67,109 @@ import org.l2x6.eircc.core.model.AbstractIrcChannel;
 import org.l2x6.eircc.core.model.IrcAccount;
 import org.l2x6.eircc.core.model.IrcModel;
 import org.l2x6.eircc.ui.IrcUiMessages;
-import org.l2x6.eircc.ui.misc.IrcUiUtils;
 
 /**
+ * Adapted from {@code org.eclipse.search.internal.ui.text.TextSearchPage} as
+ * available in org.eclipse.search 3.9.100.v20140226-1637.
+ *
  * @author <a href="mailto:ppalaga@redhat.com">Peter Palaga</a>
  */
 public class IrcSearchPage extends DialogPage implements ISearchPage {
 
-    private static class SearchPatternData {
-        public static SearchPatternData create(IDialogSettings settings) {
-            String textPattern= settings.get("textPattern"); //$NON-NLS-1$
-            String[] wsIds= settings.getArray("workingSets"); //$NON-NLS-1$
-            IWorkingSet[] workingSets= null;
+    public static class IrcSearchPatternData {
+        public static IrcSearchPatternData create(IDialogSettings settings) {
+            String textPattern = settings.get("textPattern"); //$NON-NLS-1$
+            String[] wsIds = settings.getArray("workingSets"); //$NON-NLS-1$
+            IWorkingSet[] workingSets = null;
             if (wsIds != null && wsIds.length > 0) {
-                IWorkingSetManager workingSetManager= PlatformUI.getWorkbench().getWorkingSetManager();
-                workingSets= new IWorkingSet[wsIds.length];
-                for (int i= 0; workingSets != null && i < wsIds.length; i++) {
-                    workingSets[i]= workingSetManager.getWorkingSet(wsIds[i]);
+                IWorkingSetManager workingSetManager = PlatformUI.getWorkbench().getWorkingSetManager();
+                workingSets = new IWorkingSet[wsIds.length];
+                for (int i = 0; workingSets != null && i < wsIds.length; i++) {
+                    workingSets[i] = workingSetManager.getWorkingSet(wsIds[i]);
                     if (workingSets[i] == null) {
-                        workingSets= null;
+                        workingSets = null;
                     }
                 }
             }
-            String[] fileNamePatterns= settings.getArray("fileNamePatterns"); //$NON-NLS-1$
+            String[] fileNamePatterns = settings.getArray("fileNamePatterns"); //$NON-NLS-1$
             if (fileNamePatterns == null) {
-                fileNamePatterns= new String[0];
+                fileNamePatterns = new String[0];
             }
             try {
-                int scope= settings.getInt("scope"); //$NON-NLS-1$
-                boolean isRegExSearch= settings.getBoolean("isRegExSearch"); //$NON-NLS-1$
-                boolean ignoreCase= settings.getBoolean("ignoreCase"); //$NON-NLS-1$
-                boolean isWholeWord= settings.getBoolean("isWholeWord"); //$NON-NLS-1$
-
-                return new SearchPatternData(textPattern, !ignoreCase, isRegExSearch, isWholeWord, fileNamePatterns, scope, workingSets);
+                int scope = settings.getInt("scope"); //$NON-NLS-1$
+                boolean isRegExSearch = settings.getBoolean("isRegExSearch"); //$NON-NLS-1$
+                boolean ignoreCase = settings.getBoolean("ignoreCase"); //$NON-NLS-1$
+                boolean isWholeWord = settings.getBoolean("isWholeWord"); //$NON-NLS-1$
+                boolean ignoreSystemMessages = settings.getBoolean("ignoreSystemMessages"); //$NON-NLS-1$
+                boolean ignoreMessagesFromMe = settings.getBoolean("ignoreMessagesFromMe"); //$NON-NLS-1$
+                String nickPrefixes = settings.get("nickPrefixes"); //$NON-NLS-1$
+                String channels = settings.get("channels"); //$NON-NLS-1$
+                TimeSpan timeSpan = TimeSpan.A_ANY_TIME;
+                try {
+                    String val = settings.get("timeSpan");
+                    if (val != null) {
+                        timeSpan = TimeSpan.valueOf(val); //$NON-NLS-1$
+                    }
+                } catch (IllegalArgumentException e) {
+                }
+                return new IrcSearchPatternData(textPattern, !ignoreCase, isRegExSearch, isWholeWord,
+                        ignoreSystemMessages, ignoreMessagesFromMe, nickPrefixes, channels, timeSpan, fileNamePatterns, scope,
+                        workingSets);
             } catch (NumberFormatException e) {
                 return null;
             }
         }
+
+        public final String channels;
         public final String[] fileNamePatterns;
+        public final String nickPrefixes;
+        public final Boolean ignoreMessagesFromMe;
+        public final boolean ignoreSystemMessages;
         public final boolean isCaseSensitive;
         public final boolean isRegExSearch;
+
         public final boolean isWholeWord;
         public final int scope;
         public final String textPattern;
-
+        public final TimeSpan timeSpan;
         public final IWorkingSet[] workingSets;
 
-        public SearchPatternData(String textPattern, boolean isCaseSensitive, boolean isRegExSearch, boolean isWholeWord, String[] fileNamePatterns, int scope, IWorkingSet[] workingSets) {
+        public IrcSearchPatternData(String textPattern, boolean isCaseSensitive, boolean isRegExSearch,
+                boolean isWholeWord, boolean ignoreSystemMessages, Boolean ignoreMessagesFromMe, String fromNick,
+                String channels, TimeSpan timeSpan, String[] fileNamePatterns, int scope, IWorkingSet[] workingSets) {
             Assert.isNotNull(fileNamePatterns);
-            this.isCaseSensitive= isCaseSensitive;
-            this.isRegExSearch= isRegExSearch;
-            this.isWholeWord= isWholeWord;
-            this.textPattern= textPattern;
-            this.fileNamePatterns= fileNamePatterns;
-            this.scope= scope;
-            this.workingSets= workingSets; // can be null
+            this.isCaseSensitive = isCaseSensitive;
+            this.isRegExSearch = isRegExSearch;
+            this.isWholeWord = isWholeWord;
+            this.textPattern = textPattern;
+            this.fileNamePatterns = fileNamePatterns;
+            this.scope = scope;
+            this.workingSets = workingSets; // can be null
+            this.ignoreSystemMessages = ignoreSystemMessages;
+            this.ignoreMessagesFromMe = ignoreMessagesFromMe;
+            this.nickPrefixes = fromNick;
+            this.channels = channels;
+            this.timeSpan = timeSpan;
         }
 
         public void store(IDialogSettings settings) {
             settings.put("ignoreCase", !isCaseSensitive); //$NON-NLS-1$
             settings.put("isRegExSearch", isRegExSearch); //$NON-NLS-1$
             settings.put("isWholeWord", isWholeWord); //$NON-NLS-1$
+            settings.put("ignoreSystemMessages", ignoreSystemMessages); //$NON-NLS-1$
+            settings.put("ignoreMessagesFromMe", ignoreMessagesFromMe); //$NON-NLS-1$
             settings.put("textPattern", textPattern); //$NON-NLS-1$
+
+            settings.put("channels", channels); //$NON-NLS-1$
+            settings.put("nickPrefixes", nickPrefixes); //$NON-NLS-1$
+            settings.put("timeSpan", timeSpan.name()); //$NON-NLS-1$
+
             settings.put("fileNamePatterns", fileNamePatterns); //$NON-NLS-1$
             settings.put("scope", scope); //$NON-NLS-1$
             if (workingSets != null) {
-                String[] wsIds= new String[workingSets.length];
-                for (int i= 0; i < workingSets.length; i++) {
-                    wsIds[i]= workingSets[i].getLabel();
+                String[] wsIds = new String[workingSets.length];
+                for (int i = 0; i < workingSets.length; i++) {
+                    wsIds[i] = workingSets[i].getLabel();
                 }
                 settings.put("workingSets", wsIds); //$NON-NLS-1$
             } else {
@@ -145,123 +179,196 @@ public class IrcSearchPage extends DialogPage implements ISearchPage {
         }
 
     }
-    private static class TextSearchPageInput extends TextSearchInput {
 
-        private final boolean fIsCaseSensitive;
-        private final boolean fIsRegEx;
-        private final boolean fIsWholeWord;
-        private final FileTextSearchScope fScope;
-        private final String fSearchText;
+    public enum TimeSpan {
+        A_ANY_TIME(IrcUiMessages.IrcSearchPage_anyTime) {
+            @Override
+            public OffsetDateTime getStart() {
+                return null;
+            }
+        },
+        B_TODAY(IrcUiMessages.IrcSearchPage_today) {
+            @Override
+            public OffsetDateTime getStart() {
+                return OffsetDateTime.now().truncatedTo(ChronoUnit.DAYS);
+            }
+        },
+        C_LAST_WEEK(IrcUiMessages.IrcSearchPage_lastWeek) {
+            @Override
+            public OffsetDateTime getStart() {
+                return OffsetDateTime.now().truncatedTo(ChronoUnit.DAYS).minus(7, ChronoUnit.DAYS);
+            }
+        },
+        D_LAST_MONTH(IrcUiMessages.IrcSearchPage_lastMonth) {
+            @Override
+            public OffsetDateTime getStart() {
+                return OffsetDateTime.now().truncatedTo(ChronoUnit.DAYS).minus(30, ChronoUnit.DAYS);
+            }
+        },
+        E_LAST_YEAR(IrcUiMessages.IrcSearchPage_lastYear) {
+            @Override
+            public OffsetDateTime getStart() {
+                return OffsetDateTime.now().truncatedTo(ChronoUnit.DAYS).minus(1, ChronoUnit.YEARS);
+            }
+        },
+//        F_CUSTOM(IrcUiMessages.IrcSearchPage_custom) {
+//            @Override
+//            public OffsetDateTime getStart() {
+//                return null;
+//            }
+//        }
+        ;
+        private final String label;
 
-        public TextSearchPageInput(String searchText, boolean isCaseSensitive, boolean isRegEx, boolean isWholeWord, FileTextSearchScope scope) {
-            fSearchText= searchText;
-            fIsCaseSensitive= isCaseSensitive;
-            fIsRegEx= isRegEx;
-            fIsWholeWord= isWholeWord;
-            fScope= scope;
+        /**
+         * @param label
+         */
+        private TimeSpan(String label) {
+            this.label = label;
         }
 
-        public FileTextSearchScope getScope() {
-            return fScope;
+        public String getLabel() {
+            return label;
         }
 
-        public String getSearchText() {
-            return fSearchText;
-        }
+        public abstract OffsetDateTime getStart();
 
-        public boolean isCaseSensitiveSearch() {
-            return fIsCaseSensitive;
-        }
-
-        public boolean isRegExSearch() {
-            return fIsRegEx;
-        }
-
-        public boolean isWholeWordSearch() {
-            return fIsWholeWord;
-        }
     }
 
-    private static final int HISTORY_SIZE= 12;
-    public static final String ID= "org.l2x6.eircc.ui.search.IrcSearchPage"; //$NON-NLS-1$
-    // Dialog store id constants
-    private static final String PAGE_NAME= "IrcSearchPage"; //$NON-NLS-1$
-    private static final String STORE_CASE_SENSITIVE= "CASE_SENSITIVE"; //$NON-NLS-1$
-    /**
-     * Section name for the stored file extensions.
-     * @since 3.6
-     */
-    private static final String STORE_EXTENSIONS= "EXTENSIONS"; //$NON-NLS-1$
-    private static final String STORE_HISTORY= "HISTORY"; //$NON-NLS-1$
+    private static final int HISTORY_SIZE = 12;
+    public static final String ID = "org.l2x6.eircc.ui.search.IrcSearchPage"; //$NON-NLS-1$
+    private static final String PAGE_NAME = "IrcSearchPage"; //$NON-NLS-1$
+    private static final String STORE_CASE_SENSITIVE = "CASE_SENSITIVE"; //$NON-NLS-1$
+    private static final String STORE_HISTORY = "HISTORY"; //$NON-NLS-1$
+    private static final String STORE_HISTORY_SIZE = "HISTORY_SIZE"; //$NON-NLS-1$
+    private static final String STORE_IGNORE_MESSAGES_FROM_ME = "STORE_IGNORE_MESSAGES_FROM_ME";
+    private static final String STORE_IGNORE_SYSTEM_MESSAGES = "STORE_IGNORE_SYSTEM_MESSAGES";
+    private static final String STORE_IS_REG_EX_SEARCH = "REG_EX_SEARCH"; //$NON-NLS-1$
+    private static final String STORE_IS_WHOLE_WORD = "WHOLE_WORD"; //$NON-NLS-1$
+    private Text channelsText;
 
-    private static final String STORE_HISTORY_SIZE= "HISTORY_SIZE"; //$NON-NLS-1$
+    private boolean ignoreMessagesFromMe;
+    private Button ignoreMessagesFromMeCheckbox;
+    private boolean ignoreSystemMessages;
+    private Button ignoreSystemMessagesCheckbox;
+    private boolean isCaseSensitive;
+    private Button isCaseSensitiveCheckbox;
 
-    private static final String STORE_IS_REG_EX_SEARCH= "REG_EX_SEARCH"; //$NON-NLS-1$
+    private boolean isFirstTime = true;
+    private Button isRegExCheckbox;
 
-    private static final String STORE_IS_WHOLE_WORD= "WHOLE_WORD"; //$NON-NLS-1$
-    private IrcChannelsSelector channelsSelector;
-    private ISearchPageContainer fContainer;
-    private boolean fFirstTime= true;
+    private boolean isRegExSearch;
 
-    private boolean fIsCaseSensitive;
-    private Button fIsCaseSensitiveCheckbox;
-    private Button fIsRegExCheckbox;
-    private boolean fIsRegExSearch;
-    private boolean fIsWholeWord;
-    private Button fIsWholeWordCheckbox;
+    private boolean isWholeWord;
+    private Button isWholeWordCheckbox;
+    private Text nicksText;
+    private ContentAssistCommandAdapter patterFieldContentAssist;
+    private Combo patternCombo;
+    private List<IrcSearchPatternData> previousSearchPatterns = new ArrayList<IrcSearchPatternData>(HISTORY_SIZE);
+    // private IrcChannelsSelector channelsSelector;
+    private ISearchPageContainer searchPageContainer;
 
-    private ContentAssistCommandAdapter fPatterFieldContentAssist;
-    private Combo fPattern;
+    private CLabel statusLabel;
+    private List<Button> timeSpanButtons = new ArrayList<Button>();
+    private SelectionListener timeSpanListener = new SelectionAdapter() {
+        public void widgetSelected(SelectionEvent event) {
+            Button button = ((Button) event.widget);
+            timeSpan =(TimeSpan) button.getData();
+        }
+    };
+    private TimeSpan timeSpan = TimeSpan.A_ANY_TIME;
 
-    /**
-     * The previous file extensions.
-     * @since 3.6
-     */
-    private String[] fPreviousExtensions;
+    private void addMessageControls(Composite parent) {
+        Composite group = new Composite(parent, SWT.NONE);
+        group.setFont(parent.getFont());
+        GridLayout layout = new GridLayout(4, false);
+        group.setLayout(layout);
 
-    private List<SearchPatternData> fPreviousSearchPatterns= new ArrayList<SearchPatternData>(HISTORY_SIZE);
+        /* Ignore label */
+        Label ignoreLabel = new Label(group, SWT.LEAD);
+        ignoreLabel.setText(IrcUiMessages.IrcSearchPage_ignore);
+        ignoreLabel.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, false, false, 1, 1));
+        ignoreLabel.setFont(group.getFont());
 
-
-    private CLabel fStatusLabel;
-
-    private Combo searchInChannelsCombo;
-
-    //---- Action Handling ------------------------------------------------
-
-    private void addFileNameControls(Composite group) {
-        // grid layout with 2 columns
-
-        // Line with label, combo and button
-        Label label= new Label(group, SWT.LEAD);
-        label.setText(IrcUiMessages.IrcSearchPage_Search_in_Channels_label);
-        label.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, false, false, 2, 1));
-        label.setFont(group.getFont());
-
-        searchInChannelsCombo= new Combo(group, SWT.SINGLE | SWT.BORDER);
-        searchInChannelsCombo.addModifyListener(new ModifyListener() {
-            public void modifyText(ModifyEvent e) {
-                updateOKStatus();
+        /* Ignore system messages */
+        ignoreSystemMessagesCheckbox = new Button(group, SWT.CHECK);
+        ignoreSystemMessagesCheckbox.setText(IrcUiMessages.IrcSearchPage_ignoreSystemMessages);
+        ignoreSystemMessagesCheckbox.setSelection(ignoreSystemMessages);
+        ignoreSystemMessagesCheckbox.addSelectionListener(new SelectionAdapter() {
+            public void widgetSelected(SelectionEvent e) {
+                ignoreSystemMessages = ignoreSystemMessagesCheckbox.getSelection();
             }
         });
-        GridData data= new GridData(GridData.FILL, GridData.FILL, true, false, 1, 1);
-        data.widthHint= convertWidthInCharsToPixels(50);
-        searchInChannelsCombo.setLayoutData(data);
-        searchInChannelsCombo.setFont(group.getFont());
+        ignoreSystemMessagesCheckbox.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, false, false, 1, 1));
+        ignoreSystemMessagesCheckbox.setFont(group.getFont());
 
-        Button button= new Button(group, SWT.PUSH);
-        button.setText(IrcUiMessages.IrcSearchPage_Select_button);
-        GridData gridData= new GridData(SWT.BEGINNING, SWT.CENTER, false, false, 1, 1);
-        gridData.widthHint= IrcUiUtils.getButtonWidthHint(button);
-        button.setLayoutData(gridData);
-        button.setFont(group.getFont());
+        /* Ignore messages from me */
+        ignoreMessagesFromMeCheckbox = new Button(group, SWT.CHECK);
+        ignoreMessagesFromMeCheckbox.setText(IrcUiMessages.IrcSearchPage_ignoreMessagesFromMe);
+        ignoreMessagesFromMeCheckbox.setSelection(ignoreMessagesFromMe);
+        ignoreMessagesFromMeCheckbox.addSelectionListener(new SelectionAdapter() {
+            public void widgetSelected(SelectionEvent e) {
+                ignoreMessagesFromMe = ignoreMessagesFromMeCheckbox.getSelection();
+            }
+        });
+        ignoreMessagesFromMeCheckbox.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, false, false, 1, 1));
+        ignoreMessagesFromMeCheckbox.setFont(group.getFont());
+        /* place holder */
+        new Label(group, SWT.LEAD);
 
-        channelsSelector= new IrcChannelsSelector(searchInChannelsCombo, button);
+        /* From nick label */
+        Label fromNickLabel = new Label(group, SWT.LEAD);
+        fromNickLabel.setText(IrcUiMessages.IrcSearchPage_fromNick);
+        fromNickLabel.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, false, false, 1, 1));
+        fromNickLabel.setFont(group.getFont());
 
-        // Text line which explains the special characters
-        Label description= new Label(group, SWT.LEAD);
-        description.setText(IrcUiMessages.IrcSearchPage_channelNamePatterns_hint);
-        description.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, false, false, 2, 1));
-        description.setFont(group.getFont());
+        /* From nick(s) */
+        nicksText = new Text(group, SWT.SINGLE | SWT.BORDER);
+        nicksText.setFont(group.getFont());
+        GridData data = new GridData(GridData.FILL, GridData.FILL, true, false, 2, 1);
+        data.widthHint = convertWidthInCharsToPixels(30);
+        nicksText.setLayoutData(data);
+
+        Label fromNickAssist = new Label(group, SWT.LEAD);
+        fromNickAssist.setText(IrcUiMessages.IrcSearchPage_fromNickAssist);
+        fromNickAssist.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, false, false, 1, 1));
+        fromNickAssist.setFont(group.getFont());
+
+        /* In Channels label */
+        Label inChannelsLabel = new Label(group, SWT.LEAD);
+        inChannelsLabel.setText(IrcUiMessages.IrcSearchPage_inChannels);
+        inChannelsLabel.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, false, false, 1, 1));
+        inChannelsLabel.setFont(group.getFont());
+
+        /* In Channel(s) */
+        channelsText = new Text(group, SWT.SINGLE | SWT.BORDER);
+        channelsText.setFont(group.getFont());
+        data = new GridData(GridData.FILL, GridData.FILL, true, false, 2, 1);
+        data.widthHint = convertWidthInCharsToPixels(30);
+        channelsText.setLayoutData(data);
+
+        Label inChannelsAssist = new Label(group, SWT.LEAD);
+        inChannelsAssist.setText(IrcUiMessages.IrcSearchPage_inChannelsAssist);
+        inChannelsAssist.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, false, false, 1, 1));
+        inChannelsAssist.setFont(group.getFont());
+
+        Label separator = new Label(group, SWT.NONE);
+        separator.setVisible(false);
+        data = new GridData(GridData.FILL, GridData.FILL, false, false, 4, 1);
+        data.heightHint = convertHeightInCharsToPixels(1) / 3;
+        separator.setLayoutData(data);
+
+        /* Message time label */
+        Label timeLabel = new Label(group, SWT.LEAD);
+        timeLabel.setText(IrcUiMessages.IrcSearchPage_messageTime);
+        timeLabel.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, false, false, 4, 1));
+        timeLabel.setFont(group.getFont());
+
+        /* predefined time span radio buttons */
+        for (TimeSpan timeSpan : TimeSpan.values()) {
+            createTimeSpanRadio(timeSpan, group);
+        }
+        timeSpanButtons.get(TimeSpan.A_ANY_TIME.ordinal()).setSelection(true);
 
     }
 
@@ -269,121 +376,124 @@ public class IrcSearchPage extends DialogPage implements ISearchPage {
         // grid layout with 2 columns
 
         // Info text
-        Label label= new Label(group, SWT.LEAD);
+        Label label = new Label(group, SWT.LEAD);
         label.setText(IrcUiMessages.IrcSearchPage_containingText_text);
         label.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, false, false, 2, 1));
         label.setFont(group.getFont());
 
         // Pattern combo
-        fPattern= new Combo(group, SWT.SINGLE | SWT.BORDER);
+        patternCombo = new Combo(group, SWT.SINGLE | SWT.BORDER);
         // Not done here to prevent page from resizing
         // fPattern.setItems(getPreviousSearchPatterns());
-        fPattern.addSelectionListener(new SelectionAdapter() {
+        patternCombo.addSelectionListener(new SelectionAdapter() {
             public void widgetSelected(SelectionEvent e) {
                 handleWidgetSelected();
                 updateOKStatus();
             }
         });
         // add some listeners for regex syntax checking
-        fPattern.addModifyListener(new ModifyListener() {
+        patternCombo.addModifyListener(new ModifyListener() {
             public void modifyText(ModifyEvent e) {
                 updateOKStatus();
             }
         });
-        fPattern.setFont(group.getFont());
-        GridData data= new GridData(GridData.FILL, GridData.FILL, true, false, 1, 2);
-        data.widthHint= convertWidthInCharsToPixels(50);
-        fPattern.setLayoutData(data);
+        patternCombo.setFont(group.getFont());
+        GridData data = new GridData(GridData.FILL, GridData.FILL, true, false, 1, 2);
+        data.widthHint = convertWidthInCharsToPixels(50);
+        patternCombo.setLayoutData(data);
 
-        ComboContentAdapter contentAdapter= new ComboContentAdapter();
-        FindReplaceDocumentAdapterContentProposalProvider findProposer= new FindReplaceDocumentAdapterContentProposalProvider(true);
-        fPatterFieldContentAssist= new ContentAssistCommandAdapter(
-                fPattern,
-                contentAdapter,
-                findProposer,
-                ITextEditorActionDefinitionIds.CONTENT_ASSIST_PROPOSALS,
-                new char[0],
+        ComboContentAdapter contentAdapter = new ComboContentAdapter();
+        FindReplaceDocumentAdapterContentProposalProvider findProposer = new FindReplaceDocumentAdapterContentProposalProvider(
                 true);
-        fPatterFieldContentAssist.setEnabled(fIsRegExSearch);
+        patterFieldContentAssist = new ContentAssistCommandAdapter(patternCombo, contentAdapter, findProposer,
+                ITextEditorActionDefinitionIds.CONTENT_ASSIST_PROPOSALS, new char[0], true);
+        patterFieldContentAssist.setEnabled(isRegExSearch);
 
-        fIsCaseSensitiveCheckbox= new Button(group, SWT.CHECK);
-        fIsCaseSensitiveCheckbox.setText(IrcUiMessages.IrcSearchPage_caseSensitive);
-        fIsCaseSensitiveCheckbox.setSelection(fIsCaseSensitive);
-        fIsCaseSensitiveCheckbox.addSelectionListener(new SelectionAdapter() {
+        isCaseSensitiveCheckbox = new Button(group, SWT.CHECK);
+        isCaseSensitiveCheckbox.setText(IrcUiMessages.IrcSearchPage_caseSensitive);
+        isCaseSensitiveCheckbox.setSelection(isCaseSensitive);
+        isCaseSensitiveCheckbox.addSelectionListener(new SelectionAdapter() {
             public void widgetSelected(SelectionEvent e) {
-                fIsCaseSensitive= fIsCaseSensitiveCheckbox.getSelection();
+                isCaseSensitive = isCaseSensitiveCheckbox.getSelection();
             }
         });
-        fIsCaseSensitiveCheckbox.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, false, false, 1, 1));
-        fIsCaseSensitiveCheckbox.setFont(group.getFont());
+        isCaseSensitiveCheckbox.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, false, false, 1, 1));
+        isCaseSensitiveCheckbox.setFont(group.getFont());
 
         // RegEx checkbox
-        fIsRegExCheckbox= new Button(group, SWT.CHECK);
-        fIsRegExCheckbox.setText(IrcUiMessages.IrcSearchPage_regularExpression);
-        fIsRegExCheckbox.setSelection(fIsRegExSearch);
+        isRegExCheckbox = new Button(group, SWT.CHECK);
+        isRegExCheckbox.setText(IrcUiMessages.IrcSearchPage_regularExpression);
+        isRegExCheckbox.setSelection(isRegExSearch);
 
-        fIsRegExCheckbox.addSelectionListener(new SelectionAdapter() {
+        isRegExCheckbox.addSelectionListener(new SelectionAdapter() {
             public void widgetSelected(SelectionEvent e) {
-                fIsRegExSearch= fIsRegExCheckbox.getSelection();
+                isRegExSearch = isRegExCheckbox.getSelection();
                 updateOKStatus();
 
                 writeConfiguration();
-                fPatterFieldContentAssist.setEnabled(fIsRegExSearch);
-                fIsWholeWordCheckbox.setEnabled(!fIsRegExSearch);
+                patterFieldContentAssist.setEnabled(isRegExSearch);
+                isWholeWordCheckbox.setEnabled(!isRegExSearch);
             }
         });
-        fIsRegExCheckbox.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, false, false, 1, 2));
-        fIsRegExCheckbox.setFont(group.getFont());
+        isRegExCheckbox.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, false, false, 1, 2));
+        isRegExCheckbox.setFont(group.getFont());
 
         // Text line which explains the special characters
-        fStatusLabel= new CLabel(group, SWT.LEAD);
-        fStatusLabel.setLayoutData(new GridData(SWT.FILL, SWT.TOP, true, false, 1, 2));
-        fStatusLabel.setFont(group.getFont());
-        fStatusLabel.setAlignment(SWT.LEFT);
-        fStatusLabel.setText(IrcUiMessages.IrcSearchPage_containingText_hint);
+        statusLabel = new CLabel(group, SWT.LEAD);
+        statusLabel.setLayoutData(new GridData(SWT.FILL, SWT.TOP, true, false, 1, 2));
+        statusLabel.setFont(group.getFont());
+        statusLabel.setAlignment(SWT.LEFT);
+        statusLabel.setText(IrcUiMessages.IrcSearchPage_containingText_hint);
 
         // Whole Word checkbox
-        fIsWholeWordCheckbox= new Button(group, SWT.CHECK);
-        fIsWholeWordCheckbox.setText(IrcUiMessages.IrcSearchPage_wholeWord);
-        fIsWholeWordCheckbox.setSelection(fIsWholeWord);
-        fIsWholeWordCheckbox.setEnabled(!fIsRegExSearch);
-        fIsWholeWordCheckbox.addSelectionListener(new SelectionAdapter() {
+        isWholeWordCheckbox = new Button(group, SWT.CHECK);
+        isWholeWordCheckbox.setText(IrcUiMessages.IrcSearchPage_wholeWord);
+        isWholeWordCheckbox.setSelection(isWholeWord);
+        isWholeWordCheckbox.setEnabled(!isRegExSearch);
+        isWholeWordCheckbox.addSelectionListener(new SelectionAdapter() {
             public void widgetSelected(SelectionEvent e) {
-                fIsWholeWord= fIsWholeWordCheckbox.getSelection();
+                isWholeWord = isWholeWordCheckbox.getSelection();
             }
         });
-        fIsWholeWordCheckbox.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, false, false, 1, 1));
-        fIsWholeWordCheckbox.setFont(group.getFont());
+        isWholeWordCheckbox.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, false, false, 1, 1));
+        isWholeWordCheckbox.setFont(group.getFont());
+
     }
 
     public void createControl(Composite parent) {
         initializeDialogUnits(parent);
         readConfiguration();
 
-        Composite result= new Composite(parent, SWT.NONE);
+        Composite result = new Composite(parent, SWT.NONE);
         result.setFont(parent.getFont());
-        GridLayout layout= new GridLayout(2, false);
+        GridLayout layout = new GridLayout(2, false);
         result.setLayout(layout);
 
         addTextPatternControls(result);
 
-        Label separator= new Label(result, SWT.NONE);
-        separator.setVisible(false);
-        GridData data= new GridData(GridData.FILL, GridData.FILL, false, false, 2, 1);
-        data.heightHint= convertHeightInCharsToPixels(1) / 3;
-        separator.setLayoutData(data);
-
-        addFileNameControls(result);
+        addMessageControls(result);
 
         setControl(result);
         Dialog.applyDialogFont(result);
-}
+    }
 
     public FileTextSearchScope createTextSearchScope() throws CoreException {
         return getAllScope();
     }
 
-    /* (non-Javadoc)
+    private void createTimeSpanRadio(TimeSpan timeSpan, Composite group) {
+        Button r = new Button(group, SWT.RADIO);
+        r.setText(timeSpan.getLabel());
+        r.setFont(group.getFont());
+        r.setLayoutData(new GridData(GridData.FILL, GridData.FILL, true, false, 4, 1));
+        r.addSelectionListener(timeSpanListener);
+        r.setData(timeSpan);
+        timeSpanButtons.add(r);
+    }
+
+    /*
+     * (non-Javadoc)
+     *
      * @see org.eclipse.jface.dialogs.DialogPage#dispose()
      */
     public void dispose() {
@@ -391,8 +501,8 @@ public class IrcSearchPage extends DialogPage implements ISearchPage {
         super.dispose();
     }
 
-    private SearchPatternData findInPrevious(String pattern) {
-        for (SearchPatternData element : fPreviousSearchPatterns) {
+    private IrcSearchPatternData findInPrevious(String pattern) {
+        for (IrcSearchPatternData element : previousSearchPatterns) {
             if (pattern.equals(element.textPattern)) {
                 return element;
             }
@@ -400,9 +510,8 @@ public class IrcSearchPage extends DialogPage implements ISearchPage {
         return null;
     }
 
-
     private FileTextSearchScope getAllScope() throws CoreException {
-        List<IResource> resources= new ArrayList<IResource>();
+        List<IResource> resources = new ArrayList<IResource>();
         for (IrcAccount account : IrcModel.getInstance().getSearchableAccounts()) {
             for (AbstractIrcChannel channel : account.getSearchableChannels()) {
                 for (IFile log : channel.listSearchableLogFiles()) {
@@ -410,12 +519,12 @@ public class IrcSearchPage extends DialogPage implements ISearchPage {
                 }
             }
         }
-        IResource[] arr= (IResource[]) resources.toArray(new IResource[resources.size()]);
+        IResource[] arr = (IResource[]) resources.toArray(new IResource[resources.size()]);
         return FileTextSearchScope.newSearchScope(arr, getExtensions(), false);
     }
 
     private ISearchPageContainer getContainer() {
-        return fContainer;
+        return searchPageContainer;
     }
 
     /**
@@ -423,135 +532,118 @@ public class IrcSearchPage extends DialogPage implements ISearchPage {
      *
      * @return the page settings to be used
      */
+    @SuppressWarnings("restriction")
     private IDialogSettings getDialogSettings() {
-        return SearchPlugin.getDefault().getDialogSettingsSection(PAGE_NAME);
+        return org.eclipse.search.internal.ui.SearchPlugin.getDefault().getDialogSettingsSection(PAGE_NAME);
     }
 
+    @SuppressWarnings("unused")
     private FileTextSearchScope getEnclosingProjectScope() {
-        String[] enclosingProjectName= getContainer().getSelectedProjectNames();
+        String[] enclosingProjectName = getContainer().getSelectedProjectNames();
         if (enclosingProjectName == null) {
             return FileTextSearchScope.newWorkspaceScope(getExtensions(), false);
         }
 
-        IWorkspaceRoot root= ResourcesPlugin.getWorkspace().getRoot();
-        IResource[] res= new IResource[enclosingProjectName.length];
-        for (int i= 0; i < res.length; i++) {
-            res[i]= root.getProject(enclosingProjectName[i]);
+        IWorkspaceRoot root = ResourcesPlugin.getWorkspace().getRoot();
+        IResource[] res = new IResource[enclosingProjectName.length];
+        for (int i = 0; i < res.length; i++) {
+            res[i] = root.getProject(enclosingProjectName[i]);
         }
 
         return FileTextSearchScope.newSearchScope(res, getExtensions(), false);
     }
 
     private String[] getExtensions() {
-        return channelsSelector.getChannelNames();
+        return new String[] { "*" }; // channelsSelector.getChannelNames();
     }
 
     /**
-     * Return search pattern data and update previous searches.
-     * An existing entry will be updated.
+     * Return search pattern data and update previous searches. An existing
+     * entry will be updated.
+     *
      * @return the search pattern data
      */
-    private SearchPatternData getPatternData() {
-        SearchPatternData match= findInPrevious(fPattern.getText());
+    private IrcSearchPatternData getPatternData() {
+        IrcSearchPatternData match = findInPrevious(patternCombo.getText());
         if (match != null) {
-            fPreviousSearchPatterns.remove(match);
+            previousSearchPatterns.remove(match);
         }
-        match= new SearchPatternData(
-                    fPattern.getText(),
-                    isCaseSensitive(),
-                    fIsRegExCheckbox.getSelection(),
-                    fIsWholeWordCheckbox.getSelection(),
-                    getExtensions(),
-                    getContainer().getSelectedScope(),
-                    getContainer().getSelectedWorkingSets());
-        fPreviousSearchPatterns.add(0, match);
+        match = new IrcSearchPatternData(patternCombo.getText(), isCaseSensitive(), isRegExCheckbox.getSelection(),
+                isWholeWordCheckbox.getSelection(), ignoreSystemMessagesCheckbox.getSelection(),
+                ignoreMessagesFromMeCheckbox.getSelection(), nicksText.getText(), channelsText.getText(),
+                timeSpan,
+                getExtensions(), getContainer().getSelectedScope(), getContainer().getSelectedWorkingSets());
+        previousSearchPatterns.add(0, match);
         return match;
     }
 
-    private String[] getPreviousExtensionsOldStyle() {
-        List<String> extensions= new ArrayList<String>(fPreviousSearchPatterns.size());
-        int size= fPreviousSearchPatterns.size();
-        for (int i= 0; i < size; i++) {
-            SearchPatternData data= (SearchPatternData)fPreviousSearchPatterns.get(i);
-            String text= IrcChannelsSelector.typesToString(data.fileNamePatterns);
-            if (!extensions.contains(text))
-                extensions.add(text);
-        }
-        return extensions.toArray(new String[extensions.size()]);
-    }
-
     private String[] getPreviousSearchPatterns() {
-        int size= fPreviousSearchPatterns.size();
-        String [] patterns= new String[size];
-        for (int i= 0; i < size; i++)
-            patterns[i]= ((SearchPatternData) fPreviousSearchPatterns.get(i)).textPattern;
+        int size = previousSearchPatterns.size();
+        String[] patterns = new String[size];
+        for (int i = 0; i < size; i++)
+            patterns[i] = ((IrcSearchPatternData) previousSearchPatterns.get(i)).textPattern;
         return patterns;
     }
 
-    //---- Widget creation ------------------------------------------------
-
+    @SuppressWarnings("unused")
     private FileTextSearchScope getSelectedResourcesScope() {
-        Set<IResource> resources= new HashSet<IResource>();
-        ISelection sel= getContainer().getSelection();
+        Set<IResource> resources = new HashSet<IResource>();
+        ISelection sel = getContainer().getSelection();
         if (sel instanceof IStructuredSelection && !sel.isEmpty()) {
             Iterator<?> iter = ((IStructuredSelection) sel).iterator();
             while (iter.hasNext()) {
-                Object curr= iter.next();
+                Object curr = iter.next();
                 if (curr instanceof IAdaptable) {
-                    IResource resource= (IResource) ((IAdaptable)curr).getAdapter(IResource.class);
+                    IResource resource = (IResource) ((IAdaptable) curr).getAdapter(IResource.class);
                     if (resource != null && resource.isAccessible()) {
                         resources.add(resource);
                     }
                 }
             }
         } else if (getContainer().getActiveEditorInput() != null) {
-            resources.add((IResource)getContainer().getActiveEditorInput().getAdapter(IFile.class));
+            resources.add((IResource) getContainer().getActiveEditorInput().getAdapter(IFile.class));
         }
-        IResource[] arr= (IResource[]) resources.toArray(new IResource[resources.size()]);
+        IResource[] arr = (IResource[]) resources.toArray(new IResource[resources.size()]);
         return FileTextSearchScope.newSearchScope(arr, getExtensions(), false);
     }
 
     private ISelection getSelection() {
-        return fContainer.getSelection();
+        return searchPageContainer.getSelection();
     }
 
     private void handleWidgetSelected() {
-        int selectionIndex= fPattern.getSelectionIndex();
-        if (selectionIndex < 0 || selectionIndex >= fPreviousSearchPatterns.size())
+        int selectionIndex = patternCombo.getSelectionIndex();
+        if (selectionIndex < 0 || selectionIndex >= previousSearchPatterns.size())
             return;
 
-        SearchPatternData patternData= (SearchPatternData) fPreviousSearchPatterns.get(selectionIndex);
-        if (!fPattern.getText().equals(patternData.textPattern))
+        IrcSearchPatternData patternData = (IrcSearchPatternData) previousSearchPatterns.get(selectionIndex);
+        if (!patternCombo.getText().equals(patternData.textPattern))
             return;
-        fIsCaseSensitiveCheckbox.setSelection(patternData.isCaseSensitive);
-        fIsRegExSearch= patternData.isRegExSearch;
-        fIsRegExCheckbox.setSelection(fIsRegExSearch);
-        fIsWholeWord= patternData.isWholeWord;
-        fIsWholeWordCheckbox.setSelection(fIsWholeWord);
-        fIsWholeWordCheckbox.setEnabled(!fIsRegExSearch);
-        fPattern.setText(patternData.textPattern);
-        fPatterFieldContentAssist.setEnabled(fIsRegExSearch);
-        channelsSelector.setFileTypes(patternData.fileNamePatterns);
+        isCaseSensitiveCheckbox.setSelection(patternData.isCaseSensitive);
+        isRegExSearch = patternData.isRegExSearch;
+        isRegExCheckbox.setSelection(isRegExSearch);
+        isWholeWord = patternData.isWholeWord;
+        isWholeWordCheckbox.setSelection(isWholeWord);
+        isWholeWordCheckbox.setEnabled(!isRegExSearch);
+        patternCombo.setText(patternData.textPattern);
+        patterFieldContentAssist.setEnabled(isRegExSearch);
+
         if (patternData.workingSets != null)
             getContainer().setSelectedWorkingSets(patternData.workingSets);
         else
             getContainer().setSelectedScope(patternData.scope);
     }
 
+    @SuppressWarnings("unused")
     private boolean initializePatternControl() {
-        ISelection selection= getSelection();
-        if (selection instanceof ITextSelection && !selection.isEmpty() && ((ITextSelection)selection).getLength() > 0) {
-            String text= ((ITextSelection) selection).getText();
+        ISelection selection = getSelection();
+        if (selection instanceof ITextSelection && !selection.isEmpty() && ((ITextSelection) selection).getLength() > 0) {
+            String text = ((ITextSelection) selection).getText();
             if (text != null) {
-                if (fIsRegExSearch)
-                    fPattern.setText(FindReplaceDocumentAdapter.escapeForRegExPattern(text));
-                else
-                    fPattern.setText(insertEscapeChars(text));
-
-                if (fPreviousExtensions.length > 0) {
-                    searchInChannelsCombo.setText(fPreviousExtensions[0]);
+                if (isRegExSearch) {
+                    patternCombo.setText(FindReplaceDocumentAdapter.escapeForRegExPattern(text));
                 } else {
-                    searchInChannelsCombo.setText("*"); //$NON-NLS-1$
+                    patternCombo.setText(insertEscapeChars(text));
                 }
                 return true;
             }
@@ -560,20 +652,21 @@ public class IrcSearchPage extends DialogPage implements ISearchPage {
     }
 
     private String insertEscapeChars(String text) {
-        if (text == null || text.equals("")) //$NON-NLS-1$
+        if (text == null || text.equals("")) { //$NON-NLS-1$
             return ""; //$NON-NLS-1$
-        StringBuffer sbIn= new StringBuffer(text);
-        BufferedReader reader= new BufferedReader(new StringReader(text));
-        int lengthOfFirstLine= 0;
+        }
+        StringBuffer sbIn = new StringBuffer(text);
+        BufferedReader reader = new BufferedReader(new StringReader(text));
+        int lengthOfFirstLine = 0;
         try {
-            lengthOfFirstLine= reader.readLine().length();
+            lengthOfFirstLine = reader.readLine().length();
         } catch (IOException ex) {
             return ""; //$NON-NLS-1$
         }
-        StringBuffer sbOut= new StringBuffer(lengthOfFirstLine + 5);
-        int i= 0;
+        StringBuffer sbOut = new StringBuffer(lengthOfFirstLine + 5);
+        int i = 0;
         while (i < lengthOfFirstLine) {
-            char ch= sbIn.charAt(i);
+            char ch = sbIn.charAt(i);
             if (ch == '*' || ch == '?' || ch == '\\')
                 sbOut.append("\\"); //$NON-NLS-1$
             sbOut.append(ch);
@@ -583,20 +676,21 @@ public class IrcSearchPage extends DialogPage implements ISearchPage {
     }
 
     private boolean isCaseSensitive() {
-        return fIsCaseSensitiveCheckbox.getSelection();
+        return isCaseSensitiveCheckbox.getSelection();
     }
 
     private ISearchQuery newQuery() throws CoreException {
-        SearchPatternData data= getPatternData();
-        TextSearchPageInput input= new TextSearchPageInput(data.textPattern, data.isCaseSensitive, data.isRegExSearch, data.isWholeWord && !data.isRegExSearch, createTextSearchScope());
-        return TextSearchQueryProvider.getPreferred().createQuery(input);
+        IrcSearchPatternData data = getPatternData();
+        return new IrcSearchQuery(data.textPattern, data.isWholeWord && !data.isRegExSearch, data,
+                createTextSearchScope());
     }
 
     public boolean performAction() {
         try {
             NewSearchUI.runQueryInBackground(newQuery());
         } catch (CoreException e) {
-            ErrorDialog.openError(getShell(), IrcUiMessages.IrcSearchPage_searchproblems_title, IrcUiMessages.IrcSearchPage_searchproblems_message, e.getStatus());
+            ErrorDialog.openError(getShell(), IrcUiMessages.IrcSearchPage_searchproblems_title,
+                    IrcUiMessages.IrcSearchPage_searchproblems_message, e.getStatus());
             return false;
         }
         return true;
@@ -606,108 +700,95 @@ public class IrcSearchPage extends DialogPage implements ISearchPage {
      * Initializes itself from the stored page settings.
      */
     private void readConfiguration() {
-        IDialogSettings s= getDialogSettings();
-        fIsCaseSensitive= s.getBoolean(STORE_CASE_SENSITIVE);
-        fIsRegExSearch= s.getBoolean(STORE_IS_REG_EX_SEARCH);
-        fIsWholeWord= s.getBoolean(STORE_IS_WHOLE_WORD);
+        IDialogSettings s = getDialogSettings();
+        isCaseSensitive = s.getBoolean(STORE_CASE_SENSITIVE);
+        isRegExSearch = s.getBoolean(STORE_IS_REG_EX_SEARCH);
+        isWholeWord = s.getBoolean(STORE_IS_WHOLE_WORD);
+        ignoreMessagesFromMe = s.getBoolean(STORE_IGNORE_MESSAGES_FROM_ME);
+        ignoreSystemMessages = s.getBoolean(STORE_IGNORE_SYSTEM_MESSAGES);
 
         try {
-            int historySize= s.getInt(STORE_HISTORY_SIZE);
-            for (int i= 0; i < historySize; i++) {
-                IDialogSettings histSettings= s.getSection(STORE_HISTORY + i);
+            int historySize = s.getInt(STORE_HISTORY_SIZE);
+            for (int i = 0; i < historySize; i++) {
+                IDialogSettings histSettings = s.getSection(STORE_HISTORY + i);
                 if (histSettings != null) {
-                    SearchPatternData data= SearchPatternData.create(histSettings);
+                    IrcSearchPatternData data = IrcSearchPatternData.create(histSettings);
                     if (data != null) {
-                        fPreviousSearchPatterns.add(data);
+                        previousSearchPatterns.add(data);
                     }
                 }
             }
         } catch (NumberFormatException e) {
-            // ignore
+            /* ignore */
         }
-
-        Set<String> previousExtensions= new LinkedHashSet<String>(HISTORY_SIZE);
-        IDialogSettings extensionsSettings= s.getSection(STORE_EXTENSIONS);
-        if (extensionsSettings != null) {
-            for (int i= 0; i < HISTORY_SIZE; i++) {
-                String extension= extensionsSettings.get(Integer.toString(i));
-                if (extension == null)
-                    break;
-                previousExtensions.add(extension);
-            }
-            fPreviousExtensions= new String[previousExtensions.size()];
-            previousExtensions.toArray(fPreviousExtensions);
-        } else
-            fPreviousExtensions= getPreviousExtensionsOldStyle();
-
     }
 
     /**
-     * Sets the search page's container.
-     * @param container the container to set
+     * @see org.eclipse.search.ui.ISearchPage#setContainer(org.eclipse.search.ui.ISearchPageContainer)
      */
     public void setContainer(ISearchPageContainer container) {
-        fContainer= container;
+        searchPageContainer = container;
     }
 
-
-    //--------------- Configuration handling --------------
-
-    /*
-     * Implements method from IDialogPage
+    /**
+     * @see org.eclipse.jface.dialogs.DialogPage#setVisible(boolean)
      */
     public void setVisible(boolean visible) {
-        if (visible && fPattern != null) {
-            if (fFirstTime) {
-                fFirstTime= false;
+        if (visible && patternCombo != null) {
+            if (isFirstTime) {
+                isFirstTime = false;
                 // Set item and text here to prevent page from resizing
-                fPattern.setItems(getPreviousSearchPatterns());
-                searchInChannelsCombo.setItems(fPreviousExtensions);
-//              if (fExtensions.getItemCount() == 0) {
-//                  loadFilePatternDefaults();
-//              }
-                if (!initializePatternControl()) {
-                    fPattern.select(0);
-                    searchInChannelsCombo.setText("*"); //$NON-NLS-1$
-                    handleWidgetSelected();
-                }
+                patternCombo.setItems(getPreviousSearchPatterns());
+                // searchInChannelsCombo.setItems(fPreviousExtensions);
+                // if (fExtensions.getItemCount() == 0) {
+                // loadFilePatternDefaults();
+                // }
+                // if (!initializePatternControl()) {
+                // fPattern.select(0);
+                //                    searchInChannelsCombo.setText("*"); //$NON-NLS-1$
+                // handleWidgetSelected();
+                // }
             }
-            fPattern.setFocus();
+            patternCombo.setFocus();
         }
         updateOKStatus();
 
-        IEditorInput editorInput= getContainer().getActiveEditorInput();
-        getContainer().setActiveEditorCanProvideScopeSelection(editorInput != null && editorInput.getAdapter(IFile.class) != null);
+        IEditorInput editorInput = getContainer().getActiveEditorInput();
+        getContainer().setActiveEditorCanProvideScopeSelection(
+                editorInput != null && editorInput.getAdapter(IFile.class) != null);
 
         super.setVisible(visible);
     }
 
     private void statusMessage(boolean error, String message) {
-        fStatusLabel.setText(message);
+        statusLabel.setText(message);
         if (error)
-            fStatusLabel.setForeground(JFaceColors.getErrorText(fStatusLabel.getDisplay()));
+            statusLabel.setForeground(JFaceColors.getErrorText(statusLabel.getDisplay()));
         else
-            fStatusLabel.setForeground(null);
+            statusLabel.setForeground(null);
     }
 
-
-    final void updateOKStatus() {
-        boolean regexStatus= validateRegex();
-        boolean hasFilePattern= searchInChannelsCombo.getText().length() > 0;
+    private void updateOKStatus() {
+        boolean regexStatus = validateRegex();
+        boolean hasFilePattern = true; // searchInChannelsCombo.getText().length()
+                                       // > 0;
         getContainer().setPerformActionEnabled(regexStatus && hasFilePattern);
     }
 
+    @SuppressWarnings("restriction")
     private boolean validateRegex() {
-        if (fIsRegExCheckbox.getSelection()) {
+        if (isRegExCheckbox.getSelection()) {
             try {
-                PatternConstructor.createPattern(fPattern.getText(), fIsCaseSensitive, true);
+                org.eclipse.search.internal.core.text.PatternConstructor.createPattern(patternCombo.getText(),
+                        isCaseSensitive, true);
             } catch (PatternSyntaxException e) {
-                String locMessage= e.getLocalizedMessage();
-                int i= 0;
+                String locMessage = e.getLocalizedMessage();
+                int i = 0;
                 while (i < locMessage.length() && "\n\r".indexOf(locMessage.charAt(i)) == -1) { //$NON-NLS-1$
                     i++;
                 }
-                statusMessage(true, locMessage.substring(0, i)); // only take first line
+                statusMessage(true, locMessage.substring(0, i)); // only take
+                                                                 // first line
                 return false;
             }
             statusMessage(false, ""); //$NON-NLS-1$
@@ -721,31 +802,20 @@ public class IrcSearchPage extends DialogPage implements ISearchPage {
      * Stores it current configuration in the dialog store.
      */
     private void writeConfiguration() {
-        IDialogSettings s= getDialogSettings();
-        s.put(STORE_CASE_SENSITIVE, fIsCaseSensitive);
-        s.put(STORE_IS_REG_EX_SEARCH, fIsRegExSearch);
-        s.put(STORE_IS_WHOLE_WORD, fIsWholeWord);
+        IDialogSettings s = getDialogSettings();
+        s.put(STORE_CASE_SENSITIVE, isCaseSensitive);
+        s.put(STORE_IS_REG_EX_SEARCH, isRegExSearch);
+        s.put(STORE_IS_WHOLE_WORD, isWholeWord);
+        s.put(STORE_IGNORE_MESSAGES_FROM_ME, ignoreMessagesFromMe);
+        s.put(STORE_IGNORE_SYSTEM_MESSAGES, ignoreSystemMessages);
 
-        int historySize= Math.min(fPreviousSearchPatterns.size(), HISTORY_SIZE);
+        int historySize = Math.min(previousSearchPatterns.size(), HISTORY_SIZE);
         s.put(STORE_HISTORY_SIZE, historySize);
-        for (int i= 0; i < historySize; i++) {
-            IDialogSettings histSettings= s.addNewSection(STORE_HISTORY + i);
-            SearchPatternData data= ((SearchPatternData) fPreviousSearchPatterns.get(i));
+        for (int i = 0; i < historySize; i++) {
+            IDialogSettings histSettings = s.addNewSection(STORE_HISTORY + i);
+            IrcSearchPatternData data = ((IrcSearchPatternData) previousSearchPatterns.get(i));
             data.store(histSettings);
         }
-
-        IDialogSettings extensionsSettings= s.addNewSection(STORE_EXTENSIONS);
-        extensionsSettings.put(Integer.toString(0), searchInChannelsCombo.getText());
-        Set<String> extensions= new HashSet<String>(HISTORY_SIZE);
-        extensions.add(searchInChannelsCombo.getText());
-        int length= Math.min(searchInChannelsCombo.getItemCount(), HISTORY_SIZE - 1);
-        int j= 1;
-        for (int i= 0; i < length; i++) {
-            String extension= searchInChannelsCombo.getItem(i);
-            if (extensions.add(extension))
-                extensionsSettings.put(Integer.toString(j++), extension);
-        }
-
     }
 
 }

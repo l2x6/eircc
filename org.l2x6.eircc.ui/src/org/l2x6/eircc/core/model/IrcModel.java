@@ -17,7 +17,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
-import java.util.UUID;
 
 import org.eclipse.core.resources.IFile;
 import org.eclipse.core.resources.IProject;
@@ -83,7 +82,7 @@ public class IrcModel extends IrcBase {
     }
 
     public IrcAccount createAccount(String label) {
-        return new IrcAccount(this, UUID.randomUUID(), label, System.currentTimeMillis());
+        return new IrcAccount(this, label, System.currentTimeMillis());
     }
 
     TrafficLogger createTrafficLogger(IrcAccount account) {
@@ -173,6 +172,7 @@ public class IrcModel extends IrcBase {
     public IProject getProject() {
         return project;
     }
+
     public IWorkspaceRoot getRoot() {
         return project.getWorkspace().getRoot();
     }
@@ -198,9 +198,9 @@ public class IrcModel extends IrcBase {
         }
     }
 
-    public IrcAccount proposeNextAccount() {
+    public InitialIrcAccount proposeNextAccount() {
         String newLabel = IrcUiMessages.Account + "#" + (accounts.size() + 1);
-        IrcAccount result = createAccount(newLabel);
+        InitialIrcAccount result = new InitialIrcAccount(this, newLabel);
         result.setHost("irc.devel.redhat.com");
         result.setPort(IrcClient.DEFAULT_PORT);
         result.setUsername(System.getProperty("user.name"));
@@ -239,7 +239,8 @@ public class IrcModel extends IrcBase {
         listeners = newList;
     }
 
-    public void save(IProgressMonitor monitor) throws UnsupportedEncodingException, FileNotFoundException, IOException, CoreException {
+    public void save(IProgressMonitor monitor) throws UnsupportedEncodingException, FileNotFoundException, IOException,
+            CoreException {
         for (IrcAccount account : accounts.values()) {
             account.save(monitor);
         }
