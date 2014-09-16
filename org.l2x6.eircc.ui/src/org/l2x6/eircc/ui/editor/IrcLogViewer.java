@@ -10,7 +10,10 @@ package org.l2x6.eircc.ui.editor;
 
 import org.eclipse.jface.text.Document;
 import org.eclipse.jface.text.IDocument;
-import org.eclipse.jface.text.TextViewer;
+import org.eclipse.jface.text.source.IOverviewRuler;
+import org.eclipse.jface.text.source.IVerticalRuler;
+import org.eclipse.jface.text.source.SourceViewer;
+import org.eclipse.jface.text.source.SourceViewerConfiguration;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.StyledText;
 import org.eclipse.swt.events.PaintEvent;
@@ -25,7 +28,7 @@ import org.l2x6.eircc.ui.prefs.IrcPreferences;
 /**
  * @author <a href="mailto:ppalaga@redhat.com">Peter Palaga</a>
  */
-public class IrcLogViewer {
+public class IrcLogViewer extends SourceViewer {
     private static class ViewerPaintListener implements PaintListener {
 
         private final int firstTabStop;
@@ -80,12 +83,46 @@ public class IrcLogViewer {
 
     private final StyledText textWidget;
 
-    private final TextViewer viewer;;
+    // private final StyledText textWidget;
 
-    public IrcLogViewer(Composite parent) {
-        viewer = new TextViewer(parent, SWT.MULTI | SWT.READ_ONLY | SWT.WRAP | SWT.H_SCROLL | SWT.V_SCROLL);
-        viewer.setEditable(false);
-        textWidget = viewer.getTextWidget();
+    // private final TextViewer viewer;;
+
+    /**
+     * @param parent
+     * @param verticalRuler
+     * @param overviewRuler
+     * @param styles
+     * @param showAnnotationsOverview
+     * @param styles
+     */
+    public IrcLogViewer(Composite parent, IVerticalRuler verticalRuler, IOverviewRuler overviewRuler,
+            boolean showAnnotationsOverview, int styles) {
+        // SWT.MULTI | SWT.READ_ONLY | SWT.WRAP | SWT.H_SCROLL | SWT.V_SCROLL
+        super(parent, verticalRuler, overviewRuler, showAnnotationsOverview, styles);
+        this.setEditable(false);
+        this.textWidget = this.getTextWidget();
+    }
+
+    public void appendMessage(PlainIrcMessage m) {
+        if (this.getDocument() == null) {
+            this.setDocument(new Document());
+        }
+        IrcPreferences prefs = IrcPreferences.getInstance();
+        IrcDefaultMessageFormatter formatter = prefs.getFormatter(m);
+        formatter.format(this, m);
+    }
+
+    public void clear() {
+        IDocument doc = this.getDocument();
+        if (doc != null) {
+            doc.set("");
+        }
+    }
+
+    @Override
+    public void configure(SourceViewerConfiguration configuration) {
+        super.configure(configuration);
+        //IrcLogEditorConfiguration logEditorConfiguration = (IrcLogEditorConfiguration) configuration;
 
         GC gc = new GC(textWidget);
         ViewerPaintListener paintListener = new ViewerPaintListener(gc);
@@ -94,31 +131,7 @@ public class IrcLogViewer {
         textWidget.setTabStops(paintListener.getTabStops());
         textWidget.setWrapIndent(paintListener.getFirstTabStop());
         textWidget.addPaintListener(paintListener);
-        // textWidget.addLineStyleListener(new LineStyleListener() {
-        //
-        // @Override
-        // public void lineGetStyle(LineStyleEvent e) {
-        // System.out.println("e.lineText = "+ e.lineText +"=");
-        // System.out.println("e.indent = "+ e.indent +"=");
-        // System.out.println("e.wrapIndent = "+ e.wrapIndent +"=");
-        // }
-        // });
-    }
 
-    public void appendMessage(PlainIrcMessage m) {
-        if (viewer.getDocument() == null) {
-            viewer.setDocument(new Document());
-        }
-        IrcPreferences prefs = IrcPreferences.getInstance();
-        IrcDefaultMessageFormatter formatter = prefs.getFormatter(m);
-        formatter.format(viewer, m);
-    }
-
-    public void clear() {
-        IDocument doc = viewer.getDocument();
-        if (doc != null) {
-            doc.set("");
-        }
     }
 
     /**
@@ -135,5 +148,6 @@ public class IrcLogViewer {
     public void setFocus() {
         textWidget.setFocus();
     }
+
 
 }

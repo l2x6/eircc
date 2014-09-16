@@ -22,9 +22,9 @@ import org.eclipse.swt.widgets.Shell;
 import org.eclipse.ui.IEditorInput;
 import org.eclipse.ui.IEditorSite;
 import org.eclipse.ui.IPartListener2;
+import org.eclipse.ui.IPathEditorInput;
 import org.eclipse.ui.IWorkbenchPartReference;
 import org.eclipse.ui.PartInitException;
-import org.eclipse.ui.part.EditorPart;
 import org.eclipse.ui.views.contentoutline.IContentOutlinePage;
 import org.l2x6.eircc.core.IrcController;
 import org.l2x6.eircc.core.IrcException;
@@ -42,7 +42,7 @@ import org.l2x6.eircc.ui.views.IrcLabelProvider;
 /**
  * @author <a href="mailto:ppalaga@redhat.com">Peter Palaga</a>
  */
-public class IrcChannelEditor extends EditorPart implements IrcModelEventListener {
+public class IrcChannelEditor extends IrcLogEditor implements IrcModelEventListener {
 
     public static final String ID = "org.l2x6.eircc.ui.editor.IrcChannelEditor";
     private SashForm accountsDetailsSplitter;
@@ -82,7 +82,6 @@ public class IrcChannelEditor extends EditorPart implements IrcModelEventListene
 
         }
     };
-    private IrcLogViewer logViewer;
     private IrcChannelOutlinePage outlinePage;
     private IPartListener2 readMessagesUpdater = new IPartListener2() {
 
@@ -155,7 +154,8 @@ public class IrcChannelEditor extends EditorPart implements IrcModelEventListene
     public void createPartControl(Composite parent) {
 
         accountsDetailsSplitter = new SashForm(parent, SWT.VERTICAL);
-        logViewer = new IrcLogViewer(accountsDetailsSplitter);
+
+        super.createPartControl(accountsDetailsSplitter);
 
         inputViewer = new TextViewer(accountsDetailsSplitter, SWT.MULTI | SWT.WRAP | SWT.H_SCROLL | SWT.V_SCROLL);
         inputViewer.setDocument(new Document());
@@ -263,8 +263,8 @@ public class IrcChannelEditor extends EditorPart implements IrcModelEventListene
     @Override
     public void init(IEditorSite site, IEditorInput input) throws PartInitException {
         if (input instanceof IrcChannelEditorInput) {
-            setInput(input);
             setSite(site);
+            setInput(input);
             this.channel = ((IrcChannelEditorInput) input).getChannel();
             updateReadMessages();
             IrcModel.getInstance().addModelEventListener(this);

@@ -20,14 +20,24 @@ import org.eclipse.core.resources.IFile;
 import org.eclipse.core.resources.IWorkspace;
 import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.CoreException;
+import org.eclipse.core.runtime.IConfigurationElement;
+import org.eclipse.core.runtime.IContributor;
+import org.eclipse.core.runtime.IExtension;
 import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.runtime.IProgressMonitor;
+import org.eclipse.core.runtime.InvalidRegistryObjectException;
+import org.eclipse.jface.resource.JFaceResources;
+import org.eclipse.jface.text.source.IOverviewRuler;
+import org.eclipse.jface.text.source.ISharedTextColors;
+import org.eclipse.jface.text.source.ISourceViewer;
+import org.eclipse.jface.text.source.IVerticalRuler;
+import org.eclipse.jface.text.source.OverviewRuler;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.ui.IEditorInput;
 import org.eclipse.ui.IEditorSite;
 import org.eclipse.ui.IPathEditorInput;
 import org.eclipse.ui.PartInitException;
-import org.eclipse.ui.part.EditorPart;
+import org.eclipse.ui.editors.text.TextEditor;
 import org.l2x6.eircc.core.model.AbstractIrcChannel;
 import org.l2x6.eircc.core.model.IrcLog;
 import org.l2x6.eircc.core.model.PlainIrcMessage;
@@ -39,7 +49,7 @@ import org.l2x6.eircc.ui.EirccUi;
  *
  * @author <a href="mailto:ppalaga@redhat.com">Peter Palaga</a>
  */
-public class IrcLogEditor extends EditorPart {
+public class IrcLogEditor extends TextEditor {
 
     public static final String ID = "org.l2x6.eircc.ui.editor.IrcLogEditor";
     private static final DateTimeFormatter TITLE_DATE_FORMATTER = new DateTimeFormatterBuilder()
@@ -48,32 +58,60 @@ public class IrcLogEditor extends EditorPart {
     private boolean isP2pChannel;
     private OffsetDateTime lastMessageTime;
 
-    private IrcLogViewer logViewer;
+    protected IrcLogViewer logViewer;
 
     private IPath path;
 
     private String tooltip;
 
-    /**
-     * @see org.eclipse.ui.part.WorkbenchPart#createPartControl(org.eclipse.swt.widgets.Composite)
-     */
     @Override
-    public void createPartControl(Composite parent) {
-        logViewer = new IrcLogViewer(parent);
-        try {
-            reload();
-        } catch (IOException | CoreException e) {
-            EirccUi.log(e);
-        }
+    protected ISourceViewer createSourceViewer(Composite parent, IVerticalRuler ruler, int styles) {
+        fAnnotationAccess= getAnnotationAccess();
+        fOverviewRuler= createOverviewRuler(getSharedColors());
+
+        this.logViewer = new IrcLogViewer(parent, ruler, getOverviewRuler(), isOverviewRulerVisible(), styles);
+        // ensure decoration support has been created and configured.
+        getSourceViewerDecorationSupport(this.logViewer);
+
+        return this.logViewer;
+    }
+    protected boolean isOverviewRulerVisible() {
+        return true;
     }
 
+    protected boolean isLineNumberRulerVisible() {
+        return false;
+    }
+
+    /**
+     * Returns the overview ruler.
+     *
+     * @return the overview ruler
+     */
+    protected IOverviewRuler getOverviewRuler() {
+        if (fOverviewRuler == null)
+            fOverviewRuler= createOverviewRuler(getSharedColors());
+        return fOverviewRuler;
+    }
+
+
+    protected IOverviewRuler createOverviewRuler(ISharedTextColors sharedColors) {
+        IOverviewRuler ruler= new OverviewRuler(getAnnotationAccess(), VERTICAL_RULER_WIDTH, sharedColors);
+
+        Iterator e= fAnnotationPreferences.getAnnotationPreferences().iterator();
+        while (e.hasNext()) {
+            AnnotationPreference preference= (AnnotationPreference) e.next();
+            if (preference.contributesToHeader())
+                ruler.addHeaderAnnotationType(preference.getAnnotationType());
+        }
+        return ruler;
+    }
     /**
      * @see org.eclipse.ui.part.EditorPart#doSave(org.eclipse.core.runtime.IProgressMonitor)
      */
     @Override
     public void doSave(IProgressMonitor monitor) {
     }
-
     /**
      * @see org.eclipse.ui.part.EditorPart#doSaveAs()
      */
@@ -89,8 +127,8 @@ public class IrcLogEditor extends EditorPart {
     @Override
     public void init(IEditorSite site, IEditorInput input) throws PartInitException {
         if (input instanceof IPathEditorInput) {
-            setInput(input);
             setSite(site);
+            setInput(input);
             IPathEditorInput pathInput = (IPathEditorInput) input;
             path = pathInput.getPath();
             isP2pChannel = AbstractIrcChannel.isP2pChannel(path);
@@ -98,6 +136,12 @@ public class IrcLogEditor extends EditorPart {
         } else {
             throw new PartInitException("IPathEditorInput expected.");
         }
+    }
+
+    @Override
+    protected void initializeEditor() {
+        super.initializeEditor();
+        setSourceViewerConfiguration(new IrcLogEditorConfiguration(getPreferenceStore()));
     }
 
     /**
@@ -118,16 +162,18 @@ public class IrcLogEditor extends EditorPart {
 
     private void reload() throws IOException, CoreException {
         logViewer.clear();
-        IWorkspace ws = ResourcesPlugin.getWorkspace();
-        IFile file = ws.getRoot().getFileForLocation(path);
-        try (IrcLogReader reader = new IrcLogReader(file.getContents(), isP2pChannel)) {
-            while (reader.hasNext()) {
-                PlainIrcMessage m = reader.next();
-                logViewer.appendMessage(m);
-                lastMessageTime = m.getArrivedAt();
+        if (path != null) {
+            IWorkspace ws = ResourcesPlugin.getWorkspace();
+            IFile file = ws.getRoot().getFileForLocation(path);
+            try (IrcLogReader reader = new IrcLogReader(file.getContents(), isP2pChannel)) {
+                while (reader.hasNext()) {
+                    PlainIrcMessage m = reader.next();
+                    logViewer.appendMessage(m);
+                    lastMessageTime = m.getArrivedAt();
+                }
             }
+            updateTitle();
         }
-        updateTitle();
     }
 
     /**

@@ -9,6 +9,8 @@
 package org.l2x6.eircc.ui.editor;
 
 import org.eclipse.jface.preference.IPreferenceStore;
+import org.eclipse.jface.text.reconciler.IReconciler;
+import org.eclipse.jface.text.source.ISourceViewer;
 import org.eclipse.ui.editors.text.TextSourceViewerConfiguration;
 
 /**
@@ -21,6 +23,17 @@ public class IrcLogEditorConfiguration extends TextSourceViewerConfiguration {
      */
     public IrcLogEditorConfiguration(IPreferenceStore preferenceStore) {
         super(preferenceStore);
+    }
+
+    /**
+     * super{@link #getReconciler(ISourceViewer)} returns a spell checker
+     * reconciler, which makes no sense here.
+     *
+     * @see org.eclipse.ui.editors.text.TextSourceViewerConfiguration#getReconciler(org.eclipse.jface.text.source.ISourceViewer)
+     */
+    @Override
+    public IReconciler getReconciler(ISourceViewer sourceViewer) {
+        return null;
     }
 
 }

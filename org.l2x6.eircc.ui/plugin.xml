@@ -53,6 +53,15 @@
         </editor>
     </extension>
 
+    <extension point="org.eclipse.ui.editors.documentProviders">
+        <provider
+            inputTypes="org.l2x6.eircc.ui.editor.IrcChannelEditorInput"
+            class="org.l2x6.eircc.ui.editor.IrcChannelDocumentProvider"
+            id="org.l2x6.eircc.ui.editor.IrcChannelDocumentProvider">
+    </provider>
+    </extension>
+
+
     <extension point="org.eclipse.core.contenttype.contentTypes">
         <content-type id="org.l2x6.eircc.IrcLogContentType"
             base-type="org.eclipse.core.runtime.text"
