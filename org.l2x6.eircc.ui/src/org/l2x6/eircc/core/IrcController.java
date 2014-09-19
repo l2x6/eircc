@@ -20,6 +20,7 @@ import org.l2x6.eircc.core.model.IrcAccount;
 import org.l2x6.eircc.core.model.IrcAccount.IrcAccountState;
 import org.l2x6.eircc.core.model.IrcServer;
 import org.l2x6.eircc.core.model.IrcUser;
+import org.l2x6.eircc.core.model.resource.IrcResourceException;
 import org.l2x6.eircc.core.util.IrcUtils;
 import org.schwering.irc.lib.IRCCommand;
 
@@ -85,7 +86,7 @@ public class IrcController {
         return client;
     }
 
-    public AbstractIrcChannel getOrCreateAccountChannel(IrcAccount ircAccount, String channelName) {
+    public AbstractIrcChannel getOrCreateAccountChannel(IrcAccount ircAccount, String channelName) throws IrcResourceException {
         IrcUtils.assertUiThread();
         AbstractIrcChannel result = ircAccount.findChannel(channelName);
         if (result == null) {
@@ -98,8 +99,9 @@ public class IrcController {
     /**
      * @param user
      * @return
+     * @throws IrcResourceException
      */
-    public AbstractIrcChannel getOrCreateP2pChannel(IrcUser p2pUser) {
+    public AbstractIrcChannel getOrCreateP2pChannel(IrcUser p2pUser) throws IrcResourceException {
         IrcUtils.assertUiThread();
         IrcAccount account = p2pUser.getServer().getAccount();
         AbstractIrcChannel result = account.findP2pChannel(p2pUser);
@@ -156,7 +158,7 @@ public class IrcController {
      */
     public void partChannel(AbstractIrcChannel channel) throws IrcException {
         IrcUtils.assertUiThread();
-        if (channel.isJoined()) {
+        if (channel != null && channel.isJoined()) {
             if (!channel.isP2p()) {
                 getClientOrConnect(channel.getAccount()).partChannel(channel);
             } else {

@@ -14,12 +14,17 @@ import java.io.UnsupportedEncodingException;
 
 import org.eclipse.core.resources.IFile;
 import org.eclipse.core.runtime.CoreException;
+import org.l2x6.eircc.core.model.resource.IrcChannelResource;
+import org.l2x6.eircc.core.model.resource.IrcLogResource;
+import org.l2x6.eircc.core.model.resource.IrcResourceException;
 
 /**
  * @author <a href="mailto:ppalaga@redhat.com">Peter Palaga</a>
  */
 public class IrcChannel extends AbstractIrcChannel {
+    private final IrcChannelResource channelResource;
     private final String name;
+    private final IrcLog log;
 
     /**
      * @param account
@@ -28,23 +33,34 @@ public class IrcChannel extends AbstractIrcChannel {
      * @throws FileNotFoundException
      * @throws UnsupportedEncodingException
      * @throws CoreException
+     * @throws IrcResourceException
      */
     public IrcChannel(IrcAccount account, IFile channelPropsFile) throws UnsupportedEncodingException,
-            FileNotFoundException, IOException, CoreException {
+            FileNotFoundException, IOException, CoreException, IrcResourceException {
         super(account);
-        String fName = channelPropsFile.getName();
-        this.name = fName.substring(0, fName.length() - AbstractIrcChannel.FILE_EXTENSION.length());
+        this.name = IrcChannelResource.getChannelNameFromChannelPropsFile(channelPropsFile);
+        this.channelResource = account.getAccountResource().getChannelResource(name);
         load(channelPropsFile);
+        IrcLogResource logResource = channelResource.getActiveLogResource();
+        this.log = new IrcLog(this, logResource);
+
+    }
+    public IrcLog getLog() {
+        return log;
     }
 
     /**
      * @param account
      * @param name
+     * @throws IrcResourceException
      */
-    public IrcChannel(IrcAccount account, String name) {
+    public IrcChannel(IrcAccount account, String name) throws IrcResourceException {
         super(account);
         this.name = name;
+        this.channelResource = account.getAccountResource().getChannelResource(name);
         this.kept = true;
+        IrcLogResource logResource = channelResource.getActiveLogResource();
+        this.log = new IrcLog(this, logResource);
     }
 
     /**
@@ -75,6 +91,10 @@ public class IrcChannel extends AbstractIrcChannel {
         } else if (!name.equals(other.name))
             return false;
         return true;
+    }
+
+    public IrcChannelResource getChannelResource() {
+        return channelResource;
     }
 
     public String getName() {

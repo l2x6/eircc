@@ -28,6 +28,7 @@ import org.eclipse.core.filebuffers.ITextFileBufferManager;
 import org.eclipse.core.filebuffers.LocationKind;
 import org.eclipse.core.resources.IContainer;
 import org.eclipse.core.resources.IFile;
+import org.eclipse.core.resources.IFolder;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.IStatus;
@@ -48,9 +49,9 @@ import org.eclipse.ui.IWorkbenchPage;
 import org.eclipse.ui.IWorkbenchWindow;
 import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.texteditor.ITextEditor;
-import org.l2x6.eircc.core.model.AbstractIrcChannel;
-import org.l2x6.eircc.core.model.IrcLog;
 import org.l2x6.eircc.core.model.PlainIrcMessage;
+import org.l2x6.eircc.core.model.resource.IrcChannelResource;
+import org.l2x6.eircc.core.model.resource.IrcLogResource;
 import org.l2x6.eircc.core.util.IrcLogReader;
 import org.l2x6.eircc.ui.EirccUi;
 import org.l2x6.eircc.ui.IrcUiMessages;
@@ -202,7 +203,7 @@ public class IrcSearchVisitor {
         if (timeStart == null) {
             return true;
         } else {
-            OffsetDateTime fileDate = IrcLog.getDate(file.getFullPath());
+            OffsetDateTime fileDate = IrcLogResource.getTime(file.getFullPath());
             if (!channel.equals(lastChannel)) {
                 lastFileDate = null;
             }
@@ -222,8 +223,8 @@ public class IrcSearchVisitor {
         IContainer logsFolder = file.getParent();
         String channel = null;
         try {
-            if (AbstractIrcChannel.isChannelLogsFolder(logsFolder)) {
-                channel = AbstractIrcChannel.getChannelName(logsFolder.getFullPath());
+            if (IrcChannelResource.isChannelLogsFolder(logsFolder)) {
+                channel = IrcChannelResource.getChannelName((IFolder) logsFolder);
                 if (channel == null) {
                     return false;
                 }
@@ -267,7 +268,7 @@ public class IrcSearchVisitor {
             if (isFileLevelSearch) {
                 collector.acceptFile(file);
             } else {
-                try (IrcLogReader reader = new IrcLogReader(file.getContents(), AbstractIrcChannel.isP2pChannel(file
+                try (IrcLogReader reader = new IrcLogReader(file.getContents(), IrcChannelResource.isP2pChannel(file
                         .getFullPath()))) {
                     while (reader.hasNext()) {
                         PlainIrcMessage message = reader.next();

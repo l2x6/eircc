@@ -8,7 +8,6 @@
 
 package org.l2x6.eircc.core.model;
 
-import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -23,6 +22,8 @@ import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IPath;
 import org.l2x6.eircc.core.model.event.IrcModelEvent;
 import org.l2x6.eircc.core.model.event.IrcModelEvent.EventType;
+import org.l2x6.eircc.core.model.resource.IrcChannelResource;
+import org.l2x6.eircc.core.model.resource.IrcLogResource;
 import org.l2x6.eircc.core.util.TypedField;
 import org.l2x6.eircc.ui.misc.Colors;
 
@@ -48,47 +49,10 @@ public abstract class AbstractIrcChannel extends IrcObject implements Persistent
         }
     }
 
-    /**  */
-    protected static final String FILE_EXTENSION = ".channel.properties";
-
-    private static final String LOGS_FOLDER_SUFFIX = "-logs";
-
-    public static String getChannelName(IPath logsFolderPath) {
-        String name = logsFolderPath.lastSegment();
-        return name.substring(0, name.length() - LOGS_FOLDER_SUFFIX.length());
-    }
-
-    /**
-     * @param f
-     * @return
-     */
-    public static boolean isChannelFile(IResource f) {
-        return f.getType() == IResource.FILE && f.getName().endsWith(AbstractIrcChannel.FILE_EXTENSION);
-    }
-
-    /**
-     * @param resource
-     * @return
-     */
-    public static boolean isChannelLogsFolder(IResource resource) {
-        return resource.getType() == IResource.FOLDER && resource.getName().endsWith(LOGS_FOLDER_SUFFIX);
-    }
-
-    public static boolean isP2pChannel(IPath path) {
-        return isP2pChannel(path.lastSegment());
-    }
-
-    public static boolean isP2pChannel(String channelName) {
-        return channelName.startsWith("#");
-    }
-
     protected final IrcAccount account;
     private boolean autoJoin = true;
     private boolean joined;
     protected boolean kept;
-    private IrcLog log;
-    private IPath logsFolderPath;
-    private IPath path;
     private final Map<String, Integer> seenUsers = new HashMap<String, Integer>();
 
     /** Users by nick */
@@ -100,7 +64,7 @@ public abstract class AbstractIrcChannel extends IrcObject implements Persistent
      * @param account
      */
     public AbstractIrcChannel(IrcAccount account) {
-        super(account.getModel(), account.getChannelsFolderPath());
+        super(account.getModel(), account.getAccountResource().getChannelsFolder().getFullPath());
         this.account = account;
         this.seenUsers.put(account.getAcceptedNick(), Colors.MY_INDEX);
     }
@@ -179,6 +143,8 @@ public abstract class AbstractIrcChannel extends IrcObject implements Persistent
         return account;
     }
 
+    public abstract IrcChannelResource getChannelResource();
+
     /**
      * @see org.l2x6.eircc.core.model.IrcObject#getFields()
      */
@@ -187,18 +153,12 @@ public abstract class AbstractIrcChannel extends IrcObject implements Persistent
         return IrcChannelField.values();
     }
 
-    public IrcLog getLog() {
-        return log;
-    }
-
+    public abstract IrcLog getLog();
     /**
      * @return
      */
     public IPath getLogsFolderPath() {
-        if (this.logsFolderPath == null) {
-            this.logsFolderPath = parentFolderPath.append(getName() + LOGS_FOLDER_SUFFIX);
-        }
-        return this.logsFolderPath;
+        return getChannelResource().getLogsFolder().getFullPath();
     }
 
     /**
@@ -208,10 +168,7 @@ public abstract class AbstractIrcChannel extends IrcObject implements Persistent
 
     @Override
     public IPath getPath() {
-        if (path == null) {
-            path = parentFolderPath.append(getName() + FILE_EXTENSION);
-        }
-        return path;
+        return getChannelResource().getChannelPropertyFile().getFullPath();
     }
 
     /**
@@ -276,7 +233,7 @@ public abstract class AbstractIrcChannel extends IrcObject implements Persistent
         IPath logsDir = getLogsFolderPath();
         IFolder logsFolder = model.getRoot().getFolder(logsDir);
         for (IResource r : logsFolder.members()) {
-            if (IrcLog.isLogFile(r)) {
+            if (IrcLogResource.isLogFile(r)) {
                 result.add((IFile) r);
             }
         }
@@ -299,9 +256,6 @@ public abstract class AbstractIrcChannel extends IrcObject implements Persistent
         boolean oldState = this.joined;
         this.joined = joined;
         if (oldState != joined) {
-            if (joined && log == null) {
-                log = new IrcLog(this, OffsetDateTime.now());
-            }
             account.getModel().fire(new IrcModelEvent(EventType.CHANNEL_JOINED_CHANGED, this));
         }
     }

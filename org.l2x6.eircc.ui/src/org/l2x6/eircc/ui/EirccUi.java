@@ -7,6 +7,7 @@
  *******************************************************************************/
 package org.l2x6.eircc.ui;
 
+import org.eclipse.core.resources.IFile;
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.IWorkspace;
 import org.eclipse.core.resources.ResourcesPlugin;
@@ -17,12 +18,15 @@ import org.eclipse.core.runtime.Status;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.ui.IEditorPart;
 import org.eclipse.ui.IEditorReference;
+import org.eclipse.ui.IFileEditorInput;
 import org.eclipse.ui.IWindowListener;
 import org.eclipse.ui.IWorkbenchPage;
 import org.eclipse.ui.IWorkbenchWindow;
 import org.eclipse.ui.PartInitException;
 import org.eclipse.ui.PlatformUI;
+import org.eclipse.ui.part.FileEditorInput;
 import org.eclipse.ui.plugin.AbstractUIPlugin;
+import org.eclipse.ui.texteditor.IDocumentProvider;
 import org.l2x6.eircc.core.EirccCore;
 import org.l2x6.eircc.core.IrcController;
 import org.l2x6.eircc.core.model.AbstractIrcChannel;
@@ -33,8 +37,9 @@ import org.l2x6.eircc.core.model.IrcModel;
 import org.l2x6.eircc.core.model.IrcUser;
 import org.l2x6.eircc.core.model.event.IrcModelEvent;
 import org.l2x6.eircc.core.model.event.IrcModelEventListener;
+import org.l2x6.eircc.core.model.resource.IrcResourceException;
 import org.l2x6.eircc.core.util.IrcUtils;
-import org.l2x6.eircc.ui.editor.IrcChannelEditor;
+import org.l2x6.eircc.ui.editor.IrcEditor;
 import org.l2x6.eircc.ui.editor.IrcChannelEditorInput;
 import org.l2x6.eircc.ui.misc.IrcImages;
 import org.l2x6.eircc.ui.notify.IrcSoundNotifier;
@@ -178,10 +183,12 @@ public class EirccUi extends AbstractUIPlugin implements IrcModelEventListener, 
         }
     }
 
-    public void openChannelEditor(AbstractIrcChannel channel) throws PartInitException {
+    public void openChannelEditor(AbstractIrcChannel channel) throws PartInitException, IrcResourceException {
         IrcUtils.assertUiThread();
         IWorkbenchPage page = PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage();
-        page.openEditor(new IrcChannelEditorInput(channel), IrcChannelEditor.ID);
+        IFile logFile = channel.getChannelResource().getActiveLogResource().getLogFile();
+        IFileEditorInput input = new FileEditorInput(logFile);
+        page.openEditor(input, IrcEditor.ID);
     }
 
     /**
@@ -274,8 +281,8 @@ public class EirccUi extends AbstractUIPlugin implements IrcModelEventListener, 
             IEditorReference[] editorRefs = page.getEditorReferences();
             for (IEditorReference ref : editorRefs) {
                 IEditorPart editor = ref.getEditor(false);
-                if (editor instanceof IrcChannelEditor) {
-                    IrcChannelEditor channelEditor = (IrcChannelEditor) editor;
+                if (editor instanceof IrcEditor) {
+                    IrcEditor channelEditor = (IrcEditor) editor;
                     channelEditor.updateReadMessages();
                 }
             }
@@ -303,5 +310,12 @@ public class EirccUi extends AbstractUIPlugin implements IrcModelEventListener, 
     @Override
     public void windowOpened(IWorkbenchWindow window) {
         windowActivated(window);
+    }
+
+    /**
+     * @return
+     */
+    public IDocumentProvider getDocumentProvider() {
+        return null;
     }
 }

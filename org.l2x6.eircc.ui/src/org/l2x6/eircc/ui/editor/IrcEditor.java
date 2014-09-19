@@ -8,6 +8,15 @@
 
 package org.l2x6.eircc.ui.editor;
 
+import java.io.IOException;
+import java.text.MessageFormat;
+import java.time.OffsetDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeFormatterBuilder;
+import java.time.temporal.ChronoField;
+
+import org.eclipse.core.resources.IFile;
+import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.jface.text.Document;
 import org.eclipse.jface.text.IDocument;
@@ -21,8 +30,8 @@ import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.ui.IEditorInput;
 import org.eclipse.ui.IEditorSite;
+import org.eclipse.ui.IFileEditorInput;
 import org.eclipse.ui.IPartListener2;
-import org.eclipse.ui.IPathEditorInput;
 import org.eclipse.ui.IWorkbenchPartReference;
 import org.eclipse.ui.PartInitException;
 import org.eclipse.ui.views.contentoutline.IContentOutlinePage;
@@ -32,24 +41,35 @@ import org.l2x6.eircc.core.model.AbstractIrcChannel;
 import org.l2x6.eircc.core.model.IrcLog;
 import org.l2x6.eircc.core.model.IrcMessage;
 import org.l2x6.eircc.core.model.IrcModel;
+import org.l2x6.eircc.core.model.PlainIrcMessage;
 import org.l2x6.eircc.core.model.event.IrcModelEvent;
 import org.l2x6.eircc.core.model.event.IrcModelEventListener;
+import org.l2x6.eircc.core.model.resource.IrcAccountResource;
+import org.l2x6.eircc.core.model.resource.IrcChannelResource;
+import org.l2x6.eircc.core.model.resource.IrcLogResource;
+import org.l2x6.eircc.core.model.resource.IrcResourceException;
+import org.l2x6.eircc.core.util.IrcLogReader;
 import org.l2x6.eircc.core.util.IrcUtils;
 import org.l2x6.eircc.ui.EirccUi;
+import org.l2x6.eircc.ui.IrcUiMessages;
 import org.l2x6.eircc.ui.misc.IrcImages;
+import org.l2x6.eircc.ui.misc.IrcImages.ImageKey;
 import org.l2x6.eircc.ui.views.IrcLabelProvider;
 
 /**
  * @author <a href="mailto:ppalaga@redhat.com">Peter Palaga</a>
  */
-public class IrcChannelEditor extends IrcLogEditor implements IrcModelEventListener {
+public class IrcEditor extends AbstractIrcEditor implements IrcModelEventListener {
 
-    public static final String ID = "org.l2x6.eircc.ui.editor.IrcChannelEditor";
+    private static final DateTimeFormatter TITLE_DATE_FORMATTER = new DateTimeFormatterBuilder()
+    .appendValue(ChronoField.HOUR_OF_DAY, 2).appendLiteral(':').appendValue(ChronoField.MINUTE_OF_HOUR, 2).toFormatter();
+    public static final String ID = "org.l2x6.eircc.ui.editor.IrcEditor";
     private SashForm accountsDetailsSplitter;
     private AbstractIrcChannel channel;
-    private ContentAssistant contentAssistant;
-    private TextViewer inputViewer;
 
+    private ContentAssistant contentAssistant;
+
+    private TextViewer inputViewer;
     private VerifyKeyListener inputWidgetListenet = new VerifyKeyListener() {
 
         @Override
@@ -82,6 +102,7 @@ public class IrcChannelEditor extends IrcLogEditor implements IrcModelEventListe
 
         }
     };
+    private OffsetDateTime lastMessageTime;
     private IrcChannelOutlinePage outlinePage;
     private IPartListener2 readMessagesUpdater = new IPartListener2() {
 
@@ -146,30 +167,50 @@ public class IrcChannelEditor extends IrcLogEditor implements IrcModelEventListe
         }
 
     };
+    private String tooltip;
+    private IrcLogResource logResource;
+
+    /**
+     *
+     */
+    public IrcEditor() {
+        super();
+        setSourceViewerConfiguration(new IrcLogEditorConfiguration(getPreferenceStore()));
+    }
 
     /**
      * @see org.eclipse.ui.part.WorkbenchPart#createPartControl(org.eclipse.swt.widgets.Composite)
      */
     @Override
     public void createPartControl(Composite parent) {
+        try {
+            if (isHistoryViewer()) {
+                super.createPartControl(parent);
+                reload();
+            } else {
+                accountsDetailsSplitter = new SashForm(parent, SWT.VERTICAL);
 
-        accountsDetailsSplitter = new SashForm(parent, SWT.VERTICAL);
+                super.createPartControl(accountsDetailsSplitter);
 
-        super.createPartControl(accountsDetailsSplitter);
+                inputViewer = new TextViewer(accountsDetailsSplitter, SWT.MULTI | SWT.WRAP | SWT.H_SCROLL | SWT.V_SCROLL);
+                inputViewer.setDocument(new Document());
+                inputViewer.appendVerifyKeyListener(inputWidgetListenet);
 
-        inputViewer = new TextViewer(accountsDetailsSplitter, SWT.MULTI | SWT.WRAP | SWT.H_SCROLL | SWT.V_SCROLL);
-        inputViewer.setDocument(new Document());
-        inputViewer.appendVerifyKeyListener(inputWidgetListenet);
+                contentAssistant = new ContentAssistant();
+                contentAssistant.setContentAssistProcessor(new IrcContentAssistProcessor(channel),
+                        IDocument.DEFAULT_CONTENT_TYPE);
+                contentAssistant.install(inputViewer);
 
-        contentAssistant = new ContentAssistant();
-        contentAssistant.setContentAssistProcessor(new IrcContentAssistProcessor(channel),
-                IDocument.DEFAULT_CONTENT_TYPE);
-        contentAssistant.install(inputViewer);
+                accountsDetailsSplitter.setWeights(new int[] { 80, 20 });
 
-        accountsDetailsSplitter.setWeights(new int[] { 80, 20 });
-
-        if (channel.getLog() != null) {
-            initLogViewer(channel.getLog());
+                if (channel.getLog() != null) {
+                    reload();
+                    logViewer.scrollToBottom();
+                    channel.getLog().allRead();
+                }
+            }
+        } catch (IOException | CoreException e) {
+            EirccUi.log(e);
         }
     }
 
@@ -192,7 +233,6 @@ public class IrcChannelEditor extends IrcLogEditor implements IrcModelEventListe
         }
         super.dispose();
     }
-
     /**
      * @see org.eclipse.ui.part.EditorPart#doSave(org.eclipse.core.runtime.IProgressMonitor)
      */
@@ -206,6 +246,7 @@ public class IrcChannelEditor extends IrcLogEditor implements IrcModelEventListe
     @Override
     public void doSaveAs() {
     }
+
 
     @Override
     public Object getAdapter(@SuppressWarnings("rawtypes") Class cl) {
@@ -228,6 +269,11 @@ public class IrcChannelEditor extends IrcLogEditor implements IrcModelEventListe
          * IrcSoundNotifier
          */
         return -1f;
+    }
+
+    @Override
+    public String getTitleToolTip() {
+        return tooltip == null ? super.getTitleToolTip() : tooltip;
     }
 
     /**
@@ -256,35 +302,38 @@ public class IrcChannelEditor extends IrcLogEditor implements IrcModelEventListe
         }
     }
 
-    /**
-     * @see org.eclipse.ui.part.EditorPart#init(org.eclipse.ui.IEditorSite,
-     *      org.eclipse.ui.IEditorInput)
-     */
     @Override
     public void init(IEditorSite site, IEditorInput input) throws PartInitException {
-        if (input instanceof IrcChannelEditorInput) {
+        if (input instanceof IFileEditorInput) {
             setSite(site);
             setInput(input);
-            this.channel = ((IrcChannelEditorInput) input).getChannel();
-            updateReadMessages();
-            IrcModel.getInstance().addModelEventListener(this);
-            site.getPage().addPartListener(readMessagesUpdater);
+            IFileEditorInput fileInput = (IFileEditorInput) input;
+            if (!fileInput.exists()) {
+                throw new PartInitException(MessageFormat.format(IrcUiMessages.IrcEditor_File_x_does_not_exist, fileInput.getFile().getFullPath().toString()));
+            }
+            IFile logFile = fileInput.getFile();
+            IrcModel model = IrcModel.getInstance();
+            try {
+                logResource = model.getRootResource().getLogResource(logFile);
+                if (!isHistoryViewer()) {
+                    IrcChannelResource channelResource = logResource.getChannelResource();
+                    IrcAccountResource accountResource = channelResource.getAccountResource();
+                    this.channel = model.getAccount(accountResource.getAccountName()).findChannel(logResource);
+                    updateReadMessages();
+                    IrcModel.getInstance().addModelEventListener(this);
+                    site.getPage().addPartListener(readMessagesUpdater);
+                }
+
+                updateTitle();
+            } catch (IrcResourceException e) {
+                throw new PartInitException("Cannot initialize IRC Editor", e);
+            }
+
         } else {
-            throw new PartInitException("Expected an " + IrcChannelEditorInput.class.getSimpleName() + " but got a "
-                    + input.getClass().getName());
+            throw new PartInitException("IPathEditorInput expected.");
         }
     }
 
-    /**
-     * @param log
-     */
-    private void initLogViewer(IrcLog log) {
-        for (IrcMessage m : log) {
-            logViewer.appendMessage(m);
-        }
-        logViewer.scrollToBottom();
-        log.allRead();
-    }
 
     private boolean isBeingRead() {
         Shell myShell = getEditorSite().getShell();
@@ -300,12 +349,37 @@ public class IrcChannelEditor extends IrcLogEditor implements IrcModelEventListe
         return false;
     }
 
+    public boolean isHistoryViewer() {
+        return !logResource.isLast();
+    }
+
     /**
      * @see org.eclipse.ui.part.EditorPart#isSaveAsAllowed()
      */
     @Override
     public boolean isSaveAsAllowed() {
         return false;
+    }
+
+    private void reload() throws IOException, CoreException {
+        logViewer.clear();
+        if (logResource != null) {
+            if (isHistoryViewer()) {
+                IFile file = logResource.getLogFile();
+                try (IrcLogReader reader = new IrcLogReader(file.getContents(), logResource.getChannelResource().isP2p())) {
+                    while (reader.hasNext()) {
+                        PlainIrcMessage m = reader.next();
+                        logViewer.appendMessage(m);
+                        lastMessageTime = m.getArrivedAt();
+                    }
+                }
+            } else {
+                for (IrcMessage m : channel.getLog()) {
+                    logViewer.appendMessage(m);
+                }
+            }
+            updateTitle();
+        }
     }
 
     private void sendMessage() throws IrcException {
@@ -329,13 +403,16 @@ public class IrcChannelEditor extends IrcLogEditor implements IrcModelEventListe
             }
         }
     }
-
     /**
      * @see org.eclipse.ui.part.WorkbenchPart#setFocus()
      */
     @Override
     public void setFocus() {
-        inputViewer.getControl().setFocus();
+        if (inputViewer != null) {
+            inputViewer.getControl().setFocus();
+        } else {
+            super.setFocus();
+        }
     }
 
     /**
@@ -366,12 +443,37 @@ public class IrcChannelEditor extends IrcLogEditor implements IrcModelEventListe
     }
 
     /**
-     *
-     */
+    *
+    */
     private void updateTitle() {
-        setPartName(channel.getName());
-        setTitleToolTip(IrcLabelProvider.getInstance().getTooltipText(channel));
-        setTitleImage(IrcImages.getInstance().getImage(channel));
+        if (logResource != null) {
+            if (isHistoryViewer()) {
+                String channelName = logResource.getChannelResource().getChannelName();
+                OffsetDateTime d = logResource.getTime();
+                String t = d.format(DateTimeFormatter.ISO_LOCAL_DATE) + ' ' + d.format(TITLE_DATE_FORMATTER) + ' ' + channelName;
+                setPartName(t);
+
+                if (lastMessageTime == null) {
+                    tooltip = t;
+                } else {
+                    String start = d.format(DateTimeFormatter.ISO_LOCAL_DATE);
+                    String end = lastMessageTime.format(DateTimeFormatter.ISO_LOCAL_DATE);
+                    if (start.equals(end)) {
+                        tooltip = start + ' ' + d.format(TITLE_DATE_FORMATTER) + " - "
+                                + lastMessageTime.format(TITLE_DATE_FORMATTER) + ' ' + channelName;
+                    } else {
+                        tooltip = start + ' ' + d.format(TITLE_DATE_FORMATTER) + " - " + end + ' '
+                                + lastMessageTime.format(TITLE_DATE_FORMATTER) + ' ' + channelName;
+                    }
+                }
+                setTitleImage(IrcImages.getInstance().getImage(ImageKey.CHANNEL_HISTORY));
+            } else {
+                setPartName(channel.getName());
+                tooltip = IrcLabelProvider.getInstance().getTooltipText(channel);
+                setTitleImage(IrcImages.getInstance().getImage(channel));
+            }
+        }
     }
+
 
 }

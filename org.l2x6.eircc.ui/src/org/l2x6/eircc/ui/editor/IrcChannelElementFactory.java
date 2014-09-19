@@ -53,10 +53,10 @@ public class IrcChannelElementFactory implements IElementFactory {
                     if (p2pUser == null) {
                         p2pUser = IrcController.getInstance().getOrCreateUser(server, p2pNick, p2pUsername);
                     }
-                    AbstractIrcChannel channel = IrcController.getInstance().getOrCreateP2pChannel(p2pUser);
-                    if (channel != null) {
-                        return new IrcChannelEditorInput(channel);
-                    }
+//                    AbstractIrcChannel channel = IrcController.getInstance().getOrCreateP2pChannel(p2pUser);
+//                    if (channel != null) {
+//                        return new IrcChannelEditorInput(channel);
+//                    }
                 }
             }
         }

@@ -11,6 +11,7 @@ package org.l2x6.eircc.ui.search;
 import java.text.MessageFormat;
 import java.time.OffsetDateTime;
 
+import org.eclipse.core.resources.IFolder;
 import org.eclipse.core.resources.IResource;
 import org.eclipse.jface.viewers.DelegatingStyledCellLabelProvider.IStyledLabelProvider;
 import org.eclipse.jface.viewers.ILabelProviderListener;
@@ -23,10 +24,10 @@ import org.eclipse.search.ui.text.AbstractTextSearchViewPage;
 import org.eclipse.search.ui.text.Match;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.ui.model.WorkbenchLabelProvider;
-import org.l2x6.eircc.core.model.AbstractIrcChannel;
-import org.l2x6.eircc.core.model.IrcAccount;
-import org.l2x6.eircc.core.model.IrcLog;
 import org.l2x6.eircc.core.model.PlainIrcMessage;
+import org.l2x6.eircc.core.model.resource.IrcAccountResource;
+import org.l2x6.eircc.core.model.resource.IrcChannelResource;
+import org.l2x6.eircc.core.model.resource.IrcLogResource;
 import org.l2x6.eircc.ui.IrcUiMessages;
 import org.l2x6.eircc.ui.editor.IrcDefaultMessageFormatter;
 import org.l2x6.eircc.ui.editor.IrcDefaultMessageFormatter.TimeStyle;
@@ -158,11 +159,11 @@ public class IrcSearchLabelProvider extends LabelProvider implements IStyledLabe
 
         IResource resource = (IResource) element;
 
-        if (AbstractIrcChannel.isChannelLogsFolder(resource)) {
+        if (IrcChannelResource.isChannelLogsFolder(resource)) {
             return IrcImages.getInstance().getImage(ImageKey.CHANNEL);
-        } else if (IrcLog.isLogFile(resource)) {
+        } else if (IrcLogResource.isLogFile(resource)) {
             return IrcImages.getInstance().getImage(ImageKey.CHANNEL_HISTORY);
-        } else if (IrcAccount.isChannelsFolder(resource)) {
+        } else if (IrcAccountResource.isChannelsFolder(resource)) {
             return IrcImages.getInstance().getImage(ImageKey.ACCOUNT);
         } else {
             return workbenchLabelProvider.getImage(resource);
@@ -242,13 +243,13 @@ public class IrcSearchLabelProvider extends LabelProvider implements IStyledLabe
             new StyledString(IrcUiMessages.FileLabelProvider_removed_resource_label);
 
         final String name;
-        if (AbstractIrcChannel.isChannelLogsFolder(resource)) {
-            name = AbstractIrcChannel.getChannelName(resource.getFullPath());
-        } else if (IrcLog.isLogFile(resource)) {
-            OffsetDateTime date = IrcLog.getDate(resource.getFullPath());
+        if (IrcChannelResource.isChannelLogsFolder(resource)) {
+            name = IrcChannelResource.getChannelName((IFolder) resource);
+        } else if (IrcLogResource.isLogFile(resource)) {
+            OffsetDateTime date = IrcLogResource.getTime(resource.getFullPath());
             name = date.format(TimeStyle.DATE_TIME.getFormatter());
-        } else if (IrcAccount.isChannelsFolder(resource)) {
-            name = IrcAccount.getAccountNameFromChannelsFolder(resource.getFullPath());
+        } else if (IrcAccountResource.isChannelsFolder(resource)) {
+            name = IrcAccountResource.getAccountNameFromChannelsFolder(resource.getFullPath());
         } else {
             name = TextProcessor.process(resource.getName(), ":.");
         }

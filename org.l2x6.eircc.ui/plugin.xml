@@ -32,18 +32,10 @@
     <extension
         point = "org.eclipse.ui.editors">
         <editor
-           id = "org.l2x6.eircc.ui.editor.IrcChannelEditor"
+           id = "org.l2x6.eircc.ui.editor.IrcEditor"
            name="%IrcChannelEditor.name"
            icon="icons/channel.png"
-           class="org.l2x6.eircc.ui.editor.IrcChannelEditor"
-        >
-        </editor>
-
-        <editor
-            id="org.l2x6.eircc.ui.editor.IrcLogEditor"
-            name="%IrcLogEditor.name"
-            icon="icons/channel-history.png"
-            class="org.l2x6.eircc.ui.editor.IrcLogEditor"
+           class="org.l2x6.eircc.ui.editor.IrcEditor"
             extensions="log"
             default="true"
         >
@@ -52,15 +44,6 @@
            </contentTypeBinding>
         </editor>
     </extension>
-
-    <extension point="org.eclipse.ui.editors.documentProviders">
-        <provider
-            inputTypes="org.l2x6.eircc.ui.editor.IrcChannelEditorInput"
-            class="org.l2x6.eircc.ui.editor.IrcChannelDocumentProvider"
-            id="org.l2x6.eircc.ui.editor.IrcChannelDocumentProvider">
-    </provider>
-    </extension>
-
 
     <extension point="org.eclipse.core.contenttype.contentTypes">
         <content-type id="org.l2x6.eircc.IrcLogContentType"
@@ -122,14 +105,6 @@
                     id="org.eclipse.pde.ui.actions.OpenPluginSearchPage">
             </action>
         </actionSet>
-    </extension>
-
-    <extension
-        point = "org.eclipse.ui.elementFactories">
-        <factory
-           id="org.l2x6.eircc.ui.editor.IrcChannelElementFactory"
-           class="org.l2x6.eircc.ui.editor.IrcChannelElementFactory">
-        </factory>
     </extension>
 
     <extension point="org.eclipse.search.searchPages">

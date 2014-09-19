@@ -27,6 +27,10 @@ import org.eclipse.core.runtime.IProgressMonitor;
 import org.l2x6.eircc.core.IrcException;
 import org.l2x6.eircc.core.model.event.IrcModelEvent;
 import org.l2x6.eircc.core.model.event.IrcModelEvent.EventType;
+import org.l2x6.eircc.core.model.resource.IrcAccountResource;
+import org.l2x6.eircc.core.model.resource.IrcChannelResource;
+import org.l2x6.eircc.core.model.resource.IrcLogResource;
+import org.l2x6.eircc.core.model.resource.IrcResourceException;
 import org.l2x6.eircc.core.util.TypedField;
 import org.l2x6.eircc.ui.IrcUiMessages;
 import org.schwering.irc.lib.TrafficLogger;
@@ -98,54 +102,21 @@ public class IrcAccount extends InitialIrcAccount implements PersistentIrcObject
         OFFLINE, OFFLINE_AFTER_ERROR, ONLINE
     }
 
-    private static final String CHANNELS_FOLDER_SUFFIX = "-channels";
-    static final String FILE_EXTENSION = ".account.properties";
-
-    /**
-     * @param f
-     * @return
-     */
-    public static String getAccountName(IFile f) {
-        String fileName = f.getName();
-        String result = fileName.substring(0, fileName.length() - IrcAccount.FILE_EXTENSION.length());
-        return result;
-    }
-
-    public static String getAccountNameFromChannelsFolder(IPath path) {
-        String name = path.lastSegment();
-        return name.substring(0, name.length() - CHANNELS_FOLDER_SUFFIX.length());
-    }
-
-    /**
-     * @param f
-     * @return
-     */
-    public static boolean isAccountFile(IResource r) {
-        return r.getType() == IResource.FILE && r.getName().endsWith(IrcAccount.FILE_EXTENSION);
-    }
-
-    public static boolean isChannelsFolder(IResource resource) {
-        return resource.getType() == IResource.FOLDER && resource.getName().endsWith(CHANNELS_FOLDER_SUFFIX);
-    }
-
+    private final IrcAccountResource accountResource;
     /** Kept or joined channels */
     private final List<AbstractIrcChannel> channels = new ArrayList<AbstractIrcChannel>();
-    private final IPath channelsFolderPath;
 
     private long createdOn;
+
     private AbstractIrcChannel[] keptChannelsArray;
 
     private IrcException lastException;
     private IrcUser me;
-    private IPath path;
 
     private final IrcServer server;
-
     private IrcAccountState state = IrcAccountState.OFFLINE;
 
     private TrafficLogger trafficLogger;
-
-    private final IPath usersFolderPath;
 
     public IrcAccount(InitialIrcAccount src) {
         this(src.getModel(), src.getLabel(), System.currentTimeMillis());
@@ -167,25 +138,27 @@ public class IrcAccount extends InitialIrcAccount implements PersistentIrcObject
      * @throws FileNotFoundException
      * @throws UnsupportedEncodingException
      * @throws CoreException
+     * @throws IrcResourceException
      */
     public IrcAccount(IrcModel model, IFile f) throws UnsupportedEncodingException, FileNotFoundException, IOException,
-            CoreException {
-        super(model, getAccountName(f));
+            CoreException, IrcResourceException {
+        super(model, IrcAccountResource.getAccountName(f));
+        this.accountResource = model.getRootResource().getAccoutResource(getLabel());
         this.server = new IrcServer(this);
-        this.channelsFolderPath = parentFolderPath.append(getLabel() + CHANNELS_FOLDER_SUFFIX);
-        this.usersFolderPath = parentFolderPath.append(getLabel() + "-users");
         load(f);
 
         IWorkspaceRoot root = model.getRoot();
-        if (root.exists(channelsFolderPath)) {
+        IPath channelsFolderPath = accountResource.getChannelsFolder().getFullPath();
+        if (root.exists(channelsFolderPath )) {
             IFolder channelsFolder = root.getFolder(channelsFolderPath);
             for (IResource m : channelsFolder.members()) {
-                if (AbstractIrcChannel.isChannelFile(m)) {
+                if (IrcChannelResource.isChannelFile(m)) {
                     IrcChannel channel = new IrcChannel(this, (IFile) m);
                     channels.add(channel);
                 }
             }
         }
+        IPath usersFolderPath = accountResource.getUsersFolder().getFullPath();
         if (root.exists(usersFolderPath)) {
             IFolder usersFolder = root.getFolder(usersFolderPath);
             for (IResource m : usersFolder.members()) {
@@ -203,8 +176,7 @@ public class IrcAccount extends InitialIrcAccount implements PersistentIrcObject
      */
     public IrcAccount(IrcModel model, String label, long createdOn) {
         super(model, label);
-        this.channelsFolderPath = parentFolderPath.append(getLabel() + CHANNELS_FOLDER_SUFFIX);
-        this.usersFolderPath = parentFolderPath.append(getLabel() + "-users");
+        this.accountResource = model.getRootResource().getAccoutResource(label);
         this.createdOn = createdOn;
         this.server = new IrcServer(this);
     }
@@ -226,11 +198,11 @@ public class IrcAccount extends InitialIrcAccount implements PersistentIrcObject
         model.fire(new IrcModelEvent(EventType.ACCOUNT_CHANNEL_ADDED, channel));
     }
 
-    public IrcChannel createChannel(String name) {
+    public IrcChannel createChannel(String name) throws IrcResourceException {
         return new IrcChannel(this, name);
     }
 
-    public P2pIrcChannel createP2pChannel(IrcUser p2pUser) {
+    public P2pIrcChannel createP2pChannel(IrcUser p2pUser) throws IrcResourceException {
         return new P2pIrcChannel(p2pUser);
     }
 
@@ -311,6 +283,10 @@ public class IrcAccount extends InitialIrcAccount implements PersistentIrcObject
         return me != null ? me.getNick() : null;
     }
 
+    public IrcAccountResource getAccountResource() {
+        return accountResource;
+    }
+
     /**
      * @see org.l2x6.eircc.core.model.IrcObject#getChannels()
      */
@@ -319,10 +295,6 @@ public class IrcAccount extends InitialIrcAccount implements PersistentIrcObject
             keptChannelsArray = channels.toArray(new AbstractIrcChannel[channels.size()]);
         }
         return keptChannelsArray;
-    }
-
-    protected IPath getChannelsFolderPath() {
-        return channelsFolderPath;
     }
 
     public long getCreatedOn() {
@@ -360,10 +332,7 @@ public class IrcAccount extends InitialIrcAccount implements PersistentIrcObject
      */
     @Override
     public IPath getPath() {
-        if (path == null) {
-            path = parentFolderPath.append(getLabel() + FILE_EXTENSION);
-        }
-        return path;
+        return accountResource.getAccountPropertyFile().getFullPath();
     }
 
     /**
@@ -396,10 +365,6 @@ public class IrcAccount extends InitialIrcAccount implements PersistentIrcObject
             trafficLogger = model.createTrafficLogger(this);
         }
         return trafficLogger;
-    }
-
-    protected IPath getUsersFolderPath() {
-        return usersFolderPath;
     }
 
     /**
@@ -486,6 +451,21 @@ public class IrcAccount extends InitialIrcAccount implements PersistentIrcObject
                 break;
             }
         }
+    }
+
+    /**
+     * @param logResource
+     * @return
+     * @throws IrcResourceException
+     */
+    public AbstractIrcChannel findChannel(IrcLogResource logResource) throws IrcResourceException {
+        for (AbstractIrcChannel channel : channels) {
+            IrcChannelResource channelResource = channel.getChannelResource();
+            if (channelResource.getLogResource(logResource.getTime()) == logResource) {
+                return channel;
+            }
+        }
+        return null;
     }
 
 }

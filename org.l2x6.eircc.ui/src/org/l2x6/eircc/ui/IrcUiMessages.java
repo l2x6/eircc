@@ -8,12 +8,29 @@
 
 package org.l2x6.eircc.ui;
 
+import java.util.ResourceBundle;
+
 import org.eclipse.osgi.util.NLS;
 
 /**
  * @author <a href="mailto:ppalaga@redhat.com">Peter Palaga</a>
  */
 public class IrcUiMessages extends NLS {
+
+    private static final String BUNDLE_FOR_CONSTRUCTED_KEYS= "org.eclipse.ui.texteditor.ConstructedEditorMessages";//$NON-NLS-1$
+    private static ResourceBundle fgBundleForConstructedKeys= ResourceBundle.getBundle(BUNDLE_FOR_CONSTRUCTED_KEYS);
+
+    /**
+     * Returns the message bundle which contains constructed keys.
+     *
+     * @since 3.1
+     * @return the message bundle
+     */
+    public static ResourceBundle getBundleForConstructedKeys() {
+        return fgBundleForConstructedKeys;
+    }
+
+
     public static String Account;
 
     public static String Account_Connect_Automatically;
@@ -131,6 +148,11 @@ public class IrcUiMessages extends NLS {
     public static String FileSearchQuery_time;
 
     public static String FileSearchQuery_channels;
+    public static String Editor_statusline_error_label;
+    public static String Editor_statusline_position_pattern;
+    public static String Editor_statusline_state_readonly_label;
+    public static String IrcEditor_File_x_does_not_exist;
+
 
     static {
         NLS.initializeMessages(BUNDLE_NAME, IrcUiMessages.class);

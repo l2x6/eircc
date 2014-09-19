@@ -29,6 +29,9 @@ import org.l2x6.eircc.core.client.TrafficLoggerFactory;
 import org.l2x6.eircc.core.model.event.IrcModelEvent;
 import org.l2x6.eircc.core.model.event.IrcModelEvent.EventType;
 import org.l2x6.eircc.core.model.event.IrcModelEventListener;
+import org.l2x6.eircc.core.model.resource.IrcAccountResource;
+import org.l2x6.eircc.core.model.resource.IrcResourceException;
+import org.l2x6.eircc.core.model.resource.IrcRootResource;
 import org.l2x6.eircc.core.util.IrcUtils;
 import org.l2x6.eircc.ui.EirccUi;
 import org.l2x6.eircc.ui.IrcUiMessages;
@@ -53,7 +56,7 @@ public class IrcModel extends IrcBase {
     private IrcAccount[] accountsArray;
     private List<IrcModelEventListener> listeners = Collections.emptyList();
 
-    private IProject project;
+    private IrcRootResource rootResource;
 
     private TrafficLoggerFactory trafficLoggerFactory;
 
@@ -170,11 +173,15 @@ public class IrcModel extends IrcBase {
     }
 
     public IProject getProject() {
-        return project;
+        return rootResource.getProject();
     }
 
     public IWorkspaceRoot getRoot() {
-        return project.getWorkspace().getRoot();
+        return getProject().getWorkspace().getRoot();
+    }
+
+    public IrcRootResource getRootResource() {
+        return rootResource;
     }
 
     /**
@@ -188,13 +195,17 @@ public class IrcModel extends IrcBase {
         return !accounts.isEmpty();
     }
 
-    public void load(IProject project) throws IOException, CoreException {
-        this.project = project;
-        for (IResource r : project.members()) {
-            if (IrcAccount.isAccountFile(r)) {
-                IrcAccount account = new IrcAccount(this, (IFile) r);
-                accounts.put(account.getLabel(), account);
+    public void load(IProject project) throws IrcResourceException {
+        this.rootResource = new IrcRootResource(project);
+        try {
+            for (IResource r : project.members()) {
+                if (IrcAccountResource.isAccountFile(r)) {
+                    IrcAccount account = new IrcAccount(this, (IFile) r);
+                    accounts.put(account.getLabel(), account);
+                }
             }
+        } catch (CoreException | IOException e) {
+            throw new IrcResourceException(e);
         }
     }
 

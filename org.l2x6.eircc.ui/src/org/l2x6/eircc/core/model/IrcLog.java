@@ -8,28 +8,19 @@
 
 package org.l2x6.eircc.core.model;
 
-import java.io.ByteArrayInputStream;
 import java.time.OffsetDateTime;
-import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
 
-import org.eclipse.core.filebuffers.FileBuffers;
-import org.eclipse.core.filebuffers.ITextFileBuffer;
-import org.eclipse.core.filebuffers.ITextFileBufferManager;
-import org.eclipse.core.filebuffers.LocationKind;
-import org.eclipse.core.resources.IFile;
-import org.eclipse.core.resources.IResource;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.runtime.IProgressMonitor;
-import org.eclipse.core.runtime.SubProgressMonitor;
 import org.eclipse.jface.text.IDocument;
 import org.l2x6.eircc.core.model.event.IrcModelEvent;
 import org.l2x6.eircc.core.model.event.IrcModelEvent.EventType;
-import org.l2x6.eircc.core.util.IrcUtils;
+import org.l2x6.eircc.core.model.resource.IrcLogResource;
 import org.l2x6.eircc.core.util.TypedField;
 
 /**
@@ -70,23 +61,7 @@ public class IrcLog extends IrcObject implements Iterable<IrcMessage>, Persisten
         }
     }
 
-    private static final String FILE_EXTENSION = ".irc.log";
-    private static final int NOTHING_SAVED = -1;
-
-    public static OffsetDateTime getDate(IPath path) {
-        String name = path.lastSegment();
-        String str = name.substring(0, name.length() - FILE_EXTENSION.length());
-        return OffsetDateTime.parse(str);
-    }
-
-    /**
-     * @param f
-     * @return
-     */
-    public static boolean isLogFile(IResource f) {
-        return f.getType() == IResource.FILE && f.getName().endsWith(FILE_EXTENSION);
-    }
-
+    public static final int NOTHING_SAVED = -1;
     private final AbstractIrcChannel channel;
     private int charLength = 0;
     private int lastNonSystemMessageIndex = -1;
@@ -94,13 +69,11 @@ public class IrcLog extends IrcObject implements Iterable<IrcMessage>, Persisten
     private int lastReadIndex = -1;
     /** The time of the last non-system message that arrived */
     // private Instant lastMessageTime = Instant.MIN;
-    private int lastSavedMessageIndex = NOTHING_SAVED;
+    private int lastSavedMessageIndex = IrcLog.NOTHING_SAVED;
     private int lineIndex = 0;
-    private final List<IrcMessage> messages = new ArrayList<IrcMessage>();
 
-    private IPath path;
-    // private Instant readTill = Instant.MIN;
-    private final OffsetDateTime startedOn;
+    private final IrcLogResource logResource;
+    private final List<IrcMessage> messages = new ArrayList<IrcMessage>();
     private LogState state = LogState.NONE;
 
     /**
@@ -108,10 +81,10 @@ public class IrcLog extends IrcObject implements Iterable<IrcMessage>, Persisten
      * @param channel
      * @param startedOn
      */
-    public IrcLog(AbstractIrcChannel channel, OffsetDateTime startedOn) {
+    public IrcLog(AbstractIrcChannel channel, IrcLogResource logResource) {
         super(channel.getModel(), channel.getLogsFolderPath());
         this.channel = channel;
-        this.startedOn = startedOn.truncatedTo(ChronoUnit.SECONDS);
+        this.logResource = logResource;
     }
 
     /**
@@ -148,22 +121,11 @@ public class IrcLog extends IrcObject implements Iterable<IrcMessage>, Persisten
         if (lastSavedMessageIndex == messages.size() - 1) {
             return;
         }
-        IPath path = getPath();
-        IFile file = model.getRoot().getFile(path);
 
-        ITextFileBufferManager fbm = FileBuffers.getTextFileBufferManager();
-        if (!file.exists()) {
-            IrcUtils.mkdirs(file.getParent(), monitor);
-            file.create(new ByteArrayInputStream(new byte[0]), true, monitor);
-            fbm.connect(path, LocationKind.IFILE, monitor);
-        }
-
-        ITextFileBuffer buffer = fbm.getTextFileBuffer(file.getFullPath(), LocationKind.NORMALIZE);
+        IDocument document = logResource.getDocument(monitor);
         monitor.beginTask("", 2); //$NON-NLS-1$
 
-        IDocument document = buffer.getDocument();
-
-        if (lastSavedMessageIndex == NOTHING_SAVED) {
+        if (lastSavedMessageIndex == IrcLog.NOTHING_SAVED) {
             document.set("");
         }
 
@@ -174,9 +136,7 @@ public class IrcLog extends IrcObject implements Iterable<IrcMessage>, Persisten
             m.write(document);
             // out.flush();
         }
-
-        buffer.commit(new SubProgressMonitor(monitor, 1), false);
-        file.refreshLocal(IResource.DEPTH_ONE, new SubProgressMonitor(monitor, 1));
+        logResource.commitBuffer(monitor);
         monitor.done();
 
     }
@@ -207,14 +167,11 @@ public class IrcLog extends IrcObject implements Iterable<IrcMessage>, Persisten
 
     @Override
     public IPath getPath() {
-        if (path == null) {
-            path = parentFolderPath.append(startedOn.toString() + FILE_EXTENSION);
-        }
-        return path;
+        return logResource.getLogFile().getFullPath();
     }
 
     public OffsetDateTime getStartedOn() {
-        return startedOn;
+        return logResource.getTime();
     }
 
     public LogState getState() {
@@ -248,7 +205,7 @@ public class IrcLog extends IrcObject implements Iterable<IrcMessage>, Persisten
 
     /**
      * Saves all overwriting the previous file.
-     * 
+     *
      * @see #ensureAllSaved(IProgressMonitor)
      * @see org.l2x6.eircc.core.model.PersistentIrcObject#save(org.eclipse.core.runtime.IProgressMonitor)
      */

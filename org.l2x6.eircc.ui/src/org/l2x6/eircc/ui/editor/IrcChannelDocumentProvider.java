@@ -9,33 +9,31 @@
 package org.l2x6.eircc.ui.editor;
 
 import org.eclipse.ui.editors.text.TextFileDocumentProvider;
-import org.eclipse.ui.texteditor.IDocumentProvider;
 
 /**
  * @author <a href="mailto:ppalaga@redhat.com">Peter Palaga</a>
  */
-public class IrcChannelDocumentProvider extends TextFileDocumentProvider {
-    private static IrcChannelDocumentProvider INSTANCE;
+public class IrcChannelDocumentProvider extends ForwardingDocumentProvider {
+
+    private static final TextFileDocumentProvider PARENT = new TextFileDocumentProvider();
+
+    private static volatile IrcChannelDocumentProvider INSTANCE;
 
     public static IrcChannelDocumentProvider getInstance() {
-        return INSTANCE;
+        synchronized (IrcChannelDocumentProvider.class) {
+            if (INSTANCE == null) {
+                new IrcChannelDocumentProvider();
+            }
+            return INSTANCE;
+        }
     }
 
     /**
      *
      */
     public IrcChannelDocumentProvider() {
-        super();
+        super(PARENT);
         INSTANCE = this;
     }
-
-    /**
-     * @param parentProvider
-     */
-    public IrcChannelDocumentProvider(IDocumentProvider parentProvider) {
-        super(parentProvider);
-        INSTANCE = this;
-    }
-
 
 }

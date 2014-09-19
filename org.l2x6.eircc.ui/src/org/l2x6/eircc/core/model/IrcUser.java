@@ -92,7 +92,7 @@ public class IrcUser extends IrcObject implements PersistentIrcObject {
      */
     public IrcUser(IrcServer server, IFile userPropsFile) throws UnsupportedEncodingException, FileNotFoundException,
             IOException, CoreException {
-        super(server.getAccount().getModel(), server.getAccount().getUsersFolderPath());
+        super(server.getAccount().getModel(), server.getAccount().getAccountResource().getUsersFolder().getFullPath());
         this.server = server;
         String fName = userPropsFile.getName();
         String uid = fName.substring(0, fName.length() - IrcUser.FILE_EXTENSION.length());
@@ -109,7 +109,7 @@ public class IrcUser extends IrcObject implements PersistentIrcObject {
      * @param realName
      */
     public IrcUser(IrcServer server, UUID id) {
-        super(server.getAccount().getModel(), server.getAccount().getUsersFolderPath());
+        super(server.getAccount().getModel(), server.getAccount().getAccountResource().getUsersFolder().getFullPath());
         this.server = server;
         this.id = id;
         this.previousNicks = new ArrayList<String>();
