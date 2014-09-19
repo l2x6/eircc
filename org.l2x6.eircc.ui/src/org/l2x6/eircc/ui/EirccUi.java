@@ -40,7 +40,6 @@ import org.l2x6.eircc.core.model.event.IrcModelEventListener;
 import org.l2x6.eircc.core.model.resource.IrcResourceException;
 import org.l2x6.eircc.core.util.IrcUtils;
 import org.l2x6.eircc.ui.editor.IrcEditor;
-import org.l2x6.eircc.ui.editor.IrcChannelEditorInput;
 import org.l2x6.eircc.ui.misc.IrcImages;
 import org.l2x6.eircc.ui.notify.IrcSoundNotifier;
 import org.l2x6.eircc.ui.notify.IrcSystemMessagesGenerator;

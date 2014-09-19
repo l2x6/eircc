@@ -9,7 +9,6 @@
 package org.l2x6.eircc.ui.search;
 
 import org.eclipse.core.resources.IFile;
-import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.search.ui.text.AbstractTextSearchResult;
 import org.eclipse.search.ui.text.IEditorMatchAdapter;
@@ -18,9 +17,6 @@ import org.eclipse.search.ui.text.Match;
 import org.eclipse.ui.IEditorInput;
 import org.eclipse.ui.IEditorPart;
 import org.eclipse.ui.IFileEditorInput;
-import org.l2x6.eircc.core.model.AbstractIrcChannel;
-import org.l2x6.eircc.core.model.IrcLog;
-import org.l2x6.eircc.ui.editor.IrcChannelEditorInput;
 import org.l2x6.eircc.ui.misc.IrcImages;
 import org.l2x6.eircc.ui.misc.IrcImages.ImageKey;
 
@@ -44,14 +40,6 @@ public class IrcSearchResult extends AbstractTextSearchResult implements IEditor
         if (ei instanceof IFileEditorInput) {
             IFileEditorInput fi = (IFileEditorInput) ei;
             return getMatches(fi.getFile());
-        } else if (ei instanceof IrcChannelEditorInput) {
-            IrcChannelEditorInput chei = (IrcChannelEditorInput) ei;
-            AbstractIrcChannel ch = chei.getChannel();
-            IrcLog log = ch.getLog();
-            if (log != null) {
-                IFile f = ResourcesPlugin.getWorkspace().getRoot().getFile(log.getPath());
-                return getMatches(f);
-            }
         }
         return EMPTY_ARR;
     }
@@ -95,12 +83,6 @@ public class IrcSearchResult extends AbstractTextSearchResult implements IEditor
         if (ei instanceof IFileEditorInput) {
             IFileEditorInput fi = (IFileEditorInput) ei;
             return match.getElement().equals(fi.getFile());
-        } else if (ei instanceof IrcChannelEditorInput && match.getElement() instanceof IFile) {
-            IrcChannelEditorInput chei = (IrcChannelEditorInput) ei;
-            IFile f = (IFile) match.getElement();
-            AbstractIrcChannel ch = chei.getChannel();
-            IrcLog log = ch.getLog();
-            return log != null && log.getPath().equals(f.getFullPath());
         }
         return false;
     }
