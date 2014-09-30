@@ -8,8 +8,13 @@
 
 package org.l2x6.eircc.ui.editor;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.eclipse.jface.text.Document;
 import org.eclipse.jface.text.IDocument;
+import org.eclipse.jface.text.TextViewer;
+import org.eclipse.jface.text.source.IAnnotationModel;
 import org.eclipse.jface.text.source.IOverviewRuler;
 import org.eclipse.jface.text.source.IVerticalRuler;
 import org.eclipse.jface.text.source.SourceViewer;
@@ -19,6 +24,7 @@ import org.eclipse.swt.custom.StyledText;
 import org.eclipse.swt.events.PaintEvent;
 import org.eclipse.swt.events.PaintListener;
 import org.eclipse.swt.graphics.GC;
+import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.graphics.Rectangle;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Display;
@@ -29,7 +35,7 @@ import org.l2x6.eircc.ui.prefs.IrcPreferences;
  * @author <a href="mailto:ppalaga@redhat.com">Peter Palaga</a>
  */
 public class IrcLogViewer extends SourceViewer {
-    private static class ViewerPaintListener implements PaintListener {
+    private class ViewerPaintListener implements PaintListener {
 
         private final int firstTabStop;
         private final int[] tabStops;
@@ -78,14 +84,41 @@ public class IrcLogViewer extends SourceViewer {
             gc.setLineWidth(timeLineWidth);
             gc.setForeground(Display.getDefault().getSystemColor(SWT.COLOR_WIDGET_BACKGROUND));
             gc.drawLine(timeLineX, 0, timeLineX, clientArea.height);
+
+            for (Integer Y : horizontalLines) {
+                int y = Y.intValue();
+                if (y < textWidget.getClientArea().height) {
+                    int x1 = timeLineX + timeColumnMargin + 1;
+                    int x2 = clientArea.width - timeColumnMargin - 1;
+                    if (x1 < x2) {
+                        gc.drawLine(x1, y, x2, y);
+                    }
+                }
+            }
         }
     }
 
-    private final StyledText textWidget;
+    public static final int TEXT_OFFSET = "10:00:00 ".length();
+
+    /**
+     * y coordinates in the client area of {@link #getTextWidget()} where
+     * horizontal lines should be drawn.
+     */
+    private final List<Integer> horizontalLines = new ArrayList<Integer>();
+
+    /**
+     * The content of log file as opposed to the presented channel log that is
+     * maintained in {@link TextViewer#fDocument}
+     */
+    private IDocument rawDocument;
+
+    private IAnnotationModel rawModel;
 
     // private final StyledText textWidget;
 
     // private final TextViewer viewer;;
+
+    private final StyledText textWidget;
 
     /**
      * @param parent
@@ -101,12 +134,29 @@ public class IrcLogViewer extends SourceViewer {
         super(parent, verticalRuler, overviewRuler, showAnnotationsOverview, styles);
         this.setEditable(false);
         this.textWidget = this.getTextWidget();
+        setDocument(new Document());
+    }
+
+    /**
+     *
+     */
+    public void addHorizontalLine() {
+        IDocument doc = getDocument();
+        if (doc != null) {
+            int length = doc.getLength();
+            if (length > 0) {
+                int lastOffset = length - 1;
+                Point lastCharLocation = textWidget.getLocationAtOffset(lastOffset);
+                int lastLineHeight = textWidget.getLineHeight(lastOffset);
+                int y = lastCharLocation.y + lastLineHeight;
+                if (horizontalLines.isEmpty() || horizontalLines.get(horizontalLines.size() - 1).intValue() != y) {
+                    horizontalLines.add(Integer.valueOf(y));
+                }
+            }
+        }
     }
 
     public void appendMessage(PlainIrcMessage m) {
-        if (this.getDocument() == null) {
-            this.setDocument(new Document());
-        }
         IrcPreferences prefs = IrcPreferences.getInstance();
         IrcDefaultMessageFormatter formatter = prefs.getFormatter(m);
         formatter.format(this, m);
@@ -117,12 +167,14 @@ public class IrcLogViewer extends SourceViewer {
         if (doc != null) {
             doc.set("");
         }
+        horizontalLines.clear();
     }
 
     @Override
     public void configure(SourceViewerConfiguration configuration) {
         super.configure(configuration);
-        //IrcLogEditorConfiguration logEditorConfiguration = (IrcLogEditorConfiguration) configuration;
+        // IrcLogEditorConfiguration logEditorConfiguration =
+        // (IrcLogEditorConfiguration) configuration;
 
         GC gc = new GC(textWidget);
         ViewerPaintListener paintListener = new ViewerPaintListener(gc);
@@ -132,6 +184,19 @@ public class IrcLogViewer extends SourceViewer {
         textWidget.setWrapIndent(paintListener.getFirstTabStop());
         textWidget.addPaintListener(paintListener);
 
+    }
+
+    public IDocument getRawDocument() {
+        return rawDocument;
+    }
+
+    public IAnnotationModel getRawModel() {
+        return rawModel;
+    }
+
+    public boolean isEmpty() {
+        IDocument doc = this.getDocument();
+        return doc == null || doc.getLength() == 0;
     }
 
     /**
@@ -149,5 +214,13 @@ public class IrcLogViewer extends SourceViewer {
         textWidget.setFocus();
     }
 
+    /**
+     * @param document
+     * @param model
+     */
+    public void setRawDocument(IDocument document, IAnnotationModel model) {
+        this.rawDocument = document;
+        this.rawModel = model;
+    }
 
 }

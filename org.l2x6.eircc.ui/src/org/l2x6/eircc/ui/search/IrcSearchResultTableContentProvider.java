@@ -13,7 +13,8 @@ import org.eclipse.jface.viewers.TableViewer;
 import org.eclipse.jface.viewers.Viewer;
 
 /**
- * Adapted from {@code org.eclipse.search.internal.ui.text.FileTableContentProvider} as
+ * Adapted from
+ * {@code org.eclipse.search.internal.ui.text.FileTableContentProvider} as
  * available in org.eclipse.search 3.9.100.v20140226-1637.
  *
  * @author <a href="mailto:ppalaga@redhat.com">Peter Palaga</a>
@@ -22,8 +23,8 @@ public class IrcSearchResultTableContentProvider implements IStructuredContentPr
 
     private final Object[] EMPTY_ARR = new Object[0];
 
-    private final IrcSearchResultPage searchResultPage;
     private IrcSearchResult searchResult;
+    private final IrcSearchResultPage searchResultPage;
 
     public IrcSearchResultTableContentProvider(IrcSearchResultPage page) {
         this.searchResultPage = page;

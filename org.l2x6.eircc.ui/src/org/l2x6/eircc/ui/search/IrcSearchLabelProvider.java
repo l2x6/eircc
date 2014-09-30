@@ -46,6 +46,7 @@ public class IrcSearchLabelProvider extends LabelProvider implements IStyledLabe
     public enum LabelOrder {
         SHOW_LABEL, SHOW_LABEL_PATH, SHOW_PATH_LABEL
     }
+
     private static final String ELLIPSES = " ... "; //$NON-NLS-1$
     /** minimal number of characters shown after and before a match */
     private static final int MIN_MATCH_CONTEXT = 10;
@@ -66,7 +67,7 @@ public class IrcSearchLabelProvider extends LabelProvider implements IStyledLabe
 
     /*
      * (non-Javadoc)
-     *
+     * 
      * @see
      * org.eclipse.jface.viewers.BaseLabelProvider#addListener(org.eclipse.jface
      * .viewers.ILabelProviderListener)
@@ -114,7 +115,7 @@ public class IrcSearchLabelProvider extends LabelProvider implements IStyledLabe
 
     /*
      * (non-Javadoc)
-     *
+     * 
      * @see org.eclipse.jface.viewers.BaseLabelProvider#dispose()
      */
     public void dispose() {
@@ -147,7 +148,7 @@ public class IrcSearchLabelProvider extends LabelProvider implements IStyledLabe
 
     /*
      * (non-Javadoc)
-     *
+     * 
      * @see org.eclipse.jface.viewers.LabelProvider#getImage(java.lang.Object)
      */
     public Image getImage(Object element) {
@@ -272,7 +273,7 @@ public class IrcSearchLabelProvider extends LabelProvider implements IStyledLabe
 
     /*
      * (non-Javadoc)
-     *
+     * 
      * @see org.eclipse.jface.viewers.LabelProvider#getText(java.lang.Object)
      */
     public String getText(Object object) {
@@ -281,7 +282,7 @@ public class IrcSearchLabelProvider extends LabelProvider implements IStyledLabe
 
     /*
      * (non-Javadoc)
-     *
+     * 
      * @see
      * org.eclipse.jface.viewers.BaseLabelProvider#isLabelProperty(java.lang
      * .Object, java.lang.String)
@@ -292,7 +293,7 @@ public class IrcSearchLabelProvider extends LabelProvider implements IStyledLabe
 
     /*
      * (non-Javadoc)
-     *
+     * 
      * @see
      * org.eclipse.jface.viewers.BaseLabelProvider#removeListener(org.eclipse
      * .jface.viewers.ILabelProviderListener)

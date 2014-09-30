@@ -33,12 +33,22 @@ public class PlainIrcMessage {
     public static final String SENDER_TEXT_DELIMITER = ": ";
     protected final OffsetDateTime arrivedAt;
     private final boolean isP2pChannel;
+    /**
+     * Number of lines of this message. Basically
+     * {@code 1 + numberOfEolsInMessageText}
+     */
     protected final int lineCount;
+    /**
+     * This message starts at this line index in the IRC log file. First line
+     * index is {@code 0}.
+     */
     protected final int lineIndex;
     private boolean meNamed;
     private final String myNick;
     private final String nick;
+    /** Character length of this message within the IRC log file */
     protected final int recordLenght;
+    /** This message starts at this character offset in the IRC log file */
     protected final int recordOffset;
     private String string;
     protected final String text;
@@ -189,6 +199,11 @@ public class PlainIrcMessage {
 
     public boolean isSystemMessage() {
         return nick == null;
+    }
+
+    public IrcMessage toIrcMessage(IrcLog log) {
+        IrcUser u = nick == null ? null : log.getChannel().getAccount().getServer().getOrCreateUser(nick, nick);
+        return new IrcMessage(log, arrivedAt, u, text, myNick, isP2pChannel);
     }
 
     /**

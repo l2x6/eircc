@@ -149,10 +149,10 @@ public class IrcAccount extends InitialIrcAccount implements PersistentIrcObject
 
         IWorkspaceRoot root = model.getRoot();
         IPath channelsFolderPath = accountResource.getChannelsFolder().getFullPath();
-        if (root.exists(channelsFolderPath )) {
+        if (root.exists(channelsFolderPath)) {
             IFolder channelsFolder = root.getFolder(channelsFolderPath);
             for (IResource m : channelsFolder.members()) {
-                if (IrcChannelResource.isChannelFile(m)) {
+                if (IrcChannelResource.isChannelFile(m) && m.exists()) {
                     IrcChannel channel = new IrcChannel(this, (IFile) m);
                     channels.add(channel);
                 }
@@ -328,6 +328,31 @@ public class IrcAccount extends InitialIrcAccount implements PersistentIrcObject
     }
 
     /**
+     * @param logResource
+     * @return
+     * @throws IrcResourceException
+     */
+    public AbstractIrcChannel getOrCreateChannel(IrcLogResource logResource) throws IrcResourceException {
+        for (AbstractIrcChannel channel : channels) {
+            IrcChannelResource channelResource = channel.getChannelResource();
+            if (channelResource.getLogResource(logResource.getTime()) == logResource) {
+                return channel;
+            }
+        }
+        IrcChannelResource channelResource = logResource.getChannelResource();
+        final AbstractIrcChannel result;
+        if (channelResource.isP2p()) {
+            IrcUser user = server.findUser(channelResource.getChannelName());
+            result = createP2pChannel(user);
+            addChannel(result);
+        } else {
+            result = createChannel(channelResource.getChannelName());
+            ensureChannelListed(result);
+        }
+        return result;
+    }
+
+    /**
      * @see org.l2x6.eircc.core.model.IrcObject#getPath()
      */
     @Override
@@ -451,21 +476,6 @@ public class IrcAccount extends InitialIrcAccount implements PersistentIrcObject
                 break;
             }
         }
-    }
-
-    /**
-     * @param logResource
-     * @return
-     * @throws IrcResourceException
-     */
-    public AbstractIrcChannel findChannel(IrcLogResource logResource) throws IrcResourceException {
-        for (AbstractIrcChannel channel : channels) {
-            IrcChannelResource channelResource = channel.getChannelResource();
-            if (channelResource.getLogResource(logResource.getTime()) == logResource) {
-                return channel;
-            }
-        }
-        return null;
     }
 
 }

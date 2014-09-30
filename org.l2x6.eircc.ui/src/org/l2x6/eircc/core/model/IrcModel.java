@@ -77,11 +77,13 @@ public class IrcModel extends IrcBase {
     }
 
     public void addModelEventListener(IrcModelEventListener listener) {
-        List<IrcModelEventListener> newList = new ArrayList<IrcModelEventListener>(listeners.size() + 1);
-        newList.addAll(listeners);
-        newList.add(listener);
-        Collections.sort(newList, IrcModelEventListener.COMPARATOR);
-        listeners = newList;
+        if (!listeners.contains(listener)) {
+            List<IrcModelEventListener> newList = new ArrayList<IrcModelEventListener>(listeners.size() + 1);
+            newList.addAll(listeners);
+            newList.add(listener);
+            Collections.sort(newList, IrcModelEventListener.COMPARATOR);
+            listeners = newList;
+        }
     }
 
     public IrcAccount createAccount(String label) {
@@ -195,10 +197,10 @@ public class IrcModel extends IrcBase {
         return !accounts.isEmpty();
     }
 
-    public void load(IProject project) throws IrcResourceException {
-        this.rootResource = new IrcRootResource(project);
+    public void load(IrcRootResource rootResource) throws IrcResourceException {
+        this.rootResource = rootResource;
         try {
-            for (IResource r : project.members()) {
+            for (IResource r : rootResource.getProject().members()) {
                 if (IrcAccountResource.isAccountFile(r)) {
                     IrcAccount account = new IrcAccount(this, (IFile) r);
                     accounts.put(account.getLabel(), account);
@@ -245,9 +247,11 @@ public class IrcModel extends IrcBase {
     }
 
     public void removeModelEventListener(IrcModelEventListener listener) {
-        List<IrcModelEventListener> newList = new ArrayList<IrcModelEventListener>(listeners);
-        newList.remove(listener);
-        listeners = newList;
+        if (listeners.contains(listener)) {
+            List<IrcModelEventListener> newList = new ArrayList<IrcModelEventListener>(listeners);
+            newList.remove(listener);
+            listeners = newList;
+        }
     }
 
     public void save(IProgressMonitor monitor) throws UnsupportedEncodingException, FileNotFoundException, IOException,

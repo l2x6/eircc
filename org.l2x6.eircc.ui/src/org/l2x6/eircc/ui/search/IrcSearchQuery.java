@@ -115,8 +115,8 @@ public class IrcSearchQuery implements ISearchQuery {
      * @param isWholeWord
      * @param scope
      */
-    public IrcSearchQuery(String searchText, boolean isWholeWord,
-            IrcSearchPatternData searchData, FileTextSearchScope scope) {
+    public IrcSearchQuery(String searchText, boolean isWholeWord, IrcSearchPatternData searchData,
+            FileTextSearchScope scope) {
         Assert.isLegal(!(isWholeWord && searchData.isRegExSearch));
         this.searchText = searchText;
         this.isWholeWord = isWholeWord;
@@ -176,8 +176,8 @@ public class IrcSearchQuery implements ISearchQuery {
 
     @SuppressWarnings("restriction")
     protected Pattern getSearchPattern() {
-        return org.eclipse.search.internal.core.text.PatternConstructor.createPattern(searchText, searchData.isRegExSearch, true,
-                searchData.isCaseSensitive, isWholeWord);
+        return org.eclipse.search.internal.core.text.PatternConstructor.createPattern(searchText,
+                searchData.isRegExSearch, true, searchData.isCaseSensitive, isWholeWord);
     }
 
     public IrcSearchResult getSearchResult() {

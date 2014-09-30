@@ -86,7 +86,8 @@ public class IrcController {
         return client;
     }
 
-    public AbstractIrcChannel getOrCreateAccountChannel(IrcAccount ircAccount, String channelName) throws IrcResourceException {
+    public AbstractIrcChannel getOrCreateAccountChannel(IrcAccount ircAccount, String channelName)
+            throws IrcResourceException {
         IrcUtils.assertUiThread();
         AbstractIrcChannel result = ircAccount.findChannel(channelName);
         if (result == null) {
@@ -114,12 +115,7 @@ public class IrcController {
 
     public IrcUser getOrCreateUser(IrcServer server, String nick, String username) {
         IrcUtils.assertUiThread();
-        IrcUser result = server.findUser(nick);
-        if (result == null) {
-            result = server.createUser(nick, username);
-            server.addUser(result);
-        }
-        return result;
+        return server.getOrCreateUser(nick, username);
     }
 
     /**

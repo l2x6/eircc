@@ -162,6 +162,20 @@ public class IrcServer extends IrcObject {
     }
 
     /**
+     * @param nick
+     * @param username
+     * @return
+     */
+    public IrcUser getOrCreateUser(String nick, String username) {
+        IrcUser result = findUser(nick);
+        if (result == null) {
+            result = createUser(nick, username);
+            addUser(result);
+        }
+        return result;
+    }
+
+    /**
      * @return
      * @return
      */

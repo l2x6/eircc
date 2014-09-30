@@ -15,6 +15,8 @@ import static java.time.temporal.ChronoField.MONTH_OF_YEAR;
 import static java.time.temporal.ChronoField.SECOND_OF_MINUTE;
 import static java.time.temporal.ChronoField.YEAR;
 
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
 import java.time.format.SignStyle;
@@ -32,8 +34,8 @@ import org.l2x6.eircc.ui.prefs.IrcPreferences;
  * @author <a href="mailto:ppalaga@redhat.com">Peter Palaga</a>
  */
 public class IrcDefaultMessageFormatter {
-
     public enum TimeStyle {
+
         DATE_TIME(new DateTimeFormatterBuilder().appendValue(YEAR, 4, 10, SignStyle.EXCEEDS_PAD).appendLiteral('-')
                 .appendValue(MONTH_OF_YEAR, 2).appendLiteral('-').appendValue(DAY_OF_MONTH, 2).appendLiteral(' ')
                 .appendValue(HOUR_OF_DAY, 2).appendLiteral(':').appendValue(MINUTE_OF_HOUR, 2).optionalStart()
@@ -43,6 +45,7 @@ public class IrcDefaultMessageFormatter {
                 .appendValue(MINUTE_OF_HOUR, 2).optionalStart().appendLiteral(':').appendValue(SECOND_OF_MINUTE, 2)
                 .toFormatter());
 
+        private final int characterLength;
         private final DateTimeFormatter formatter;
 
         /**
@@ -50,6 +53,11 @@ public class IrcDefaultMessageFormatter {
          */
         private TimeStyle(DateTimeFormatter formatter) {
             this.formatter = formatter;
+            this.characterLength = formatter.format(A_DATE).length();
+        }
+
+        public int getCharacterLength() {
+            return characterLength;
         }
 
         public DateTimeFormatter getFormatter() {
@@ -57,6 +65,8 @@ public class IrcDefaultMessageFormatter {
         }
 
     }
+
+    public static final OffsetDateTime A_DATE = OffsetDateTime.of(2014, 12, 30, 23, 59, 59, 0, ZoneOffset.ofHours(10));
 
     protected final IrcPreferences preferences;
 

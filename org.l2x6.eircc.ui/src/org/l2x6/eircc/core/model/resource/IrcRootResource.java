@@ -16,22 +16,26 @@ import org.eclipse.core.resources.IFolder;
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.IResource;
 import org.eclipse.core.runtime.CoreException;
+import org.eclipse.core.runtime.NullProgressMonitor;
+import org.eclipse.ui.texteditor.IDocumentProvider;
 
 /**
  * @author <a href="mailto:ppalaga@redhat.com">Peter Palaga</a>
  */
 public class IrcRootResource {
     private final Map<String, IrcAccountResource> accountResources;
-
+    private final IDocumentProvider documentProvider;
     private final IProject project;
 
     /**
      * @param project
      * @throws CoreException
      */
-    public IrcRootResource(IProject project) throws IrcResourceException {
+    public IrcRootResource(IProject project, IDocumentProvider documentProvider) throws IrcResourceException {
         super();
         this.project = project;
+        this.documentProvider = documentProvider;
+        refresh();
         this.accountResources = collectAccountResources();
     }
 
@@ -50,27 +54,6 @@ public class IrcRootResource {
         return result;
     }
 
-    public IProject getProject() {
-        return project;
-    }
-
-    public IrcAccountResource getAccoutResource(String accountName) {
-        return accountResources.get(accountName);
-    }
-
-    /**
-     * @param logPath
-     * @return
-     * @throws IrcResourceException
-     */
-    public IrcLogResource getLogResource(IFile logFile) throws IrcResourceException {
-        IFolder logsFolder = (IFolder) logFile.getParent();
-        IFolder accountChannelsFolder = (IFolder) logsFolder.getParent();
-        IrcAccountResource accountResource = getAccountResource(accountChannelsFolder);
-        IrcChannelResource channelResource = accountResource.getChannelResource(logsFolder);
-        return channelResource.getLogResource(logFile);
-    }
-
     /**
      * @param accountChannelsFolder
      * @return
@@ -86,9 +69,47 @@ public class IrcRootResource {
             }
         }
         if (result == null) {
-            throw new IrcResourceException("Cannot create account resource for " + accountChannelsFolder.getFullPath() + ".");
+            throw new IrcResourceException("Cannot create account resource for " + accountChannelsFolder.getFullPath()
+                    + ".");
         }
         return result;
+    }
+
+    public IrcAccountResource getAccoutResource(String accountName) {
+        return accountResources.get(accountName);
+    }
+
+    public IDocumentProvider getDocumentProvider() {
+        return documentProvider;
+    }
+
+    /**
+     * @param logPath
+     * @return
+     * @throws IrcResourceException
+     */
+    public IrcLogResource getLogResource(IFile logFile) throws IrcResourceException {
+        IFolder logsFolder = (IFolder) logFile.getParent();
+        IFolder accountChannelsFolder = (IFolder) logsFolder.getParent();
+        IrcAccountResource accountResource = getAccountResource(accountChannelsFolder);
+        IrcChannelResource channelResource = accountResource.getChannelResource(logsFolder);
+        return channelResource.getLogResource(logFile);
+    }
+
+    public IProject getProject() {
+        return project;
+    }
+
+    /**
+     * @throws IrcResourceException
+     *
+     */
+    public void refresh() throws IrcResourceException {
+        try {
+            project.refreshLocal(IResource.DEPTH_INFINITE, new NullProgressMonitor());
+        } catch (CoreException e) {
+            throw new IrcResourceException(e);
+        }
     }
 
 }

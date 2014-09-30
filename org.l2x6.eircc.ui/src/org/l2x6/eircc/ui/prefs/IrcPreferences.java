@@ -8,6 +8,9 @@
 
 package org.l2x6.eircc.ui.prefs;
 
+import java.time.Duration;
+import java.time.temporal.TemporalAmount;
+
 import org.eclipse.jface.resource.ColorRegistry;
 import org.eclipse.jface.resource.JFaceResources;
 import org.eclipse.swt.SWT;
@@ -24,6 +27,9 @@ import org.l2x6.eircc.ui.misc.ExtendedTextStyle;
  * @author <a href="mailto:ppalaga@redhat.com">Peter Palaga</a>
  */
 public class IrcPreferences {
+    private static final int DEFAULT_EDITOR_LOOK_BACK_LINE_LIMIT = 512;
+
+    private static final TemporalAmount DEFAULT_EDITOR_LOOK_BACK_TIME_SPAN = Duration.ofHours(24);
     private static final IrcPreferences INSTANCE = new IrcPreferences();
 
     public static IrcPreferences getInstance() {
@@ -72,6 +78,35 @@ public class IrcPreferences {
 
     public void dispose() {
 
+    }
+
+    /**
+     * @return
+     */
+    public String getAddresseeSuffix() {
+        return ": ";
+    }
+
+    /**
+     * @return
+     */
+    public boolean getEditorAutoInsert() {
+        return true;
+    }
+
+    /**
+     * @return
+     */
+    public boolean getEditorAutoPrefixCompletion() {
+        return true;
+    }
+
+    public int getEditorLookBackLineLimit() {
+        return DEFAULT_EDITOR_LOOK_BACK_LINE_LIMIT;
+    }
+
+    public TemporalAmount getEditorLookBackTimeSpan() {
+        return DEFAULT_EDITOR_LOOK_BACK_TIME_SPAN;
     }
 
     /**

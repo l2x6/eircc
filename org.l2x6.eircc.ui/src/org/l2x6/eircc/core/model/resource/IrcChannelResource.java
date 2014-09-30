@@ -25,9 +25,15 @@ import org.eclipse.core.runtime.NullProgressMonitor;
  * @author <a href="mailto:ppalaga@redhat.com">Peter Palaga</a>
  */
 public class IrcChannelResource {
+
     /**  */
     public static final String FILE_EXTENSION = ".channel.properties";
+
     public static final String LOGS_FOLDER_SUFFIX = "-logs";
+
+    public static IFolder getChannelLogsFolder(IFolder channelsFolder, String channelName) {
+        return channelsFolder.getFolder(channelName + IrcChannelResource.LOGS_FOLDER_SUFFIX);
+    }
 
     public static String getChannelName(IFolder logsFolder) {
         String name = logsFolder.getName();
@@ -70,19 +76,19 @@ public class IrcChannelResource {
     }
 
     public static boolean isP2pChannel(String channelName) {
-        return channelName.startsWith("#");
+        return !channelName.startsWith("#");
     }
 
     private final IrcAccountResource accountResource;
 
     private final String channelName;
 
-    private final SortedMap<OffsetDateTime, IrcLogResource> logResources;
+    private IFile channelPropertyFile;
 
+    private final SortedMap<OffsetDateTime, IrcLogResource> logResources;
     private final IFolder logsFolder;
 
     private final boolean p2p;
-    private IFile channelPropertyFile;
 
     /**
      * S
@@ -96,7 +102,6 @@ public class IrcChannelResource {
         this.accountResource = accountResource;
         this.logsFolder = logsFolder;
         this.channelName = IrcChannelResource.getChannelName(logsFolder);
-        ;
         this.p2p = IrcChannelResource.isP2pChannel(channelName);
         this.logResources = collectLogResources();
     }
@@ -108,6 +113,9 @@ public class IrcChannelResource {
     private SortedMap<OffsetDateTime, IrcLogResource> collectLogResources() throws IrcResourceException {
         SortedMap<OffsetDateTime, IrcLogResource> result = new TreeMap<OffsetDateTime, IrcLogResource>();
         try {
+            if (!logsFolder.exists()) {
+                logsFolder.create(true, true, new NullProgressMonitor());
+            }
             for (IResource r : logsFolder.members()) {
                 if (IrcLogResource.isLogFile(r)) {
                     OffsetDateTime time = IrcLogResource.getTime(r.getFullPath());
@@ -132,8 +140,7 @@ public class IrcChannelResource {
     public IrcLogResource getActiveLogResource() throws IrcResourceException {
         refresh();
         if (logResources.isEmpty() || shouldRotate()) {
-            OffsetDateTime time = OffsetDateTime.now().truncatedTo(ChronoUnit.SECONDS);
-            return getOrCreateLogResource(time);
+            return rotate();
         } else {
             return getLastLogResource();
         }
@@ -141,6 +148,17 @@ public class IrcChannelResource {
 
     public String getChannelName() {
         return channelName;
+    }
+
+    /**
+     * @return
+     */
+    public IFile getChannelPropertyFile() {
+        if (channelPropertyFile == null) {
+            channelPropertyFile = accountResource.getChannelsFolder().getFile(
+                    channelName + IrcChannelResource.FILE_EXTENSION);
+        }
+        return channelPropertyFile;
     }
 
     /**
@@ -170,6 +188,10 @@ public class IrcChannelResource {
      */
     public IrcLogResource getLogResource(OffsetDateTime time) {
         return logResources.get(time);
+    }
+
+    public SortedMap<OffsetDateTime, IrcLogResource> getLogResources() {
+        return logResources;
     }
 
     public IFolder getLogsFolder() {
@@ -228,26 +250,29 @@ public class IrcChannelResource {
 
     /**
      * @return
+     * @throws IrcResourceException
+     */
+    private IrcLogResource rotate() throws IrcResourceException {
+        OffsetDateTime time = OffsetDateTime.now().truncatedTo(ChronoUnit.SECONDS);
+        IrcLogResource result = getOrCreateLogResource(time);
+        return result;
+    }
+
+    /**
+     * @return
      */
     private boolean shouldRotate() {
         IrcLogResource lastLogResource = getLastLogResource();
         if (lastLogResource == null) {
             return true;
         }
-        long logDay = lastLogResource.getTime().truncatedTo(ChronoUnit.DAYS).toEpochSecond();
-        long today = OffsetDateTime.now().truncatedTo(ChronoUnit.DAYS).toEpochSecond();
+        // long logDay =
+        // lastLogResource.getTime().truncatedTo(ChronoUnit.DAYS).toEpochSecond();
+        long logDay = lastLogResource.getTime().truncatedTo(ChronoUnit.MINUTES).toEpochSecond();
+        // long today =
+        // OffsetDateTime.now().truncatedTo(ChronoUnit.DAYS).toEpochSecond();
+        long today = OffsetDateTime.now().truncatedTo(ChronoUnit.MINUTES).toEpochSecond();
         return today != logDay;
-    }
-
-    /**
-     * @return
-     */
-    public IFile getChannelPropertyFile() {
-        if (channelPropertyFile == null) {
-            channelPropertyFile = accountResource.getChannelsFolder().getFile(
-                    channelName + IrcChannelResource.FILE_EXTENSION);
-        }
-        return channelPropertyFile;
     }
 
 }

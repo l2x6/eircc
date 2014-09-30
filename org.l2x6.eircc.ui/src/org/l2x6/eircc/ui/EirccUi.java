@@ -7,7 +7,12 @@
  *******************************************************************************/
 package org.l2x6.eircc.ui;
 
-import org.eclipse.core.resources.IFile;
+import java.io.IOException;
+import java.time.OffsetDateTime;
+import java.time.temporal.TemporalAmount;
+import java.util.SortedMap;
+import java.util.TreeMap;
+
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.IWorkspace;
 import org.eclipse.core.resources.ResourcesPlugin;
@@ -16,15 +21,13 @@ import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.NullProgressMonitor;
 import org.eclipse.core.runtime.Status;
 import org.eclipse.swt.widgets.Shell;
+import org.eclipse.ui.IEditorInput;
 import org.eclipse.ui.IEditorPart;
 import org.eclipse.ui.IEditorReference;
-import org.eclipse.ui.IFileEditorInput;
 import org.eclipse.ui.IWindowListener;
 import org.eclipse.ui.IWorkbenchPage;
 import org.eclipse.ui.IWorkbenchWindow;
-import org.eclipse.ui.PartInitException;
 import org.eclipse.ui.PlatformUI;
-import org.eclipse.ui.part.FileEditorInput;
 import org.eclipse.ui.plugin.AbstractUIPlugin;
 import org.eclipse.ui.texteditor.IDocumentProvider;
 import org.l2x6.eircc.core.EirccCore;
@@ -37,13 +40,18 @@ import org.l2x6.eircc.core.model.IrcModel;
 import org.l2x6.eircc.core.model.IrcUser;
 import org.l2x6.eircc.core.model.event.IrcModelEvent;
 import org.l2x6.eircc.core.model.event.IrcModelEventListener;
+import org.l2x6.eircc.core.model.resource.IrcChannelResource;
+import org.l2x6.eircc.core.model.resource.IrcLogResource;
 import org.l2x6.eircc.core.model.resource.IrcResourceException;
+import org.l2x6.eircc.core.model.resource.IrcRootResource;
 import org.l2x6.eircc.core.util.IrcUtils;
+import org.l2x6.eircc.ui.editor.IrcDocumentProvider;
 import org.l2x6.eircc.ui.editor.IrcEditor;
 import org.l2x6.eircc.ui.misc.IrcImages;
 import org.l2x6.eircc.ui.notify.IrcSoundNotifier;
 import org.l2x6.eircc.ui.notify.IrcSystemMessagesGenerator;
 import org.l2x6.eircc.ui.notify.IrcTray;
+import org.l2x6.eircc.ui.prefs.IrcPreferences;
 import org.l2x6.eircc.ui.views.IrcConsole;
 import org.l2x6.eircc.ui.views.IrcLabelProvider;
 import org.osgi.framework.BundleContext;
@@ -100,6 +108,13 @@ public class EirccUi extends AbstractUIPlugin implements IrcModelEventListener, 
 
     private IProject project;
 
+    /**
+     * @return
+     */
+    public IDocumentProvider getDocumentProvider() {
+        return null;
+    }
+
     private IProject getIrcProject() throws CoreException {
         if (project == null) {
             IWorkspace ws = ResourcesPlugin.getWorkspace();
@@ -145,7 +160,7 @@ public class EirccUi extends AbstractUIPlugin implements IrcModelEventListener, 
             try {
                 AbstractIrcChannel ch = (AbstractIrcChannel) e.getModelObject();
                 if (ch.isJoined()) {
-                    openChannelEditor(ch);
+                    openEditor(ch);
                 }
             } catch (Exception e1) {
                 log(e1);
@@ -182,11 +197,66 @@ public class EirccUi extends AbstractUIPlugin implements IrcModelEventListener, 
         }
     }
 
-    public void openChannelEditor(AbstractIrcChannel channel) throws PartInitException, IrcResourceException {
+    public void openEditor(AbstractIrcChannel channel) throws IrcResourceException, CoreException, IOException {
         IrcUtils.assertUiThread();
         IWorkbenchPage page = PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage();
-        IFile logFile = channel.getChannelResource().getActiveLogResource().getLogFile();
-        IFileEditorInput input = new FileEditorInput(logFile);
+        IrcChannelResource channelResource = channel.getChannelResource();
+        IrcLogResource logResource = channelResource.getActiveLogResource();
+        IEditorInput input = logResource.getEditorInput();
+
+        SortedMap<OffsetDateTime, IrcEditor> channelEditors = new TreeMap<OffsetDateTime, IrcEditor>();
+
+        IEditorReference[] editorRefs = page.getEditorReferences();
+        for (IEditorReference editorRef : editorRefs) {
+            IEditorPart editor = editorRef.getEditor(true);
+            if (editor instanceof IrcEditor) {
+                IrcEditor ircEditor = (IrcEditor) editor;
+                IEditorInput editorInput = ircEditor.getEditorInput();
+                if (input.equals(editorInput)) {
+                    /*
+                     * The editor for the given channel is already opened, we
+                     * just need to activate it
+                     */
+                    page.activate(editor);
+                    return;
+                }
+                /*
+                 * we should somehow ensure that there is only one connected
+                 * editor per channel
+                 */
+                // TODO AbstractIrcChannel editorChannel =
+                // ircEditor.getChannel();
+
+                IrcLogResource editorLogResource = ircEditor.getLastLogResource();
+                if (channelResource == editorLogResource.getChannelResource()) {
+                    channelEditors.put(editorLogResource.getTime(), ircEditor);
+                }
+            }
+        }
+
+        /*
+         * take the newest open editor belonging to the given channel but make
+         * sure that it is not too old, namely, that it is newer than the editor
+         * look back timespan preference
+         */
+        if (!channelEditors.isEmpty()) {
+
+            TemporalAmount lookBackTimeSpan = IrcPreferences.getInstance().getEditorLookBackTimeSpan();
+
+            OffsetDateTime editorStart = channelEditors.lastKey();
+            IrcEditor lastEditor = channelEditors.get(editorStart);
+            OffsetDateTime editorEnd = lastEditor.getLastMessageTime();
+
+            OffsetDateTime lookBackStart = OffsetDateTime.now().minus(lookBackTimeSpan);
+            if (!lookBackStart.isAfter(editorEnd)) {
+                /* lookBackStart is between editorStart and editorEnd */
+                lastEditor.rotate();
+                page.activate(lastEditor);
+                return;
+            }
+        }
+
+        /* there was no open editor belonging to this channel */
         page.openEditor(input, IrcEditor.ID);
     }
 
@@ -203,7 +273,8 @@ public class EirccUi extends AbstractUIPlugin implements IrcModelEventListener, 
         IrcModel model = IrcModel.getInstance();
         model.setTrafficLogFactory(IrcConsole.getInstance());
         model.addModelEventListener(this);
-        model.load(ircProject);
+        IrcRootResource rootResource = new IrcRootResource(ircProject, IrcDocumentProvider.getInstance());
+        model.load(rootResource);
         IrcController controller = IrcController.getInstance();
         for (IrcAccount account : model.getAccounts()) {
             if (account.isAutoConnect()) {
@@ -309,12 +380,5 @@ public class EirccUi extends AbstractUIPlugin implements IrcModelEventListener, 
     @Override
     public void windowOpened(IWorkbenchWindow window) {
         windowActivated(window);
-    }
-
-    /**
-     * @return
-     */
-    public IDocumentProvider getDocumentProvider() {
-        return null;
     }
 }

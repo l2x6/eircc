@@ -28,7 +28,8 @@ import org.eclipse.ui.dialogs.PropertyDialogAction;
 import org.l2x6.eircc.ui.IrcUiMessages;
 
 /**
- * Adapted from {@code org.eclipse.search.internal.ui.text.NewTextSearchActionGroup} as
+ * Adapted from
+ * {@code org.eclipse.search.internal.ui.text.NewTextSearchActionGroup} as
  * available in org.eclipse.search 3.9.100.v20140226-1637.
  *
  * @author <a href="mailto:ppalaga@redhat.com">Peter Palaga</a>

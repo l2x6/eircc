@@ -34,6 +34,7 @@ public class ForwardingDocumentProvider implements IDocumentProvider, IDocumentP
     private final IDocumentProviderExtension4 delegate4;
     private final IDocumentProviderExtension5 delegate5;
     private final IStorageDocumentProvider storageDelegate;
+
     /**
      * @param delegate
      * @param delegate1

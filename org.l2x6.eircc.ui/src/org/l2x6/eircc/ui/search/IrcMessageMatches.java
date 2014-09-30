@@ -24,10 +24,10 @@ import org.l2x6.eircc.core.model.PlainIrcMessage;
  */
 public class IrcMessageMatches {
 
-    private final IResource parent;
     private final List<IrcMatch> matches;
     private IrcMatch[] matchesArray;
     private final PlainIrcMessage message;
+    private final IResource parent;
 
     public IrcMessageMatches(IResource parent, PlainIrcMessage message) {
         this.parent = parent;

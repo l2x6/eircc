@@ -320,7 +320,7 @@ public class IrcAccountsView extends ViewPart implements IrcModelEventListener {
                                     /* this should both join and open the editor */
                                     IrcController.getInstance().joinChannel(ch);
                                 } else {
-                                    EirccUi.getDefault().openChannelEditor(ch);
+                                    EirccUi.getDefault().openEditor(ch);
                                 }
                             }
                         }

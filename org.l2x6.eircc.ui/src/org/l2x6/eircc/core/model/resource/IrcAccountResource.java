@@ -27,6 +27,7 @@ public class IrcAccountResource {
     public static final String FILE_EXTENSION = ".account.properties";
     /**  */
     public static final String USERS_FOLDER_SUFFIX = "-users";
+
     /**
      * @param f
      * @return
@@ -36,6 +37,7 @@ public class IrcAccountResource {
         String result = fileName.substring(0, fileName.length() - IrcAccountResource.FILE_EXTENSION.length());
         return result;
     }
+
     /**
      * @param accountChannelsFolder
      * @return
@@ -44,17 +46,21 @@ public class IrcAccountResource {
         String name = accountChannelsFolder.getName();
         return name.substring(0, name.length() - IrcAccountResource.CHANNELS_FOLDER_SUFFIX.length());
     }
+
     public static String getAccountNameFromChannelsFolder(IPath path) {
         String name = path.lastSegment();
         return name.substring(0, name.length() - CHANNELS_FOLDER_SUFFIX.length());
     }
+
     /**
      * @param resource
      * @return
      */
     public static boolean isAccountChannelsFolder(IResource resource) {
-        return resource.getType() == IResource.FOLDER && resource.getName().endsWith(IrcAccountResource.CHANNELS_FOLDER_SUFFIX);
+        return resource.getType() == IResource.FOLDER
+                && resource.getName().endsWith(IrcAccountResource.CHANNELS_FOLDER_SUFFIX);
     }
+
     /**
      * @param f
      * @return
@@ -62,18 +68,21 @@ public class IrcAccountResource {
     public static boolean isAccountFile(IResource r) {
         return r.getType() == IResource.FILE && r.getName().endsWith(IrcAccountResource.FILE_EXTENSION);
     }
+
     public static boolean isChannelsFolder(IResource resource) {
         return resource.getType() == IResource.FOLDER && resource.getName().endsWith(CHANNELS_FOLDER_SUFFIX);
     }
+
     private final String accountName;
+    private final IFile accountPropertyFile;
+
     private final Map<String, IrcChannelResource> channelResources;
 
     private final IFolder channelsFolder;
 
     private final IrcRootResource rootResource;
-
     private final IFolder usersFolder;
-    private final IFile accountPropertyFile;
+
     /**
      * @param rootResource
      * @param accountName
@@ -83,13 +92,15 @@ public class IrcAccountResource {
     public IrcAccountResource(IrcRootResource rootResource, IFolder channelsFolder) throws IrcResourceException {
         super();
         this.rootResource = rootResource;
-        this.accountName = getAccountName(channelsFolder);;
+        this.accountName = getAccountName(channelsFolder);
+        ;
         this.channelsFolder = channelsFolder;
         IContainer parent = channelsFolder.getParent();
-        this.usersFolder = parent .getFolder(new Path(accountName + IrcAccountResource.USERS_FOLDER_SUFFIX));
+        this.usersFolder = parent.getFolder(new Path(accountName + IrcAccountResource.USERS_FOLDER_SUFFIX));
         this.accountPropertyFile = parent.getFile(new Path(accountName + FILE_EXTENSION));
         this.channelResources = collectChannelResources();
     }
+
     /**
      * @return
      * @throws CoreException
@@ -108,9 +119,18 @@ public class IrcAccountResource {
         }
         return result;
     }
+
     public String getAccountName() {
         return accountName;
     }
+
+    /**
+     * @return
+     */
+    public IFile getAccountPropertyFile() {
+        return accountPropertyFile;
+    }
+
     /**
      * @param logsFolder
      * @throws IrcResourceException
@@ -129,6 +149,7 @@ public class IrcAccountResource {
         }
         return result;
     }
+
     /**
      * @param channelName
      * @return
@@ -136,20 +157,32 @@ public class IrcAccountResource {
     public IrcChannelResource getChannelResource(String channelName) {
         return channelResources.get(channelName);
     }
+
     public IFolder getChannelsFolder() {
         return channelsFolder;
     }
+
+    /**
+     * @param name
+     * @return
+     * @throws IrcResourceException
+     */
+    public IrcChannelResource getOrCreateChannelResource(String channelName) throws IrcResourceException {
+        IrcChannelResource result = channelResources.get(channelName);
+        if (result == null) {
+            IFolder logsFolder = IrcChannelResource.getChannelLogsFolder(channelsFolder, channelName);
+            result = new IrcChannelResource(this, logsFolder);
+            channelResources.put(result.getChannelName(), result);
+        }
+        return result;
+    }
+
     public IrcRootResource getRootResource() {
         return rootResource;
     }
+
     public IFolder getUsersFolder() {
         return usersFolder;
-    }
-    /**
-     * @return
-     */
-    public IFile getAccountPropertyFile() {
-        return accountPropertyFile;
     }
 
 }

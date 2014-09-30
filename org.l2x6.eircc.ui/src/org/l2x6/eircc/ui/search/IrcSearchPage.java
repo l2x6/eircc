@@ -113,8 +113,8 @@ public class IrcSearchPage extends DialogPage implements ISearchPage {
                 } catch (IllegalArgumentException e) {
                 }
                 return new IrcSearchPatternData(textPattern, !ignoreCase, isRegExSearch, isWholeWord,
-                        ignoreSystemMessages, ignoreMessagesFromMe, nickPrefixes, channels, timeSpan, fileNamePatterns, scope,
-                        workingSets);
+                        ignoreSystemMessages, ignoreMessagesFromMe, nickPrefixes, channels, timeSpan, fileNamePatterns,
+                        scope, workingSets);
             } catch (NumberFormatException e) {
                 return null;
             }
@@ -122,13 +122,13 @@ public class IrcSearchPage extends DialogPage implements ISearchPage {
 
         public final String channels;
         public final String[] fileNamePatterns;
-        public final String nickPrefixes;
         public final Boolean ignoreMessagesFromMe;
         public final boolean ignoreSystemMessages;
         public final boolean isCaseSensitive;
         public final boolean isRegExSearch;
-
         public final boolean isWholeWord;
+
+        public final String nickPrefixes;
         public final int scope;
         public final String textPattern;
         public final TimeSpan timeSpan;
@@ -211,12 +211,12 @@ public class IrcSearchPage extends DialogPage implements ISearchPage {
                 return OffsetDateTime.now().truncatedTo(ChronoUnit.DAYS).minus(1, ChronoUnit.YEARS);
             }
         },
-//        F_CUSTOM(IrcUiMessages.IrcSearchPage_custom) {
-//            @Override
-//            public OffsetDateTime getStart() {
-//                return null;
-//            }
-//        }
+        // F_CUSTOM(IrcUiMessages.IrcSearchPage_custom) {
+        // @Override
+        // public OffsetDateTime getStart() {
+        // return null;
+        // }
+        // }
         ;
         private final String label;
 
@@ -269,14 +269,14 @@ public class IrcSearchPage extends DialogPage implements ISearchPage {
     private ISearchPageContainer searchPageContainer;
 
     private CLabel statusLabel;
+    private TimeSpan timeSpan = TimeSpan.A_ANY_TIME;
     private List<Button> timeSpanButtons = new ArrayList<Button>();
     private SelectionListener timeSpanListener = new SelectionAdapter() {
         public void widgetSelected(SelectionEvent event) {
             Button button = ((Button) event.widget);
-            timeSpan =(TimeSpan) button.getData();
+            timeSpan = (TimeSpan) button.getData();
         }
     };
-    private TimeSpan timeSpan = TimeSpan.A_ANY_TIME;
 
     private void addMessageControls(Composite parent) {
         Composite group = new Composite(parent, SWT.NONE);
@@ -493,7 +493,7 @@ public class IrcSearchPage extends DialogPage implements ISearchPage {
 
     /*
      * (non-Javadoc)
-     *
+     * 
      * @see org.eclipse.jface.dialogs.DialogPage#dispose()
      */
     public void dispose() {
@@ -570,8 +570,7 @@ public class IrcSearchPage extends DialogPage implements ISearchPage {
         }
         match = new IrcSearchPatternData(patternCombo.getText(), isCaseSensitive(), isRegExCheckbox.getSelection(),
                 isWholeWordCheckbox.getSelection(), ignoreSystemMessagesCheckbox.getSelection(),
-                ignoreMessagesFromMeCheckbox.getSelection(), nicksText.getText(), channelsText.getText(),
-                timeSpan,
+                ignoreMessagesFromMeCheckbox.getSelection(), nicksText.getText(), channelsText.getText(), timeSpan,
                 getExtensions(), getContainer().getSelectedScope(), getContainer().getSelectedWorkingSets());
         previousSearchPatterns.add(0, match);
         return match;

@@ -60,8 +60,8 @@ import org.l2x6.eircc.ui.search.IrcSearchPage.TimeSpan;
 import org.l2x6.eircc.ui.search.IrcSearchQuery.IrcSearchResultCollector;
 
 /**
- * Adapted from {@code org.eclipse.search.internal.core.text.TextSearchVisitor} as
- * available in org.eclipse.search 3.9.100.v20140226-1637.
+ * Adapted from {@code org.eclipse.search.internal.core.text.TextSearchVisitor}
+ * as available in org.eclipse.search 3.9.100.v20140226-1637.
  *
  * @author <a href="mailto:ppalaga@redhat.com">Peter Palaga</a>
  */
@@ -78,24 +78,25 @@ public class IrcSearchVisitor {
 
     private IFile currentFile;
 
-    private final Matcher matcher;
-    private int numberOfFilesToScan;
-    private int numberOfScannedFiles;
-
-    private IProgressMonitor progressMonitor;
-    private final List<String> nickPrefixes;
-    private final MultiStatus status;
     private final boolean isFileLevelSearch;
-    private IrcSearchPatternData searchData;
     private String lastChannel;
     private OffsetDateTime lastFileDate;
+
+    private final Matcher matcher;
+    private final List<String> nickPrefixes;
+    private int numberOfFilesToScan;
+    private int numberOfScannedFiles;
+    private IProgressMonitor progressMonitor;
+    private IrcSearchPatternData searchData;
+    private final MultiStatus status;
     private final OffsetDateTime timeStart;
 
     public IrcSearchVisitor(boolean isFileLevelSearch, IrcSearchResultCollector collector, Pattern searchPattern,
             IrcSearchPatternData searchData) {
         this.collector = collector;
         this.isFileLevelSearch = isFileLevelSearch;
-        this.status = new MultiStatus(NewSearchUI.PLUGIN_ID, IStatus.OK, IrcUiMessages.TextSearchEngine_statusMessage, null);
+        this.status = new MultiStatus(NewSearchUI.PLUGIN_ID, IStatus.OK, IrcUiMessages.TextSearchEngine_statusMessage,
+                null);
 
         this.matcher = searchPattern.pattern().length() == 0 ? null : searchPattern.matcher(new String());
         this.searchData = searchData;
@@ -199,19 +200,6 @@ public class IrcSearchVisitor {
         }
     }
 
-    private boolean matchesTime(IFile file, String channel, String lastChannel) {
-        if (timeStart == null) {
-            return true;
-        } else {
-            OffsetDateTime fileDate = IrcLogResource.getTime(file.getFullPath());
-            if (!channel.equals(lastChannel)) {
-                lastFileDate = null;
-            }
-            boolean result = lastFileDate == null || lastFileDate.isAfter(timeStart);
-            lastFileDate = fileDate;
-            return result;
-        }
-    }
     /**
      * @param file
      * @return
@@ -263,32 +251,18 @@ public class IrcSearchVisitor {
         return false;
     }
 
-    public boolean processFile(IFile file, Map<IFile, IDocument> documentsInEditors) {
-        if (matchesChannelsAndTime(file)) {
-            if (isFileLevelSearch) {
-                collector.acceptFile(file);
-            } else {
-                try (IrcLogReader reader = new IrcLogReader(file.getContents(), IrcChannelResource.isP2pChannel(file
-                        .getFullPath()))) {
-                    while (reader.hasNext()) {
-                        PlainIrcMessage message = reader.next();
-                        if ((!searchData.ignoreSystemMessages || !message.isSystemMessage())
-                                && (!searchData.ignoreMessagesFromMe || !message.isFromMe()) && matchesFrom(message)
-                                && matchesTime(message)
-                                ) {
-                            locateMatches(file, message);
-                        }
-                    }
-                } catch (IOException | CoreException e1) {
-                    EirccUi.log(e1);
-                }
+    private boolean matchesTime(IFile file, String channel, String lastChannel) {
+        if (timeStart == null) {
+            return true;
+        } else {
+            OffsetDateTime fileDate = IrcLogResource.getTime(file.getFullPath());
+            if (!channel.equals(lastChannel)) {
+                lastFileDate = null;
             }
+            boolean result = lastFileDate == null || lastFileDate.isAfter(timeStart);
+            lastFileDate = fileDate;
+            return result;
         }
-        numberOfScannedFiles++;
-        if (progressMonitor.isCanceled())
-            throw new OperationCanceledException(IrcUiMessages.TextSearchVisitor_canceled);
-
-        return true;
     }
 
     /**
@@ -300,6 +274,48 @@ public class IrcSearchVisitor {
             return true;
         }
         return !timeStart.isAfter(message.getArrivedAt());
+    }
+
+    public boolean processFile(IFile file, Map<IFile, IDocument> documentsInEditors) {
+        if (matchesChannelsAndTime(file)) {
+            if (isFileLevelSearch) {
+                collector.acceptFile(file);
+            } else {
+                IDocument document = documentsInEditors.get(file);
+                IrcLogReader reader = null;
+                try {
+                    if (document != null) {
+                        reader = new IrcLogReader(document, IrcChannelResource.isP2pChannel(file.getFullPath()));
+                    } else {
+                        reader = new IrcLogReader(file.getContents(), IrcChannelResource.isP2pChannel(file
+                                .getFullPath()));
+                    }
+                    while (reader.hasNext()) {
+                        PlainIrcMessage message = reader.next();
+                        if ((!searchData.ignoreSystemMessages || !message.isSystemMessage())
+                                && (!searchData.ignoreMessagesFromMe || !message.isFromMe()) && matchesFrom(message)
+                                && matchesTime(message)) {
+                            locateMatches(file, message);
+                        }
+                    }
+                } catch (IOException | CoreException e1) {
+                    EirccUi.log(e1);
+                } finally {
+                    if (reader != null) {
+                        try {
+                            reader.close();
+                        } catch (IOException e) {
+                            EirccUi.log(e);
+                        }
+                    }
+                }
+            }
+        }
+        numberOfScannedFiles++;
+        if (progressMonitor.isCanceled())
+            throw new OperationCanceledException(IrcUiMessages.TextSearchVisitor_canceled);
+
+        return true;
     }
 
     private void processFiles(IFile[] files) {
@@ -334,8 +350,7 @@ public class IrcSearchVisitor {
                     IFile file = currentFile;
                     if (file != null) {
                         String fileName = file.getName();
-                        Object[] args = { fileName, new Integer(numberOfScannedFiles),
-                                new Integer(numberOfFilesToScan) };
+                        Object[] args = { fileName, new Integer(numberOfScannedFiles), new Integer(numberOfFilesToScan) };
                         progressMonitor.subTask(MessageFormat.format(IrcUiMessages.TextSearchVisitor_scanning, args));
                         int steps = numberOfScannedFiles - fLastNumberOfScannedFiles;
                         progressMonitor.worked(steps);

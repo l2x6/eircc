@@ -11,10 +11,6 @@ package org.l2x6.eircc.core.model.resource;
 import java.io.ByteArrayInputStream;
 import java.time.OffsetDateTime;
 
-import org.eclipse.core.filebuffers.FileBuffers;
-import org.eclipse.core.filebuffers.ITextFileBuffer;
-import org.eclipse.core.filebuffers.ITextFileBufferManager;
-import org.eclipse.core.filebuffers.LocationKind;
 import org.eclipse.core.resources.IFile;
 import org.eclipse.core.resources.IResource;
 import org.eclipse.core.runtime.CoreException;
@@ -22,7 +18,8 @@ import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.NullProgressMonitor;
 import org.eclipse.core.runtime.SubProgressMonitor;
-import org.eclipse.jface.text.IDocument;
+import org.eclipse.ui.part.FileEditorInput;
+import org.eclipse.ui.texteditor.IDocumentProvider;
 import org.l2x6.eircc.core.util.IrcUtils;
 
 /**
@@ -40,7 +37,8 @@ public class IrcLogResource {
     private static IFile getLogFile(IrcChannelResource channelResource, OffsetDateTime time) {
         String name = time.toString() + IrcLogResource.FILE_EXTENSION;
         IPath path = channelResource.getLogsFolder().getFullPath().append(name);
-        IFile file = channelResource.getAccountResource().getRootResource().getProject().getWorkspace().getRoot().getFile(path);
+        IFile file = channelResource.getAccountResource().getRootResource().getProject().getWorkspace().getRoot()
+                .getFile(path);
         return file;
     }
 
@@ -63,8 +61,10 @@ public class IrcLogResource {
     public static boolean isLogFile(IResource f) {
         return f.getType() == IResource.FILE && f.getName().endsWith(FILE_EXTENSION);
     }
-    private ITextFileBuffer buffer;
+
     private final IrcChannelResource channelResource;
+
+    private final FileEditorInput editorInput;
 
     private final IFile logFile;
 
@@ -85,46 +85,31 @@ public class IrcLogResource {
      * @param logFile
      * @throws IrcResourceException
      */
-    public IrcLogResource(IrcChannelResource channelResource, OffsetDateTime time, IFile logFile) throws IrcResourceException {
+    public IrcLogResource(IrcChannelResource channelResource, OffsetDateTime time, IFile logFile)
+            throws IrcResourceException {
         this.channelResource = channelResource;
         this.time = time;
         this.logFile = logFile;
-        if (!logFile.exists()) {
-            IProgressMonitor monitor = new NullProgressMonitor();
-            try {
+        this.editorInput = new FileEditorInput(logFile);
+        try {
+            if (!logFile.exists()) {
+                IProgressMonitor monitor = new NullProgressMonitor();
                 IrcUtils.mkdirs(logFile.getParent(), monitor);
                 logFile.create(new ByteArrayInputStream(new byte[0]), true, monitor);
                 logFile.refreshLocal(IResource.DEPTH_ONE, new SubProgressMonitor(monitor, 1));
-            } catch (CoreException e) {
-                throw new IrcResourceException(e);
             }
+            IDocumentProvider documentProvider = channelResource.getAccountResource().getRootResource()
+                    .getDocumentProvider();
+            documentProvider.connect(editorInput);
+        } catch (CoreException e) {
+            throw new IrcResourceException(e);
         }
     }
 
-    /**
-     * @param monitor
-     * @throws IrcResourceException
-     *
-     */
-    public void commitBuffer(IProgressMonitor monitor) throws CoreException {
-        if (buffer == null) {
-            throw new IllegalStateException("Cannot commit a null buffer.");
-        }
-        buffer.commit(new SubProgressMonitor(monitor, 1), false);
-        logFile.refreshLocal(IResource.DEPTH_ONE, new SubProgressMonitor(monitor, 1));
-    }
-
-    private void ensureBufferConnected(IProgressMonitor monitor) throws CoreException {
-        if (buffer == null) {
-            IFile file = logFile;
-            ITextFileBufferManager fbm = FileBuffers.getTextFileBufferManager();
-            IPath path = file.getFullPath();
-            buffer = fbm.getTextFileBuffer(path, LocationKind.NORMALIZE);
-            if (buffer == null) {
-                fbm.connect(path, LocationKind.IFILE, monitor);
-                buffer = fbm.getTextFileBuffer(path, LocationKind.NORMALIZE);
-            }
-        }
+    public void discard() {
+        IDocumentProvider documentProvider = channelResource.getAccountResource().getRootResource()
+                .getDocumentProvider();
+        documentProvider.disconnect(editorInput);
     }
 
     /**
@@ -138,15 +123,8 @@ public class IrcLogResource {
         return channelResource;
     }
 
-    /**
-     * @param monitor
-     * @return
-     * @throws IrcResourceException
-     */
-    public IDocument getDocument(IProgressMonitor monitor) throws CoreException {
-        ensureBufferConnected(monitor);
-        IDocument document = buffer.getDocument();
-        return document;
+    public FileEditorInput getEditorInput() {
+        return editorInput;
     }
 
     /**

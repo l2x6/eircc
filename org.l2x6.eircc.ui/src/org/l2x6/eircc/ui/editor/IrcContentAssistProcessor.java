@@ -30,6 +30,7 @@ import org.l2x6.eircc.core.model.AbstractIrcChannel;
 import org.l2x6.eircc.core.model.IrcChannelUser;
 import org.l2x6.eircc.core.util.IrcConstants;
 import org.l2x6.eircc.ui.EirccUi;
+import org.l2x6.eircc.ui.prefs.IrcPreferences;
 import org.schwering.irc.lib.IRCCommand;
 
 /**
@@ -92,11 +93,11 @@ public class IrcContentAssistProcessor implements IContentAssistProcessor {
         }
 
         public int getPrefixCompletionStart(IDocument document, int completionOffset) {
-            return fOffset - fPrefix.length();
+            return completionOffset;
         }
 
         public CharSequence getPrefixCompletionText(IDocument document, int completionOffset) {
-            return fPrefix + fString;
+            return fString.substring(fPrefix.length());
         }
 
         public Point getSelection(IDocument document) {
@@ -138,14 +139,14 @@ public class IrcContentAssistProcessor implements IContentAssistProcessor {
     private static final IContextInformation[] NO_CONTEXTS = new IContextInformation[0];
     private static final ICompletionProposal[] NO_PROPOSALS = new ICompletionProposal[0];
 
-    private final AbstractIrcChannel channel;
+    private final IrcEditor editor;
 
     /**
      * @param channel
      */
-    public IrcContentAssistProcessor(AbstractIrcChannel channel) {
+    public IrcContentAssistProcessor(IrcEditor editor) {
         super();
-        this.channel = channel;
+        this.editor = editor;
     }
 
     /**
@@ -256,10 +257,13 @@ public class IrcContentAssistProcessor implements IContentAssistProcessor {
             }
         }
 
-        for (IrcChannelUser user : channel.getUsers()) {
-            String nick = user.getNick();
-            if (nick.toLowerCase().startsWith(prefix)) {
-                suggestions.add(nick);
+        AbstractIrcChannel channel = editor.getChannel();
+        if (channel != null) {
+            for (IrcChannelUser user : channel.getUsers()) {
+                String nick = user.getNick();
+                if (nick.toLowerCase().startsWith(prefix)) {
+                    suggestions.add(nick + IrcPreferences.getInstance().getAddresseeSuffix());
+                }
             }
         }
 

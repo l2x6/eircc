@@ -24,8 +24,8 @@ import org.eclipse.search.ui.text.Match;
 import org.l2x6.eircc.ui.EirccUi;
 
 /**
- * Adapted from {@code org.eclipse.search.internal.ui.text.SearchResultUpdater} as
- * available in org.eclipse.search 3.9.100.v20140226-1637.
+ * Adapted from {@code org.eclipse.search.internal.ui.text.SearchResultUpdater}
+ * as available in org.eclipse.search 3.9.100.v20140226-1637.
  *
  * @author <a href="mailto:ppalaga@redhat.com">Peter Palaga</a>
  */

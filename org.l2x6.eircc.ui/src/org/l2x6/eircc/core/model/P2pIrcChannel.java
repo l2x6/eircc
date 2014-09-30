@@ -17,9 +17,9 @@ import org.l2x6.eircc.core.model.resource.IrcResourceException;
  */
 public class P2pIrcChannel extends AbstractIrcChannel {
 
-    private IrcUser p2pUser;
-    private final IrcLog log;
     private final IrcChannelResource channelResource;
+    private final IrcLog log;
+    private IrcUser p2pUser;
 
     /**
      * @param account
@@ -35,7 +35,7 @@ public class P2pIrcChannel extends AbstractIrcChannel {
         if (me != null) {
             addNickInternal(me.getNick());
         }
-        this.channelResource = account.getAccountResource().getChannelResource(getName());
+        this.channelResource = account.getAccountResource().getOrCreateChannelResource(getName());
         IrcLogResource logResource = channelResource.getActiveLogResource();
         this.log = new IrcLog(this, logResource);
     }
@@ -69,6 +69,14 @@ public class P2pIrcChannel extends AbstractIrcChannel {
         return true;
     }
 
+    public IrcChannelResource getChannelResource() {
+        return channelResource;
+    }
+
+    public IrcLog getLog() {
+        return log;
+    }
+
     /**
      * @see org.l2x6.eircc.core.model.AbstractIrcChannel#getName()
      */
@@ -96,14 +104,6 @@ public class P2pIrcChannel extends AbstractIrcChannel {
     @Override
     public boolean isP2p() {
         return true;
-    }
-
-    public IrcLog getLog() {
-        return log;
-    }
-
-    public IrcChannelResource getChannelResource() {
-        return channelResource;
     }
 
 }

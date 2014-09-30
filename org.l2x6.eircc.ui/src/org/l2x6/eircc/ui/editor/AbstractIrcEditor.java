@@ -33,15 +33,12 @@ import org.eclipse.jface.text.IFindReplaceTarget;
 import org.eclipse.jface.text.IFindReplaceTargetExtension;
 import org.eclipse.jface.text.IRegion;
 import org.eclipse.jface.text.ISelectionValidator;
-import org.eclipse.jface.text.ITextInputListener;
-import org.eclipse.jface.text.ITextListener;
 import org.eclipse.jface.text.ITextOperationTarget;
 import org.eclipse.jface.text.ITextSelection;
 import org.eclipse.jface.text.ITextViewerExtension;
 import org.eclipse.jface.text.ITextViewerExtension5;
 import org.eclipse.jface.text.Position;
 import org.eclipse.jface.text.Region;
-import org.eclipse.jface.text.TextEvent;
 import org.eclipse.jface.text.hyperlink.HyperlinkManager;
 import org.eclipse.jface.text.revisions.RevisionInformation;
 import org.eclipse.jface.text.source.Annotation;
@@ -78,7 +75,6 @@ import org.eclipse.swt.widgets.Listener;
 import org.eclipse.swt.widgets.Menu;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.ui.IEditorInput;
-import org.eclipse.ui.IEditorSite;
 import org.eclipse.ui.IKeyBindingService;
 import org.eclipse.ui.IMemento;
 import org.eclipse.ui.INavigationLocation;
@@ -89,11 +85,8 @@ import org.eclipse.ui.IWorkbenchActionConstants;
 import org.eclipse.ui.IWorkbenchCommandConstants;
 import org.eclipse.ui.dialogs.PropertyDialogAction;
 import org.eclipse.ui.internal.editors.text.EditorsPlugin;
-import org.eclipse.ui.internal.texteditor.EditPosition;
 import org.eclipse.ui.internal.texteditor.NLSUtility;
-import org.eclipse.ui.internal.texteditor.TextEditorPlugin;
 import org.eclipse.ui.part.EditorPart;
-import org.eclipse.ui.part.MultiPageEditorSite;
 import org.eclipse.ui.texteditor.AbstractDecoratedTextEditorPreferenceConstants;
 import org.eclipse.ui.texteditor.AnnotationPreference;
 import org.eclipse.ui.texteditor.DefaultMarkerAnnotationAccess;
@@ -114,7 +107,6 @@ import org.eclipse.ui.texteditor.ITextEditorExtension4;
 import org.eclipse.ui.texteditor.IUpdate;
 import org.eclipse.ui.texteditor.IWorkbenchActionDefinitionIds;
 import org.eclipse.ui.texteditor.IncrementalFindAction;
-import org.eclipse.ui.texteditor.KeyBindingSupportForAssistant;
 import org.eclipse.ui.texteditor.MarkerAnnotationPreferences;
 import org.eclipse.ui.texteditor.MoveLinesAction;
 import org.eclipse.ui.texteditor.RecenterAction;
@@ -128,8 +120,9 @@ import org.l2x6.eircc.ui.IrcUiMessages;
 /**
  * @author <a href="mailto:ppalaga@redhat.com">Peter Palaga</a>
  */
-public abstract class AbstractIrcEditor extends EditorPart implements ITextEditor, IReusableEditor, ITextEditorExtension,
-ITextEditorExtension4, INavigationLocationProvider, IPersistableEditor {
+@SuppressWarnings({ "deprecation", "restriction" })
+public abstract class AbstractIrcEditor extends EditorPart implements ITextEditor, IReusableEditor,
+        ITextEditorExtension, ITextEditorExtension4, INavigationLocationProvider, IPersistableEditor {
 
     /**
      * Internal implementation class for a change listener.
@@ -535,117 +528,6 @@ ITextEditorExtension4, INavigationLocationProvider, IPersistableEditor {
         }
     }
 
-    /**
-     * Internal text listener for updating all content dependent actions. The
-     * updating is done asynchronously.
-     */
-    class TextListener implements ITextListener, ITextInputListener {
-
-        /** Display used for posting the updater code. */
-        private Display fDisplay;
-
-        /**
-         * Has the runnable been posted?
-         *
-         * @since 3.0
-         */
-        private boolean fIsRunnablePosted = false;
-        /**
-         * The editor's last edit position
-         *
-         * @since 3.0
-         */
-        private Position fLocalLastEditPosition;
-        /** The posted updater code. */
-        private Runnable fRunnable = new Runnable() {
-            public void run() {
-                fIsRunnablePosted = false;
-
-                if (logViewer != null) {
-                    updateContentDependentActions();
-
-                    // remember the last edit position
-                    if (isDirty() && fUpdateLastEditPosition) {
-                        fUpdateLastEditPosition = false;
-                        ISelection sel = getSelectionProvider().getSelection();
-                        IEditorInput input = getEditorInput();
-                        IDocument document = getDocumentProvider().getDocument(input);
-
-                        if (fLocalLastEditPosition != null) {
-                            document.removePosition(fLocalLastEditPosition);
-                            fLocalLastEditPosition = null;
-                        }
-
-                        if (sel instanceof ITextSelection && !sel.isEmpty()) {
-                            ITextSelection s = (ITextSelection) sel;
-                            fLocalLastEditPosition = new Position(s.getOffset(), s.getLength());
-                            try {
-                                document.addPosition(fLocalLastEditPosition);
-                            } catch (BadLocationException ex) {
-                                fLocalLastEditPosition = null;
-                            }
-                        }
-
-                        IEditorSite editorSite = getEditorSite();
-                        if (editorSite instanceof MultiPageEditorSite)
-                            editorSite = ((MultiPageEditorSite) editorSite).getMultiPageEditor().getEditorSite();
-                        TextEditorPlugin.getDefault().setLastEditPosition(
-                                new EditPosition(input, editorSite.getId(), fLocalLastEditPosition));
-                    }
-                }
-            }
-        };
-        /**
-         * Should the last edit position be updated?
-         *
-         * @since 3.0
-         */
-        private boolean fUpdateLastEditPosition = false;
-
-        /*
-         * @see
-         * org.eclipse.jface.text.ITextInputListener#inputDocumentAboutToBeChanged
-         * (org.eclipse.jface.text.IDocument, org.eclipse.jface.text.IDocument)
-         */
-        public void inputDocumentAboutToBeChanged(IDocument oldInput, IDocument newInput) {
-            if (oldInput != null && fLocalLastEditPosition != null) {
-                oldInput.removePosition(fLocalLastEditPosition);
-                fLocalLastEditPosition = null;
-            }
-        }
-
-        /*
-         * @see
-         * org.eclipse.jface.text.ITextInputListener#inputDocumentChanged(org
-         * .eclipse.jface.text.IDocument, org.eclipse.jface.text.IDocument)
-         */
-        public void inputDocumentChanged(IDocument oldInput, IDocument newInput) {
-        }
-
-        /*
-         * @see ITextListener#textChanged(TextEvent)
-         */
-        public void textChanged(TextEvent event) {
-
-            /*
-             * Also works for text events which do not base on a DocumentEvent.
-             * This way, if the visible document of the viewer changes, all
-             * content dependent actions are updated as well.
-             */
-
-            if (fDisplay == null)
-                fDisplay = getSite().getShell().getDisplay();
-
-            if (event.getDocumentEvent() != null)
-                fUpdateLastEditPosition = true;
-
-            if (!fIsRunnablePosted) {
-                fIsRunnablePosted = true;
-                fDisplay.asyncExec(fRunnable);
-            }
-        }
-    }
-
     private static final Object INVALID_SELECTION = new Object();
 
     /** The width of the vertical ruler. */
@@ -711,9 +593,9 @@ ITextEditorExtension4, INavigationLocationProvider, IPersistableEditor {
     }
 
     /** The actions registered with the editor. */
-    private Map fActions = new HashMap(10);
+    private Map<String, IAction> fActions = new HashMap<String, IAction>(10);
 
-    private List fActivationCodes = new ArrayList(2);
+    private List<ActionActivationCode> fActivationCodes = new ArrayList<ActionActivationCode>(2);
 
     /** The verify key listener for activation code triggering. */
     private ActivationCodeTrigger fActivationCodeTrigger = new ActivationCodeTrigger();
@@ -742,7 +624,7 @@ ITextEditorExtension4, INavigationLocationProvider, IPersistableEditor {
     private SourceViewerConfiguration fConfiguration;
 
     /** The actions marked as content dependent. */
-    private List fContentActions = new ArrayList(5);
+    private List<String> fContentActions = new ArrayList<String>(5);
 
     private ICursorListener fCursorListener;
     /** The editor's context menu id. */
@@ -764,12 +646,6 @@ ITextEditorExtension4, INavigationLocationProvider, IPersistableEditor {
     private Font fFont;
     private Color fForegroundColor;
 
-    /**
-     * Key binding support for the quick assist assistant.
-     *
-     * @since 3.5
-     */
-    private KeyBindingSupportForAssistant fKeyBindingSupportForContentAssistant;
     private final PositionLabelValue fLineLabel = new PositionLabelValue();
 
     /** Context menu listener. */
@@ -787,11 +663,11 @@ ITextEditorExtension4, INavigationLocationProvider, IPersistableEditor {
      *
      * @since 2.0
      */
-    private List fPropertyActions = new ArrayList(5);
+    private List<String> fPropertyActions = new ArrayList<String>(5);
     /** The editor's range indicator. */
     private Annotation fRangeIndicator;
     /** The actions marked as selection dependent. */
-    private List fSelectionActions = new ArrayList(5);
+    private List<String> fSelectionActions = new ArrayList<String>(5);
     /**
      * The editor's selection background color.
      *
@@ -819,7 +695,6 @@ ITextEditorExtension4, INavigationLocationProvider, IPersistableEditor {
     /** The editor's presentation mode. */
     private boolean fShowHighlightRangeOnly;
 
-    protected IrcLogViewer logViewer;
     /**
      * Helper for managing the decoration support of this editor's viewer.
      *
@@ -831,25 +706,23 @@ ITextEditorExtension4, INavigationLocationProvider, IPersistableEditor {
      * </p>
      */
     protected SourceViewerDecorationSupport fSourceViewerDecorationSupport;
-
     /**
      * The actions marked as state dependent.
      *
      * @since 2.0
      */
-    private List fStateActions = new ArrayList(5);
+    private List<String> fStateActions = new ArrayList<String>(5);
+
     /**
      * The map of the editor's status fields.
      *
      * @since 2.0
      */
-    private Map fStatusFields;
-
+    private Map<String, IStatusField> fStatusFields;
     /** The text context menu to be disposed. */
     private Menu fTextContextMenu;
 
-    /** The editor's text listener. */
-    private TextListener fTextListener = new TextListener();
+    protected IrcLogViewer logViewer;
 
     /**
      *
@@ -957,7 +830,7 @@ ITextEditorExtension4, INavigationLocationProvider, IPersistableEditor {
      */
     protected void configureSourceViewerDecorationSupport(SourceViewerDecorationSupport support) {
 
-        Iterator e = fAnnotationPreferences.getAnnotationPreferences().iterator();
+        Iterator<?> e = fAnnotationPreferences.getAnnotationPreferences().iterator();
         while (e.hasNext())
             support.setAnnotationPreference((AnnotationPreference) e.next());
 
@@ -1239,8 +1112,6 @@ ITextEditorExtension4, INavigationLocationProvider, IPersistableEditor {
         if (fRangeIndicator != null)
             this.logViewer.setRangeIndicator(fRangeIndicator);
 
-        logViewer.addTextListener(fTextListener);
-        logViewer.addTextInputListener(fTextListener);
         getSelectionProvider().addSelectionChangedListener(getSelectionChangedListener());
 
         initializeViewerFont(logViewer);
@@ -1284,7 +1155,7 @@ ITextEditorExtension4, INavigationLocationProvider, IPersistableEditor {
 
         fSelectionListener = new SelectionListener();
         fSelectionListener.install(getSelectionProvider());
-        fSelectionListener.setDocument(getDocumentProvider().getDocument(getEditorInput()));
+        fSelectionListener.setDocument(logViewer.getDocument());
 
         initializeActivationCodeTrigger();
 
@@ -1438,7 +1309,7 @@ ITextEditorExtension4, INavigationLocationProvider, IPersistableEditor {
         int distance = Integer.MAX_VALUE;
 
         IAnnotationModel model = getDocumentProvider().getAnnotationModel(getEditorInput());
-        Iterator e = model.getAnnotationIterator();
+        Iterator<?> e = model.getAnnotationIterator();
         while (e.hasNext()) {
             Annotation a = (Annotation) e.next();
             if (!isNavigationTarget(a))
@@ -1617,7 +1488,7 @@ ITextEditorExtension4, INavigationLocationProvider, IPersistableEditor {
      */
     @Override
     public IDocumentProvider getDocumentProvider() {
-        return IrcChannelDocumentProvider.getInstance();
+        return IrcDocumentProvider.getInstance();
     }
 
     /**
@@ -1829,12 +1700,12 @@ ITextEditorExtension4, INavigationLocationProvider, IPersistableEditor {
 
         IDocumentProvider documentProvider = getDocumentProvider();
         IAnnotationModel model = documentProvider.getAnnotationModel(input);
-        IDocument document = documentProvider.getDocument(input);
+        IDocument rawDocument = documentProvider.getDocument(input);
 
-        if (document != null) {
-            logViewer.setDocument(document, model);
-            logViewer.setEditable(isEditable());
-            logViewer.showAnnotations(model != null);
+        if (rawDocument != null) {
+            logViewer.setRawDocument(rawDocument, model);
+            logViewer.setEditable(false);
+            logViewer.showAnnotations(true);
         }
 
         // if (fElementStateListener instanceof IElementStateListenerExtension)
@@ -2366,7 +2237,7 @@ ITextEditorExtension4, INavigationLocationProvider, IPersistableEditor {
         if (field != null) {
 
             if (fStatusFields == null)
-                fStatusFields = new HashMap(3);
+                fStatusFields = new HashMap<String, IStatusField>(3);
 
             fStatusFields.put(category, field);
             updateStatusField(category);
@@ -2448,9 +2319,9 @@ ITextEditorExtension4, INavigationLocationProvider, IPersistableEditor {
      */
     protected void updateContentDependentActions() {
         if (fContentActions != null) {
-            Iterator e = fContentActions.iterator();
+            Iterator<String> e = fContentActions.iterator();
             while (e.hasNext())
-                updateAction((String) e.next());
+                updateAction(e.next());
         }
     }
 
@@ -2461,9 +2332,9 @@ ITextEditorExtension4, INavigationLocationProvider, IPersistableEditor {
      */
     protected void updatePropertyDependentActions() {
         if (fPropertyActions != null) {
-            Iterator e = fPropertyActions.iterator();
+            Iterator<String> e = fPropertyActions.iterator();
             while (e.hasNext())
-                updateAction((String) e.next());
+                updateAction(e.next());
         }
     }
 
@@ -2472,9 +2343,9 @@ ITextEditorExtension4, INavigationLocationProvider, IPersistableEditor {
      */
     protected void updateSelectionDependentActions() {
         if (fSelectionActions != null) {
-            Iterator e = fSelectionActions.iterator();
+            Iterator<String> e = fSelectionActions.iterator();
             while (e.hasNext())
-                updateAction((String) e.next());
+                updateAction(e.next());
         }
     }
 
@@ -2485,9 +2356,9 @@ ITextEditorExtension4, INavigationLocationProvider, IPersistableEditor {
      */
     protected void updateStateDependentActions() {
         if (fStateActions != null) {
-            Iterator e = fStateActions.iterator();
+            Iterator<String> e = fStateActions.iterator();
             while (e.hasNext())
-                updateAction((String) e.next());
+                updateAction(e.next());
         }
     }
 

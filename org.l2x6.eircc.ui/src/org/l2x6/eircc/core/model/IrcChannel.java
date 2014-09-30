@@ -23,8 +23,8 @@ import org.l2x6.eircc.core.model.resource.IrcResourceException;
  */
 public class IrcChannel extends AbstractIrcChannel {
     private final IrcChannelResource channelResource;
-    private final String name;
     private final IrcLog log;
+    private final String name;
 
     /**
      * @param account
@@ -44,9 +44,6 @@ public class IrcChannel extends AbstractIrcChannel {
         IrcLogResource logResource = channelResource.getActiveLogResource();
         this.log = new IrcLog(this, logResource);
 
-    }
-    public IrcLog getLog() {
-        return log;
     }
 
     /**
@@ -95,6 +92,10 @@ public class IrcChannel extends AbstractIrcChannel {
 
     public IrcChannelResource getChannelResource() {
         return channelResource;
+    }
+
+    public IrcLog getLog() {
+        return log;
     }
 
     public String getName() {

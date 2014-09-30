@@ -27,9 +27,14 @@ public class IrcMessage extends PlainIrcMessage {
      * @param isP2pChannel
      */
     public IrcMessage(IrcLog log, OffsetDateTime arrivedAt, IrcUser user, String text, boolean isP2pChannel) {
+        this(log, arrivedAt, user, text, log.getChannel().getAccount().getAcceptedNick(), isP2pChannel);
+    }
+
+    public IrcMessage(IrcLog log, OffsetDateTime arrivedAt, IrcUser user, String text, String myNick,
+            boolean isP2pChannel) {
         super(log.getCharLength(), log.getLineIndex(), arrivedAt, user == null ? null : user.getNick(), text,
-                user != null ? log.getChannel().getUserIndex(user.getNick()) : Colors.INVALID_INDEX, log.getChannel()
-                        .getAccount().getAcceptedNick(), isP2pChannel);
+                user != null ? log.getChannel().getUserIndex(user.getNick()) : Colors.INVALID_INDEX, myNick,
+                isP2pChannel);
         this.log = log;
         this.user = user;
     }

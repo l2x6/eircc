@@ -154,6 +154,7 @@ public abstract class AbstractIrcChannel extends IrcObject implements Persistent
     }
 
     public abstract IrcLog getLog();
+
     /**
      * @return
      */

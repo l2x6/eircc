@@ -27,8 +27,9 @@ import org.eclipse.ui.IWorkbenchPreferenceConstants;
 import org.eclipse.ui.PlatformUI;
 
 /**
- * Adapted from {@code org.eclipse.search.internal.ui.text.DecoratingFileSearchLabelProvider} as
- * available in org.eclipse.search 3.9.100.v20140226-1637.
+ * Adapted from
+ * {@code org.eclipse.search.internal.ui.text.DecoratingFileSearchLabelProvider}
+ * as available in org.eclipse.search 3.9.100.v20140226-1637.
  *
  * @author <a href="mailto:ppalaga@redhat.com">Peter Palaga</a>
  */

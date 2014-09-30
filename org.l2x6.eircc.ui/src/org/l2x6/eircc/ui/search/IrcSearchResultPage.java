@@ -21,6 +21,7 @@ import org.eclipse.core.runtime.IAdaptable;
 import org.eclipse.jface.action.IMenuManager;
 import org.eclipse.jface.action.MenuManager;
 import org.eclipse.jface.dialogs.ErrorDialog;
+import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.viewers.ILabelProvider;
 import org.eclipse.jface.viewers.ISelection;
 import org.eclipse.jface.viewers.ISelectionProvider;
@@ -38,18 +39,23 @@ import org.eclipse.search.ui.ISearchResultViewPart;
 import org.eclipse.search.ui.text.AbstractTextSearchResult;
 import org.eclipse.search.ui.text.AbstractTextSearchViewPage;
 import org.eclipse.search.ui.text.Match;
+import org.eclipse.ui.IEditorPart;
+import org.eclipse.ui.IFileEditorInput;
 import org.eclipse.ui.IMemento;
 import org.eclipse.ui.IPageLayout;
 import org.eclipse.ui.IWorkbenchPage;
 import org.eclipse.ui.PartInitException;
 import org.eclipse.ui.actions.ActionContext;
 import org.eclipse.ui.actions.ActionGroup;
+import org.eclipse.ui.part.FileEditorInput;
 import org.eclipse.ui.part.IPageSite;
 import org.eclipse.ui.part.IShowInSource;
 import org.eclipse.ui.part.IShowInTargetList;
 import org.eclipse.ui.part.ShowInContext;
+import org.l2x6.eircc.ui.EirccUi;
 import org.l2x6.eircc.ui.IrcUiMessages;
 import org.l2x6.eircc.ui.editor.IrcDefaultMessageFormatter.TimeStyle;
+import org.l2x6.eircc.ui.editor.IrcEditor;
 import org.l2x6.eircc.ui.search.IrcSearchLabelProvider.LabelOrder;
 
 /**
@@ -69,7 +75,7 @@ public class IrcSearchResultPage extends AbstractTextSearchViewPage implements I
 
         /*
          * (non-Javadoc)
-         *
+         * 
          * @see
          * org.eclipse.jface.viewers.ViewerComparator#category(java.lang.Object)
          */
@@ -117,9 +123,9 @@ public class IrcSearchResultPage extends AbstractTextSearchViewPage implements I
     };
     @SuppressWarnings("deprecation")
     private static final String[] SHOW_IN_TARGETS = new String[] { IPageLayout.ID_RES_NAV };
-    private ActionGroup searchActionGroup;
     private IrcSearchContentProvider contentProvider;
     private LabelOrder labelOrder;
+    private ActionGroup searchActionGroup;
 
     private final SortIrcSearchResultsAction sortByNameAction;
     private final SortIrcSearchResultsAction sortByPathAction;
@@ -381,8 +387,23 @@ public class IrcSearchResultPage extends AbstractTextSearchViewPage implements I
     }
 
     protected void showMatch(Match match, int offset, int length, boolean activate) throws PartInitException {
-        IFile file = (IFile) match.getElement();
         IWorkbenchPage page = getSite().getPage();
+        if (match instanceof IrcMatch) {
+            IrcMatch ircMatch = (IrcMatch) match;
+            IFileEditorInput input = new FileEditorInput(ircMatch.getFile());
+            IEditorPart editor = page.openEditor(input, IrcEditor.ID, true);
+            if (!ircMatch.isFileLevelMatch() && editor instanceof IrcEditor) {
+                IrcEditor ircEditor = (IrcEditor) editor;
+                try {
+                    ircEditor.reveal(ircMatch);
+                } catch (BadLocationException e) {
+                    EirccUi.log(e);
+                }
+                return;
+            }
+        }
+
+        IFile file = (IFile) match.getElement();
         if (offset >= 0 && length != 0) {
             openAndSelect(page, file, offset, length, activate);
         } else {

@@ -8,6 +8,7 @@
 
 package org.l2x6.eircc.core.model;
 
+import java.io.IOException;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -15,38 +16,20 @@ import java.util.List;
 import java.util.ListIterator;
 
 import org.eclipse.core.runtime.CoreException;
-import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.jface.text.IDocument;
+import org.eclipse.ui.IFileEditorInput;
+import org.eclipse.ui.texteditor.IDocumentProvider;
 import org.l2x6.eircc.core.model.event.IrcModelEvent;
 import org.l2x6.eircc.core.model.event.IrcModelEvent.EventType;
 import org.l2x6.eircc.core.model.resource.IrcLogResource;
-import org.l2x6.eircc.core.util.TypedField;
+import org.l2x6.eircc.core.util.IrcLogReader;
+import org.l2x6.eircc.ui.EirccUi;
 
 /**
  * @author <a href="mailto:ppalaga@redhat.com">Peter Palaga</a>
  */
-public class IrcLog extends IrcObject implements Iterable<IrcMessage>, PersistentIrcObject {
-
-    public enum IrcLogField implements TypedField {
-        ;
-        private final TypedFieldData typedFieldData;
-
-        /**
-         * @param typedFieldData
-         */
-        private IrcLogField() {
-            this.typedFieldData = new TypedFieldData(name(), IrcLog.class);
-        }
-
-        /**
-         * @see org.l2x6.eircc.core.util.TypedField#getTypedFieldData()
-         */
-        @Override
-        public TypedFieldData getTypedFieldData() {
-            return typedFieldData;
-        }
-    };
+public class IrcLog extends IrcObject implements Iterable<IrcMessage> {
 
     public enum LogState {
         ME_NAMED(true), NONE(false), UNREAD_MESSAGES(true);
@@ -85,6 +68,8 @@ public class IrcLog extends IrcObject implements Iterable<IrcMessage>, Persisten
         super(channel.getModel(), channel.getLogsFolderPath());
         this.channel = channel;
         this.logResource = logResource;
+
+        load();
     }
 
     /**
@@ -121,9 +106,9 @@ public class IrcLog extends IrcObject implements Iterable<IrcMessage>, Persisten
         if (lastSavedMessageIndex == messages.size() - 1) {
             return;
         }
-
-        IDocument document = logResource.getDocument(monitor);
-        monitor.beginTask("", 2); //$NON-NLS-1$
+        IFileEditorInput editorInput = logResource.getEditorInput();
+        IDocumentProvider documentProvider = getModel().getRootResource().getDocumentProvider();
+        IDocument document = documentProvider.getDocument(editorInput);
 
         if (lastSavedMessageIndex == IrcLog.NOTHING_SAVED) {
             document.set("");
@@ -136,9 +121,9 @@ public class IrcLog extends IrcObject implements Iterable<IrcMessage>, Persisten
             m.write(document);
             // out.flush();
         }
-        logResource.commitBuffer(monitor);
+        documentProvider.saveDocument(monitor, editorInput, document, true);
+        lastSavedMessageIndex = messages.size() - 1;
         monitor.done();
-
     }
 
     public AbstractIrcChannel getChannel() {
@@ -149,25 +134,12 @@ public class IrcLog extends IrcObject implements Iterable<IrcMessage>, Persisten
         return charLength;
     }
 
-    /**
-     * @see org.l2x6.eircc.core.model.IrcObject#getFields()
-     */
-    @Override
-    public IrcLogField[] getFields() {
-        return IrcLogField.values();
-    }
-
     int getLineIndex() {
         return lineIndex;
     }
 
     public int getMessageCount() {
         return messages.size();
-    }
-
-    @Override
-    public IPath getPath() {
-        return logResource.getLogFile().getFullPath();
     }
 
     public OffsetDateTime getStartedOn() {
@@ -204,15 +176,32 @@ public class IrcLog extends IrcObject implements Iterable<IrcMessage>, Persisten
     }
 
     /**
-     * Saves all overwriting the previous file.
      *
-     * @see #ensureAllSaved(IProgressMonitor)
-     * @see org.l2x6.eircc.core.model.PersistentIrcObject#save(org.eclipse.core.runtime.IProgressMonitor)
      */
-    @Override
-    public void save(IProgressMonitor monitor) throws CoreException {
-        lastSavedMessageIndex = -1;
-        ensureAllSaved(monitor);
+    private void load() {
+        IFileEditorInput editorInput = logResource.getEditorInput();
+        IDocumentProvider documentProvider = getModel().getRootResource().getDocumentProvider();
+        IDocument document = documentProvider.getDocument(editorInput);
+        if (document.getLength() > 0) {
+            IrcLogReader reader = null;
+            try {
+                reader = new IrcLogReader(document, logResource.getChannelResource().isP2p());
+                while (reader.hasNext()) {
+                    PlainIrcMessage message = reader.next();
+                    appendMessage(message.toIrcMessage(this));
+                }
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            } finally {
+                try {
+                    reader.close();
+                } catch (IOException e) {
+                    EirccUi.log(e);
+                }
+            }
+        }
+        allRead();
+        lastSavedMessageIndex = messages.size() - 1;
     }
 
     public void setState(LogState state) {

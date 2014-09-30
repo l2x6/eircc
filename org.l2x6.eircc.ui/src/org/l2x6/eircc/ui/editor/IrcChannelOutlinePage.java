@@ -38,14 +38,14 @@ public class IrcChannelOutlinePage extends ContentOutlinePage implements IDouble
 
     private static class IrcChannelOutlineContentProvider implements ITreeContentProvider {
 
-        private final AbstractIrcChannel channel;
+        private final IrcEditor editor;
 
         /**
          * @param channel
          */
-        public IrcChannelOutlineContentProvider(AbstractIrcChannel channel) {
+        public IrcChannelOutlineContentProvider(IrcEditor editor) {
             super();
-            this.channel = channel;
+            this.editor = editor;
         }
 
         /**
@@ -68,7 +68,11 @@ public class IrcChannelOutlinePage extends ContentOutlinePage implements IDouble
          */
         @Override
         public Object[] getElements(Object inputElement) {
-            return channel.getUsers();
+            AbstractIrcChannel channel = editor.getChannel();
+            if (channel != null) {
+                return channel.getUsers();
+            }
+            return new Object[0];
         }
 
         /**
@@ -98,14 +102,14 @@ public class IrcChannelOutlinePage extends ContentOutlinePage implements IDouble
     }
 
     private static class UsersLabelProvider extends IrcLabelProvider implements IStyledLabelProvider {
-        private final AbstractIrcChannel channel;
+        private final IrcEditor editor;
 
         /**
          * @param channel
          */
-        public UsersLabelProvider(AbstractIrcChannel channel) {
+        public UsersLabelProvider(IrcEditor editor) {
             super();
-            this.channel = channel;
+            this.editor = editor;
         }
 
         /**
@@ -114,22 +118,25 @@ public class IrcChannelOutlinePage extends ContentOutlinePage implements IDouble
         @Override
         public StyledString getStyledText(Object element) {
             if (element instanceof IrcChannelUser) {
-                int index = channel.getUserIndex(((IrcChannelUser) element).getNick());
-                return new StyledString(super.getText(element), IrcPreferences.getInstance().getUserStyler(index));
+                AbstractIrcChannel channel = editor.getChannel();
+                if (channel != null) {
+                    int index = channel.getUserIndex(((IrcChannelUser) element).getNick());
+                    return new StyledString(super.getText(element), IrcPreferences.getInstance().getUserStyler(index));
+                }
             }
             return new StyledString(super.getText(element));
         }
 
     }
 
-    private final AbstractIrcChannel channel;
+    private final IrcEditor editor;
     private IrcTreeAction<?> openPrivateChatAction;
 
     /**
      * @param ircChannelEditor
      */
-    public IrcChannelOutlinePage(AbstractIrcChannel channel) {
-        this.channel = channel;
+    public IrcChannelOutlinePage(IrcEditor editor) {
+        this.editor = editor;
     }
 
     /**
@@ -141,11 +148,11 @@ public class IrcChannelOutlinePage extends ContentOutlinePage implements IDouble
 
         // Init tree viewer
         TreeViewer viewer = getTreeViewer();
-        viewer.setContentProvider(new IrcChannelOutlineContentProvider(channel));
-        viewer.setLabelProvider(new DelegatingStyledCellLabelProvider(new UsersLabelProvider(channel)));
+        viewer.setContentProvider(new IrcChannelOutlineContentProvider(editor));
+        viewer.setLabelProvider(new DelegatingStyledCellLabelProvider(new UsersLabelProvider(editor)));
         viewer.addSelectionChangedListener(this);
         viewer.addDoubleClickListener(this);
-        viewer.setInput(channel);
+        updateInput();
         IrcModel.getInstance().addModelEventListener(this);
 
         Tree tree = viewer.getTree();
@@ -190,5 +197,13 @@ public class IrcChannelOutlinePage extends ContentOutlinePage implements IDouble
         default:
             break;
         }
+    }
+
+    /**
+     *
+     */
+    public void updateInput() {
+        AbstractIrcChannel channel = editor.getChannel();
+        getTreeViewer().setInput(channel);
     }
 }

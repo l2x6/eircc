@@ -34,7 +34,7 @@
         <editor
            id = "org.l2x6.eircc.ui.editor.IrcEditor"
            name="%IrcChannelEditor.name"
-           icon="icons/channel.png"
+           icon="icons/channel-history.png"
            class="org.l2x6.eircc.ui.editor.IrcEditor"
             extensions="log"
             default="true"

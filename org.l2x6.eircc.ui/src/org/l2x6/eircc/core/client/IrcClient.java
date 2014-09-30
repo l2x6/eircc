@@ -251,7 +251,8 @@ public class IrcClient {
                 @Override
                 public void run() {
                     try {
-                        AbstractIrcChannel channel = IrcController.getInstance().getOrCreateAccountChannel(account, chan);
+                        AbstractIrcChannel channel = IrcController.getInstance().getOrCreateAccountChannel(account,
+                                chan);
                         String nick = user.getNick();
                         if (nick.equals(account.getAcceptedNick())) {
                             /* It is me who joined */

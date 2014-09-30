@@ -9,7 +9,8 @@
 package org.l2x6.eircc.ui.search;
 
 /**
- * Adapted from {@code org.eclipse.search.internal.ui.text.IFileSearchContentProvider} as
+ * Adapted from
+ * {@code org.eclipse.search.internal.ui.text.IFileSearchContentProvider} as
  * available in org.eclipse.search 3.9.100.v20140226-1637.
  *
  * @author <a href="mailto:ppalaga@redhat.com">Peter Palaga</a>

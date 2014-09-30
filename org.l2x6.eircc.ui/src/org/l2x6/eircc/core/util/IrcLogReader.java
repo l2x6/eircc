@@ -15,6 +15,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
 
+import org.eclipse.jface.text.IDocument;
 import org.l2x6.eircc.core.model.PlainIrcMessage;
 
 /**
@@ -66,6 +67,11 @@ public class IrcLogReader implements Closeable {
     private final CountedPushbackReader in;
 
     private final boolean isP2pChannel;
+
+    public IrcLogReader(IDocument document, boolean isP2pChannel) throws UnsupportedEncodingException,
+            FileNotFoundException {
+        this(new DocumentInputStream(document), isP2pChannel);
+    }
 
     /**
      * @param isP2pChannel

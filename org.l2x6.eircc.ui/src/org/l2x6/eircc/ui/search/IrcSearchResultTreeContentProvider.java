@@ -21,7 +21,8 @@ import org.eclipse.jface.viewers.Viewer;
 import org.eclipse.search.ui.text.Match;
 
 /**
- * Adapted from {@code org.eclipse.search.internal.ui.text.FileTreeContentProvider} as
+ * Adapted from
+ * {@code org.eclipse.search.internal.ui.text.FileTreeContentProvider} as
  * available in org.eclipse.search 3.9.100.v20140226-1637.
  *
  * @author <a href="mailto:ppalaga@redhat.com">Peter Palaga</a>

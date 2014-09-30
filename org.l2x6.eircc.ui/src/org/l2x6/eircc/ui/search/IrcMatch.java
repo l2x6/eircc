@@ -64,7 +64,7 @@ public class IrcMatch extends Match {
         return getOffset();
     }
 
-    public boolean isFileSearch() {
+    public boolean isFileLevelMatch() {
         return messageMatches == null;
     }
 
