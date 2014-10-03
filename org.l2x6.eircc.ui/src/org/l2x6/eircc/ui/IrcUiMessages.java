@@ -142,6 +142,8 @@ public class IrcUiMessages extends NLS {
     public static String Message_You_joined_as_nick;
     public static String Message_You_left;
     public static String OpenWithMenu_label;
+    public static String PromptAndJoinChannelAction_label;
+    public static String PromptAndJoinChannelAction_shouldStartWithHash;
     public static String TextSearchEngine_statusMessage;
     public static String TextSearchVisitor_canceled;
     public static String TextSearchVisitor_filesearch_task_label;

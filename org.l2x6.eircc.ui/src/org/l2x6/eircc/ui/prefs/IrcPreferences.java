@@ -322,7 +322,7 @@ public class IrcPreferences {
     /**
      * @return
      */
-    public String showAddNichPatternDialog(String initialValue) {
+    public String showAddNickPatternDialog(String initialValue) {
         if (initialValue == null) {
             initialValue = "";
         }

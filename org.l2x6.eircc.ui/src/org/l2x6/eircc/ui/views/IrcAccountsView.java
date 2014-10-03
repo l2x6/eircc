@@ -57,6 +57,8 @@ import org.l2x6.eircc.ui.EirccUi;
 import org.l2x6.eircc.ui.IrcUiMessages;
 import org.l2x6.eircc.ui.actions.AddIrcAccountAction;
 import org.l2x6.eircc.ui.actions.IrcTreeAction;
+import org.l2x6.eircc.ui.actions.IrcTreeActions;
+import org.l2x6.eircc.ui.actions.PromptAndJoinChannelAction;
 
 /**
  * @author <a href="mailto:ppalaga@redhat.com">Peter Palaga</a>
@@ -69,26 +71,28 @@ public class IrcAccountsView extends ViewPart implements IrcModelEventListener {
     private AddIrcAccountAction addIrcAccountAction;
 
     private CollapseAllHandler collapseAllAccounts;
-    private IrcTreeAction<?> connectAccountAction;
+    private IrcTreeActions<?> connectAccountAction;
 
-    private IrcTreeAction<?> disconnectAccountAction;
+    private IrcTreeActions<?> disconnectAccountAction;
 
     private Label emptyLabel;
 
     private ExpandAllHandler expandAllAccounts;
     private ISelectionProvider focusedTreeViewer;
-    private IrcTreeAction<?> joinAccountChannelAction;
-    private IrcTreeAction<?> joinServerChannelAction;
-    private IrcTreeAction<?> leaveAccountChannelAction;
-    private IrcTreeAction<?> listChannelsAction;
+    private IrcTreeActions<?> joinAccountChannelAction;
+    private IrcTreeActions<?> joinServerChannelAction;
+    private IrcTreeActions<?> leaveAccountChannelAction;
+    private IrcTreeActions<?> listChannelsAction;
 
     private List<ISelectionChangedListener> listeners = Collections.emptyList();
     private PageBook pagebook;
+    private PromptAndJoinChannelAction promptChannelAndJoinAction;
     private CLabel serverChannelsLabel;
     private TreeViewer serverChannelsTreeViewer;
     // TODO private TreeViewer serverUsersTreeViewer;
     private ViewForm serverChannelsViewForm;
-    private IrcTreeAction<?>[] treeActions;
+    private IrcTreeAction[] treeActions;
+
     private MouseListener treeMouseListener;
 
     private FocusListener treesFocusListener = new FocusListener() {
@@ -103,7 +107,6 @@ public class IrcAccountsView extends ViewPart implements IrcModelEventListener {
         public void focusLost(FocusEvent event) {
         }
     };
-
     private ISelectionChangedListener treesSelectionListener = new ISelectionChangedListener() {
 
         @Override
@@ -178,11 +181,12 @@ public class IrcAccountsView extends ViewPart implements IrcModelEventListener {
         accountsTree.addMouseListener(getTreeMouseListener());
         accountsTree.addFocusListener(treesFocusListener);
         addIrcAccountAction = new AddIrcAccountAction();
-        listChannelsAction = IrcTreeAction.createListChannelsAction(accountsTree);
-        connectAccountAction = IrcTreeAction.createConnectAccountAction(accountsTree);
-        disconnectAccountAction = IrcTreeAction.createDisonnectAccountAction(accountsTree);
-        joinAccountChannelAction = IrcTreeAction.createJoinAccountChannelAction(accountsTree);
-        leaveAccountChannelAction = IrcTreeAction.createLeaveChannelAction(accountsTree);
+        listChannelsAction = IrcTreeActions.createListChannelsAction(accountsTree);
+        connectAccountAction = IrcTreeActions.createConnectAccountAction(accountsTree);
+        disconnectAccountAction = IrcTreeActions.createDisonnectAccountAction(accountsTree);
+        joinAccountChannelAction = IrcTreeActions.createJoinAccountChannelAction(accountsTree);
+        promptChannelAndJoinAction = new PromptAndJoinChannelAction(accountsTree);
+        leaveAccountChannelAction = IrcTreeActions.createLeaveChannelAction(accountsTree);
 
         IViewSite site = getViewSite();
         IToolBarManager accountsTbm = site.getActionBars().getToolBarManager();
@@ -202,6 +206,7 @@ public class IrcAccountsView extends ViewPart implements IrcModelEventListener {
         accountsMenuManager.add(connectAccountAction);
         accountsMenuManager.add(disconnectAccountAction);
         accountsMenuManager.add(joinAccountChannelAction);
+        accountsMenuManager.add(promptChannelAndJoinAction);
         accountsMenuManager.add(leaveAccountChannelAction);
         accountsTree.setMenu(accountsMenu);
         site.registerContextMenu(accountsMenuManager, accountsTreeViewer);
@@ -211,9 +216,10 @@ public class IrcAccountsView extends ViewPart implements IrcModelEventListener {
         serverChannelsTree.addMouseListener(getTreeMouseListener());
         serverChannelsTree.addFocusListener(treesFocusListener);
 
-        joinServerChannelAction = IrcTreeAction.createJoinServerChannelAction(serverChannelsTree);
+        joinServerChannelAction = IrcTreeActions.createJoinServerChannelAction(serverChannelsTree);
         treeActions = new IrcTreeAction[] { listChannelsAction, connectAccountAction, disconnectAccountAction,
-                joinAccountChannelAction, leaveAccountChannelAction, joinServerChannelAction };
+                joinAccountChannelAction, promptChannelAndJoinAction, leaveAccountChannelAction,
+                joinServerChannelAction };
 
         ToolBarManager serverChannelsTbm = new ToolBarManager(serverChannelsToolbar);
         serverChannelsTbm.add(new Separator(ContextMenuConstants.GROUP_IRC_SERVER_CHANNELS));

@@ -66,7 +66,7 @@ public class IrcNotificationsPreferencePage extends FieldEditorPreferencePage im
          */
         @Override
         protected String getNewInputObject() {
-            return IrcPreferences.getInstance().showAddNichPatternDialog("");
+            return IrcPreferences.getInstance().showAddNickPatternDialog("");
         }
 
         /*

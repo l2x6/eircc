@@ -372,7 +372,7 @@ public abstract class AbstractIrcEditor extends EditorPart implements ITextEdito
          * @see
          * org.eclipse.jface.text.IDocumentListener#documentAboutToBeChanged
          * (org.eclipse.jface.text.DocumentEvent)
-         *
+         * 
          * @since 3.0
          */
         public synchronized void documentAboutToBeChanged(DocumentEvent event) {
@@ -383,7 +383,7 @@ public abstract class AbstractIrcEditor extends EditorPart implements ITextEdito
          * @see
          * org.eclipse.jface.text.IDocumentListener#documentChanged(org.eclipse
          * .jface.text.DocumentEvent)
-         *
+         * 
          * @since 3.0
          */
         public void documentChanged(DocumentEvent event) {
@@ -393,7 +393,7 @@ public abstract class AbstractIrcEditor extends EditorPart implements ITextEdito
          * @see org.eclipse.ui.texteditor.AbstractTextEditor.
          * AbstractSelectionChangedListener
          * #install(org.eclipse.jface.viewers.ISelectionProvider)
-         *
+         * 
          * @since 3.0
          */
         public void install(ISelectionProvider selectionProvider) {
@@ -429,7 +429,7 @@ public abstract class AbstractIrcEditor extends EditorPart implements ITextEdito
          * @see org.eclipse.ui.texteditor.AbstractTextEditor.
          * AbstractSelectionChangedListener
          * #uninstall(org.eclipse.jface.viewers.ISelectionProvider)
-         *
+         * 
          * @since 3.0
          */
         public void uninstall(ISelectionProvider selectionProvider) {
@@ -456,7 +456,7 @@ public abstract class AbstractIrcEditor extends EditorPart implements ITextEdito
          * @see org.eclipse.jface.text.IPostSelectionProvider#
          * addPostSelectionChangedListener
          * (org.eclipse.jface.viewers.ISelectionChangedListener)
-         *
+         * 
          * @since 3.0
          */
         public void addPostSelectionChangedListener(ISelectionChangedListener listener) {
@@ -487,7 +487,7 @@ public abstract class AbstractIrcEditor extends EditorPart implements ITextEdito
 
         /*
          * @see org.eclipse.jface.text.IPostSelectionValidator#isValid()
-         *
+         * 
          * @since 3.0
          */
         public boolean isValid(ISelection postSelection) {
@@ -498,7 +498,7 @@ public abstract class AbstractIrcEditor extends EditorPart implements ITextEdito
          * @see org.eclipse.jface.text.IPostSelectionProvider#
          * removePostSelectionChangedListener
          * (org.eclipse.jface.viewers.ISelectionChangedListener)
-         *
+         * 
          * @since 3.0
          */
         public void removePostSelectionChangedListener(ISelectionChangedListener listener) {

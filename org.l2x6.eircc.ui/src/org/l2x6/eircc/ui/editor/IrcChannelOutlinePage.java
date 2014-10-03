@@ -27,7 +27,7 @@ import org.l2x6.eircc.core.model.IrcModel;
 import org.l2x6.eircc.core.model.event.IrcModelEvent;
 import org.l2x6.eircc.core.model.event.IrcModelEventListener;
 import org.l2x6.eircc.ui.EirccUi;
-import org.l2x6.eircc.ui.actions.IrcTreeAction;
+import org.l2x6.eircc.ui.actions.IrcTreeActions;
 import org.l2x6.eircc.ui.prefs.IrcPreferences;
 import org.l2x6.eircc.ui.views.IrcLabelProvider;
 
@@ -130,8 +130,8 @@ public class IrcChannelOutlinePage extends ContentOutlinePage implements IDouble
     }
 
     private final IrcEditor editor;
-    private IrcTreeAction<?> notifyAction;
-    private IrcTreeAction<?> openPrivateChatAction;
+    private IrcTreeActions<?> notifyAction;
+    private IrcTreeActions<?> openPrivateChatAction;
 
     /**
      * @param ircChannelEditor
@@ -157,8 +157,8 @@ public class IrcChannelOutlinePage extends ContentOutlinePage implements IDouble
         IrcModel.getInstance().addModelEventListener(this);
 
         Tree tree = viewer.getTree();
-        openPrivateChatAction = IrcTreeAction.createOpenPrivateChatAction(tree);
-        notifyAction = IrcTreeAction.createNotifyAction(tree);
+        openPrivateChatAction = IrcTreeActions.createOpenPrivateChatAction(tree);
+        notifyAction = IrcTreeActions.createNotifyAction(tree);
         MenuManager accountsMenuManager = new MenuManager("#PopupMenu");
         Menu accountsMenu = accountsMenuManager.createContextMenu(tree);
         accountsMenuManager.add(openPrivateChatAction);

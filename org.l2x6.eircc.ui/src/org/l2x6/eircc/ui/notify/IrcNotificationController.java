@@ -22,9 +22,11 @@ import org.l2x6.eircc.ui.prefs.IrcPreferences;
 public class IrcNotificationController implements IrcModelEventListener {
 
     private static final IrcNotificationController INSTANCE = new IrcNotificationController();
+
     public static IrcNotificationController getInstance() {
         return INSTANCE;
     }
+
     private final IrcSoundNotifier soundNotifier;
 
     private final IrcTray tray;

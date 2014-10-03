@@ -30,6 +30,13 @@ public class DocumenReader extends Reader {
     }
 
     /**
+     * @see java.io.Reader#close()
+     */
+    @Override
+    public void close() throws IOException {
+    }
+
+    /**
      * @see java.io.Reader#read(char[], int, int)
      */
     @Override
@@ -48,12 +55,5 @@ public class DocumenReader extends Reader {
         } else {
             return -1;
         }
-    }
-
-    /**
-     * @see java.io.Reader#close()
-     */
-    @Override
-    public void close() throws IOException {
     }
 }
