@@ -13,6 +13,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.Reader;
 import java.io.UnsupportedEncodingException;
 
 import org.eclipse.jface.text.IDocument;
@@ -70,7 +71,12 @@ public class IrcLogReader implements Closeable {
 
     public IrcLogReader(IDocument document, boolean isP2pChannel) throws UnsupportedEncodingException,
             FileNotFoundException {
-        this(new DocumentInputStream(document), isP2pChannel);
+        this(new DocumenReader(document), isP2pChannel);
+    }
+
+    public IrcLogReader(Reader input, boolean isP2pChannel) throws UnsupportedEncodingException, FileNotFoundException {
+        this.in = new CountedPushbackReader(input, 2);
+        this.isP2pChannel = isP2pChannel;
     }
 
     /**
@@ -81,9 +87,7 @@ public class IrcLogReader implements Closeable {
      */
     public IrcLogReader(InputStream inputStream, boolean isP2pChannel) throws UnsupportedEncodingException,
             FileNotFoundException {
-        super();
-        this.in = new CountedPushbackReader(new InputStreamReader(inputStream, "utf-8"), 2);
-        this.isP2pChannel = isP2pChannel;
+        this(new InputStreamReader(inputStream, "utf-8"), isP2pChannel);
     }
 
     /**

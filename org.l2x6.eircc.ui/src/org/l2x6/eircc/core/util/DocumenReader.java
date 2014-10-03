@@ -9,7 +9,7 @@
 package org.l2x6.eircc.core.util;
 
 import java.io.IOException;
-import java.io.InputStream;
+import java.io.Reader;
 
 import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.IDocument;
@@ -17,28 +17,43 @@ import org.eclipse.jface.text.IDocument;
 /**
  * @author <a href="mailto:ppalaga@redhat.com">Peter Palaga</a>
  */
-public class DocumentInputStream extends InputStream {
+public class DocumenReader extends Reader {
     private final IDocument document;
     private int offset = 0;
 
     /**
      * @param document
      */
-    public DocumentInputStream(IDocument document) {
+    public DocumenReader(IDocument document) {
         super();
         this.document = document;
     }
 
+    /**
+     * @see java.io.Reader#read(char[], int, int)
+     */
     @Override
-    public int read() throws IOException {
+    public int read(char[] cbuf, int off, int len) throws IOException {
         if (offset < document.getLength()) {
             try {
-                return document.getChar(offset++);
+                int count = 0;
+                while (offset < document.getLength() && count < len) {
+                    cbuf[off + count] = document.getChar(offset++);
+                    count++;
+                }
+                return count;
             } catch (BadLocationException e) {
                 throw new IOException(e);
             }
         } else {
             return -1;
         }
+    }
+
+    /**
+     * @see java.io.Reader#close()
+     */
+    @Override
+    public void close() throws IOException {
     }
 }
