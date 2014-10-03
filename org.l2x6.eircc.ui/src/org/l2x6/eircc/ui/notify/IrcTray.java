@@ -16,8 +16,6 @@ import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Tray;
 import org.eclipse.swt.widgets.TrayItem;
 import org.l2x6.eircc.core.model.IrcModel;
-import org.l2x6.eircc.core.model.event.IrcModelEvent;
-import org.l2x6.eircc.core.model.event.IrcModelEventListener;
 import org.l2x6.eircc.ui.misc.IrcImages;
 import org.l2x6.eircc.ui.misc.IrcImages.ImageSize;
 import org.l2x6.eircc.ui.views.IrcLabelProvider;
@@ -25,7 +23,7 @@ import org.l2x6.eircc.ui.views.IrcLabelProvider;
 /**
  * @author <a href="mailto:ppalaga@redhat.com">Peter Palaga</a>
  */
-public class IrcTray implements IrcModelEventListener {
+public class IrcTray {
 
     private class Flasher implements Runnable {
         private int flashIndex = 0;
@@ -55,12 +53,6 @@ public class IrcTray implements IrcModelEventListener {
 
     }
 
-    private static final IrcTray INSTANCE = new IrcTray();
-
-    public static IrcTray getInstance() {
-        return INSTANCE;
-    }
-
     private Flasher flasher;
 
     private int flashingInterval = 500;
@@ -77,34 +69,17 @@ public class IrcTray implements IrcModelEventListener {
         if (tray != null) {
             trayItem = new TrayItem(tray, SWT.NONE);
             update();
-            IrcModel.getInstance().addModelEventListener(this);
         }
     }
 
     public void dispose() {
-        IrcModel.getInstance().removeModelEventListener(this);
         flasher = null;
         trayItem.dispose();
         trayItem = null;
         tray = null;
     }
 
-    /**
-     * @see org.l2x6.eircc.core.model.event.IrcModelEventListener#handle(org.l2x6.eircc.core.model.event.IrcModelEvent)
-     */
-    @Override
-    public void handle(IrcModelEvent e) {
-        switch (e.getEventType()) {
-        case ACCOUNT_STATE_CHANGED:
-        case LOG_STATE_CHANGED:
-            update();
-            break;
-        default:
-            break;
-        }
-    }
-
-    private void update() {
+    public void update() {
         if (trayItem != null) {
             IrcModel model = IrcModel.getInstance();
             trayItem.setToolTipText(IrcLabelProvider.getInstance().getTooltipText(model));

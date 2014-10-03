@@ -10,6 +10,7 @@ package org.l2x6.eircc.core.model;
 
 import java.util.Collection;
 import java.util.Map;
+import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.UUID;
 
@@ -22,8 +23,8 @@ import org.l2x6.eircc.core.model.event.IrcModelEvent.EventType;
 public class IrcServer extends IrcObject {
 
     private final IrcAccount account;
-    private final Map<String, IrcChannel> channels = new TreeMap<String, IrcChannel>();
-    private AbstractIrcChannel[] channelsArray;
+    private final SortedMap<String, PlainIrcChannel> channels = new TreeMap<String, PlainIrcChannel>();
+    private PlainIrcChannel[] channelsArray;
     /** Users by nick */
     private final Map<UUID, IrcUser> users = new TreeMap<UUID, IrcUser>();
 
@@ -36,15 +37,7 @@ public class IrcServer extends IrcObject {
         this.account = account;
     }
 
-    public void addChannel(IrcChannel channel) {
-        addChannel(channel, true);
-    }
-
-    public void addChannel(IrcChannel channel, boolean fireChannelAddedEvent) {
-        if (channel.getAccount().getServer() != this) {
-            throw new IllegalArgumentException("Cannot add channel with parent distinct from this "
-                    + account.getClass().getSimpleName());
-        }
+    public void addChannel(PlainIrcChannel channel, boolean fireChannelAddedEvent) {
         String channelName = channel.getName();
         if (channels.get(channelName) != null) {
             throw new IllegalArgumentException("Channel with name '" + channelName
@@ -58,8 +51,8 @@ public class IrcServer extends IrcObject {
         }
     }
 
-    public void addChannels(IrcChannel[] addChannels) {
-        for (IrcChannel channel : addChannels) {
+    public void addChannels(PlainIrcChannel[] addChannels) {
+        for (PlainIrcChannel channel : addChannels) {
             addChannel(channel, false);
         }
         account.getModel().fire(new IrcModelEvent(EventType.SERVER_CHANNELS_ADDED, addChannels));
@@ -98,6 +91,14 @@ public class IrcServer extends IrcObject {
     }
 
     /**
+     * @param channelName
+     * @return
+     */
+    public PlainIrcChannel createChannel(String channelName) {
+        return new PlainIrcChannel(this, channelName);
+    }
+
+    /**
      * @param nick
      * @param username
      * @param realName
@@ -112,17 +113,6 @@ public class IrcServer extends IrcObject {
      */
     @Override
     public void dispose() {
-    }
-
-    /**
-     * If you feel you need thi to be {@code public} you probably need to call
-     * {@link IrcAccount#findChannel(String)}.
-     *
-     * @param channelName
-     * @return
-     */
-    IrcChannel findChannel(String channelName) {
-        return channels.get(channelName);
     }
 
     /**
@@ -150,13 +140,10 @@ public class IrcServer extends IrcObject {
         return account;
     }
 
-    /**
-     * @see org.l2x6.eircc.core.model.IrcObject#getChannels()
-     */
-    public AbstractIrcChannel[] getChannels() {
+    public PlainIrcChannel[] getChannels() {
         if (channelsArray == null) {
-            Collection<IrcChannel> chans = channels.values();
-            channelsArray = chans.toArray(new IrcChannel[chans.size()]);
+            Collection<PlainIrcChannel> chans = channels.values();
+            channelsArray = chans.toArray(new PlainIrcChannel[chans.size()]);
         }
         return channelsArray;
     }

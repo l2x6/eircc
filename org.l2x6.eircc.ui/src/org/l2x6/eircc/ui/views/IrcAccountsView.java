@@ -49,6 +49,7 @@ import org.l2x6.eircc.core.IrcException;
 import org.l2x6.eircc.core.model.AbstractIrcChannel;
 import org.l2x6.eircc.core.model.IrcAccount;
 import org.l2x6.eircc.core.model.IrcModel;
+import org.l2x6.eircc.core.model.PlainIrcChannel;
 import org.l2x6.eircc.core.model.event.IrcModelEvent;
 import org.l2x6.eircc.core.model.event.IrcModelEventListener;
 import org.l2x6.eircc.ui.ContextMenuConstants;
@@ -79,7 +80,6 @@ public class IrcAccountsView extends ViewPart implements IrcModelEventListener {
     private IrcTreeAction<?> joinAccountChannelAction;
     private IrcTreeAction<?> joinServerChannelAction;
     private IrcTreeAction<?> leaveAccountChannelAction;
-    private IrcTreeAction<?> leaveServerChannelAction;
     private IrcTreeAction<?> listChannelsAction;
 
     private List<ISelectionChangedListener> listeners = Collections.emptyList();
@@ -181,7 +181,7 @@ public class IrcAccountsView extends ViewPart implements IrcModelEventListener {
         listChannelsAction = IrcTreeAction.createListChannelsAction(accountsTree);
         connectAccountAction = IrcTreeAction.createConnectAccountAction(accountsTree);
         disconnectAccountAction = IrcTreeAction.createDisonnectAccountAction(accountsTree);
-        joinAccountChannelAction = IrcTreeAction.createJoinChannelAction(accountsTree);
+        joinAccountChannelAction = IrcTreeAction.createJoinAccountChannelAction(accountsTree);
         leaveAccountChannelAction = IrcTreeAction.createLeaveChannelAction(accountsTree);
 
         IViewSite site = getViewSite();
@@ -211,16 +211,14 @@ public class IrcAccountsView extends ViewPart implements IrcModelEventListener {
         serverChannelsTree.addMouseListener(getTreeMouseListener());
         serverChannelsTree.addFocusListener(treesFocusListener);
 
-        joinServerChannelAction = IrcTreeAction.createJoinChannelAction(serverChannelsTree);
-        leaveServerChannelAction = IrcTreeAction.createLeaveChannelAction(serverChannelsTree);
+        joinServerChannelAction = IrcTreeAction.createJoinServerChannelAction(serverChannelsTree);
         treeActions = new IrcTreeAction[] { listChannelsAction, connectAccountAction, disconnectAccountAction,
-                joinAccountChannelAction, leaveAccountChannelAction, joinServerChannelAction, leaveServerChannelAction };
+                joinAccountChannelAction, leaveAccountChannelAction, joinServerChannelAction };
 
         ToolBarManager serverChannelsTbm = new ToolBarManager(serverChannelsToolbar);
         serverChannelsTbm.add(new Separator(ContextMenuConstants.GROUP_IRC_SERVER_CHANNELS));
         serverChannelsTbm.appendToGroup(ContextMenuConstants.GROUP_IRC_SERVER_CHANNELS, listChannelsAction);
         serverChannelsTbm.appendToGroup(ContextMenuConstants.GROUP_IRC_SERVER_CHANNELS, joinServerChannelAction);
-        serverChannelsTbm.appendToGroup(ContextMenuConstants.GROUP_IRC_SERVER_CHANNELS, leaveServerChannelAction);
         serverChannelsTbm.update(false);
 
         /* server channels context menu */
@@ -228,7 +226,6 @@ public class IrcAccountsView extends ViewPart implements IrcModelEventListener {
         Menu serverChannelsMenu = serverChannelsMenuManager.createContextMenu(accountsTree);
         serverChannelsMenuManager.add(listChannelsAction);
         serverChannelsMenuManager.add(joinServerChannelAction);
-        serverChannelsMenuManager.add(leaveServerChannelAction);
         serverChannelsTree.setMenu(serverChannelsMenu);
         site.registerContextMenu(serverChannelsMenuManager, serverChannelsTreeViewer);
 
@@ -314,13 +311,22 @@ public class IrcAccountsView extends ViewPart implements IrcModelEventListener {
                         if (e.widget instanceof Tree) {
                             Tree tree = (Tree) e.widget;
                             TreeItem[] selection = tree.getSelection();
-                            if (selection.length == 1 && selection[0].getData() instanceof AbstractIrcChannel) {
-                                AbstractIrcChannel ch = (AbstractIrcChannel) selection[0].getData();
-                                if (!ch.isJoined()) {
-                                    /* this should both join and open the editor */
+                            if (selection.length == 1) {
+                                Object data = selection[0].getData();
+                                if (data instanceof AbstractIrcChannel) {
+                                    AbstractIrcChannel ch = (AbstractIrcChannel) selection[0].getData();
+                                    if (!ch.isJoined()) {
+                                        /*
+                                         * this should both join and open the
+                                         * editor
+                                         */
+                                        IrcController.getInstance().joinChannel(ch);
+                                    } else {
+                                        EirccUi.getDefault().openEditor(ch);
+                                    }
+                                } else if (data instanceof PlainIrcChannel) {
+                                    PlainIrcChannel ch = (PlainIrcChannel) data;
                                     IrcController.getInstance().joinChannel(ch);
-                                } else {
-                                    EirccUi.getDefault().openEditor(ch);
                                 }
                             }
                         }

@@ -20,6 +20,7 @@ import org.l2x6.eircc.core.model.IrcAccount;
 import org.l2x6.eircc.core.model.IrcAccount.IrcAccountState;
 import org.l2x6.eircc.core.model.IrcServer;
 import org.l2x6.eircc.core.model.IrcUser;
+import org.l2x6.eircc.core.model.PlainIrcChannel;
 import org.l2x6.eircc.core.model.resource.IrcResourceException;
 import org.l2x6.eircc.core.util.IrcUtils;
 import org.schwering.irc.lib.IRCCommand;
@@ -137,6 +138,18 @@ public class IrcController {
                 channel.setJoined(true);
             }
         }
+    }
+
+    /**
+     * @param channel
+     * @throws IrcResourceException
+     * @throws IOException
+     */
+    public void joinChannel(PlainIrcChannel channel) throws IrcException, IrcResourceException {
+        IrcUtils.assertUiThread();
+        IrcAccount account = channel.getServer().getAccount();
+        AbstractIrcChannel accountChannel = getOrCreateAccountChannel(account, channel.getName());
+        joinChannel(accountChannel);
     }
 
     /**

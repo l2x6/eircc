@@ -21,19 +21,12 @@ import javax.sound.sampled.LineListener;
 import javax.sound.sampled.LineUnavailableException;
 import javax.sound.sampled.UnsupportedAudioFileException;
 
-import org.l2x6.eircc.core.model.IrcLog.LogState;
-import org.l2x6.eircc.core.model.IrcMessage;
-import org.l2x6.eircc.core.model.IrcModel;
-import org.l2x6.eircc.core.model.event.IrcModelEvent;
-import org.l2x6.eircc.core.model.event.IrcModelEventListener;
-import org.l2x6.eircc.ui.EirccUi;
-
 /**
  * @author <a href="mailto:ppalaga@redhat.com">Peter Palaga</a>
  */
-public class IrcSoundNotifier implements IrcModelEventListener {
+public class IrcSoundNotifier {
     public enum SoundFile {
-        NOTIFICATION;
+        ME_NAMED, MESSAGE_FROM_TRACKED_USER;
 
         private final String absolutePath;
 
@@ -56,51 +49,29 @@ public class IrcSoundNotifier implements IrcModelEventListener {
         }
     };
 
-    private static final IrcSoundNotifier INSTANCE = new IrcSoundNotifier();;
-
-    public static IrcSoundNotifier getInstance() {
-        return INSTANCE;
-    }
-
     /**
      *
      */
     public IrcSoundNotifier() {
         super();
-        IrcModel.getInstance().addModelEventListener(this);
-    }
-
-    public void dispose() {
-        IrcModel.getInstance().removeModelEventListener(this);
-    }
-
-    /**
-     * @see org.l2x6.eircc.core.model.event.IrcModelEventListener#handle(org.l2x6.eircc.core.model.event.IrcModelEvent)
-     */
-    @Override
-    public void handle(IrcModelEvent e) {
-        try {
-            switch (e.getEventType()) {
-            case NEW_MESSAGE:
-                IrcMessage m = (IrcMessage) e.getModelObject();
-                if (m.isMeNamed() && m.getLog().getState() == LogState.ME_NAMED) {
-                    meNamed();
-                }
-                break;
-            default:
-                break;
-            }
-        } catch (Exception e1) {
-            EirccUi.log(e1);
-        }
     }
 
     public void meNamed() throws LineUnavailableException, IOException, UnsupportedAudioFileException {
-        play(SoundFile.NOTIFICATION);
+        play(SoundFile.ME_NAMED);
+    }
+
+    /**
+     * @throws UnsupportedAudioFileException
+     * @throws IOException
+     * @throws LineUnavailableException
+     *
+     */
+    public void messageFromTrackedUser() throws LineUnavailableException, IOException, UnsupportedAudioFileException {
+        play(SoundFile.MESSAGE_FROM_TRACKED_USER);
     }
 
     private void play(SoundFile soundFile) throws LineUnavailableException, IOException, UnsupportedAudioFileException {
-        String path = SoundFile.NOTIFICATION.getAbsolutePath();
+        String path = soundFile.getAbsolutePath();
         URL url = this.getClass().getResource(path);
         AudioInputStream audioIn = AudioSystem.getAudioInputStream(url);
         Clip clip = AudioSystem.getClip();

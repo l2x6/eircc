@@ -48,9 +48,8 @@ import org.l2x6.eircc.core.util.IrcUtils;
 import org.l2x6.eircc.ui.editor.IrcDocumentProvider;
 import org.l2x6.eircc.ui.editor.IrcEditor;
 import org.l2x6.eircc.ui.misc.IrcImages;
-import org.l2x6.eircc.ui.notify.IrcSoundNotifier;
+import org.l2x6.eircc.ui.notify.IrcNotificationController;
 import org.l2x6.eircc.ui.notify.IrcSystemMessagesGenerator;
-import org.l2x6.eircc.ui.notify.IrcTray;
 import org.l2x6.eircc.ui.prefs.IrcPreferences;
 import org.l2x6.eircc.ui.views.IrcConsole;
 import org.l2x6.eircc.ui.views.IrcLabelProvider;
@@ -286,8 +285,7 @@ public class EirccUi extends AbstractUIPlugin implements IrcModelEventListener, 
             }
         }
         /* Touch IrcTray to create it */
-        IrcTray.getInstance();
-        IrcSoundNotifier.getInstance();
+        IrcNotificationController.getInstance();
 
         IrcSystemMessagesGenerator.getInstance();
 
@@ -311,12 +309,7 @@ public class EirccUi extends AbstractUIPlugin implements IrcModelEventListener, 
             log(e);
         }
         try {
-            IrcSoundNotifier.getInstance().dispose();
-        } catch (Exception e) {
-            log(e);
-        }
-        try {
-            IrcTray.getInstance().dispose();
+            IrcNotificationController.getInstance().dispose();
         } catch (Exception e) {
             log(e);
         }

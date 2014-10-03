@@ -127,5 +127,19 @@
             searchResultClass="org.l2x6.eircc.ui.search.IrcSearchResult"
             class="org.l2x6.eircc.ui.search.IrcSearchResultPage">
         </viewPage>
-</extension>
+    </extension>
+    <extension
+        point="org.eclipse.ui.preferencePages">
+        <page
+            id="org.l2x6.eircc.ui.prefs.IrcPreferencePage"
+            name="%IrcPreferencePage.name"
+            class="org.l2x6.eircc.ui.prefs.IrcPreferencePage">
+        </page>
+        <page
+            id="org.l2x6.eircc.ui.prefs.IrcNotificationsPreferencePage"
+            name="%IrcNotificationsPreferencePage.name"
+            class="org.l2x6.eircc.ui.prefs.IrcNotificationsPreferencePage"
+            category="org.l2x6.eircc.ui.prefs.IrcPreferencePage">
+        </page>
+    </extension>
 </plugin>

@@ -258,7 +258,7 @@ public class IrcAccount extends InitialIrcAccount implements PersistentIrcObject
                 return (IrcChannel) channel;
             }
         }
-        return server.findChannel(channelName);
+        return null;
     }
 
     private IrcChannel findOwnChannel(String channelName) {

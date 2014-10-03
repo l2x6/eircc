@@ -28,11 +28,11 @@ import org.l2x6.eircc.core.IrcException;
 import org.l2x6.eircc.core.model.AbstractIrcChannel;
 import org.l2x6.eircc.core.model.IrcAccount;
 import org.l2x6.eircc.core.model.IrcAccount.IrcAccountState;
-import org.l2x6.eircc.core.model.IrcChannel;
 import org.l2x6.eircc.core.model.IrcLog;
 import org.l2x6.eircc.core.model.IrcMessage;
 import org.l2x6.eircc.core.model.IrcServer;
 import org.l2x6.eircc.core.model.IrcUser;
+import org.l2x6.eircc.core.model.PlainIrcChannel;
 import org.l2x6.eircc.core.model.resource.IrcResourceException;
 import org.l2x6.eircc.core.util.IrcUtils;
 import org.l2x6.eircc.ui.EirccUi;
@@ -98,13 +98,13 @@ public class IrcClient {
 
     private class UiListener implements IRCEventListener {
 
-        private final List<IrcChannel> channelBuffer = new ArrayList<IrcChannel>(LIST_BUFFER_SIZE);
+        private final List<PlainIrcChannel> channelBuffer = new ArrayList<PlainIrcChannel>(LIST_BUFFER_SIZE);
 
         /**
          *
          */
         private void flushChannelBuffer() {
-            final IrcChannel[] channels = channelBuffer.toArray(new IrcChannel[channelBuffer.size()]);
+            final PlainIrcChannel[] channels = channelBuffer.toArray(new PlainIrcChannel[channelBuffer.size()]);
             channelBuffer.clear();
             Display.getDefault().asyncExec(new Runnable() {
                 @Override
@@ -129,8 +129,7 @@ public class IrcClient {
                 }
                 if (st.hasMoreTokens()) {
                     final String channelName = st.nextToken();
-                    final IrcChannel channel = account.createChannel(channelName);
-
+                    PlainIrcChannel channel = account.getServer().createChannel(channelName);
                     channelBuffer.add(channel);
                     if (channelBuffer.size() >= LIST_BUFFER_SIZE) {
                         flushChannelBuffer();

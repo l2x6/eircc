@@ -25,9 +25,13 @@ import org.l2x6.eircc.core.model.IrcAccount;
 import org.l2x6.eircc.core.model.IrcAccount.IrcAccountState;
 import org.l2x6.eircc.core.model.IrcChannelUser;
 import org.l2x6.eircc.core.model.IrcUser;
+import org.l2x6.eircc.core.model.PlainIrcChannel;
+import org.l2x6.eircc.core.model.resource.IrcResourceException;
+import org.l2x6.eircc.core.util.NickComparator;
 import org.l2x6.eircc.ui.EirccUi;
 import org.l2x6.eircc.ui.misc.IrcImages;
 import org.l2x6.eircc.ui.misc.IrcImages.ImageKey;
+import org.l2x6.eircc.ui.prefs.IrcPreferences;
 import org.l2x6.eircc.ui.IrcUiMessages;
 
 /**
@@ -63,9 +67,9 @@ public class IrcTreeAction<E> extends Action implements Listener {
                 predicate, itemAction);
     }
 
-    public static IrcTreeAction<AbstractIrcChannel> createJoinChannelAction(Tree tree) {
-        Predicate<? super TreeItem> predicate = treeItem -> treeItem.getData() instanceof AbstractIrcChannel
-                && !((AbstractIrcChannel) treeItem.getData()).isJoined();
+    public static IrcTreeAction<AbstractIrcChannel> createJoinAccountChannelAction(Tree tree) {
+        Predicate<? super TreeItem> predicate = treeItem -> (treeItem.getData() instanceof AbstractIrcChannel && !((AbstractIrcChannel) treeItem
+                .getData()).isJoined()) || treeItem.getData() instanceof PlainIrcChannel;
         Consumer<AbstractIrcChannel> itemAction = channel -> {
             try {
                 IrcController.getInstance().joinChannel(channel);
@@ -74,6 +78,19 @@ public class IrcTreeAction<E> extends Action implements Listener {
             }
         };
         return new IrcTreeAction<AbstractIrcChannel>(tree, IrcUiMessages.JoinIrcChannelAction_label,
+                ImageKey.JOIN_CHANNEL, predicate, itemAction);
+    }
+
+    public static IrcTreeAction<PlainIrcChannel> createJoinServerChannelAction(Tree tree) {
+        Predicate<? super TreeItem> predicate = treeItem -> treeItem.getData() instanceof PlainIrcChannel;
+        Consumer<PlainIrcChannel> itemAction = channel -> {
+            try {
+                IrcController.getInstance().joinChannel(channel);
+            } catch (IrcException | IrcResourceException e) {
+                EirccUi.log(e);
+            }
+        };
+        return new IrcTreeAction<PlainIrcChannel>(tree, IrcUiMessages.JoinIrcChannelAction_label,
                 ImageKey.JOIN_CHANNEL, predicate, itemAction);
     }
 
@@ -101,6 +118,30 @@ public class IrcTreeAction<E> extends Action implements Listener {
             }
         };
         return new IrcTreeAction<IrcAccount>(tree, IrcUiMessages.ListChannelsAction_label, ImageKey.REFRESH, predicate,
+                itemAction);
+    }
+
+    /**
+     * @param tree2
+     * @return
+     */
+    public static IrcTreeAction<?> createNotifyAction(Tree tree) {
+        Predicate<? super TreeItem> predicate = treeItem -> treeItem.getData() instanceof IrcChannelUser;
+        Consumer<IrcChannelUser> itemAction = user -> {
+            try {
+                if (user != null) {
+                    String patternProposal = NickComparator.getBaseNick(user.getNick()) + ".*";
+                    IrcPreferences prefs = IrcPreferences.getInstance();
+                    String pattern = prefs.showAddNichPatternDialog(patternProposal);
+                    if (pattern != null) {
+                        prefs.addTrackedNickPattern(pattern);
+                    }
+                }
+            } catch (Exception e) {
+                EirccUi.log(e);
+            }
+        };
+        return new IrcTreeAction<IrcChannelUser>(tree, IrcUiMessages.IrcChannelOutlinePage_Notify, null, predicate,
                 itemAction);
     }
 
@@ -140,7 +181,9 @@ public class IrcTreeAction<E> extends Action implements Listener {
         this.tree = tree;
         setEnabled(false);
         setText(label);
-        setImageDescriptor(IrcImages.getInstance().getImageDescriptor(imageKey));
+        if (imageKey != null) {
+            setImageDescriptor(IrcImages.getInstance().getImageDescriptor(imageKey));
+        }
         this.enabledPredicate = enabledPredicate;
         this.itemAction = itemAction;
         tree.addListener(SWT.Selection, this);

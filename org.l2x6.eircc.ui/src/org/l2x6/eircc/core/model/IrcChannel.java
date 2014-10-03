@@ -54,7 +54,7 @@ public class IrcChannel extends AbstractIrcChannel {
     public IrcChannel(IrcAccount account, String name) throws IrcResourceException {
         super(account);
         this.name = name;
-        this.channelResource = account.getAccountResource().getChannelResource(name);
+        this.channelResource = account.getAccountResource().getOrCreateChannelResource(name);
         this.kept = true;
         IrcLogResource logResource = channelResource.getActiveLogResource();
         this.log = new IrcLog(this, logResource);

@@ -6,16 +6,15 @@
  * http://www.eclipse.org/legal/epl-v10.html
  */
 
-package org.l2x6.eircc.core.model.search.tests;
+package org.l2x6.eircc.core;
 
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
+import org.l2x6.eircc.core.util.NickComparatorTest;
 
 /**
- * Test suite for all net.sourceforge.shelled.ui.text tests.
- *
  */
 @RunWith(Suite.class)
-@Suite.SuiteClasses({ Test1.class })
-public class ModelSearchSuite {
+@Suite.SuiteClasses({ NickComparatorTest.class })
+public class EirccCoreSuite {
 }

@@ -34,6 +34,8 @@ import org.l2x6.eircc.core.model.IrcMessage;
 import org.l2x6.eircc.core.model.IrcModel;
 import org.l2x6.eircc.core.model.IrcObject;
 import org.l2x6.eircc.core.model.IrcUser;
+import org.l2x6.eircc.core.model.PlainIrcChannel;
+import org.l2x6.eircc.ui.prefs.IrcPreferences;
 
 /**
  * @author <a href="mailto:ppalaga@redhat.com">Peter Palaga</a>
@@ -163,8 +165,9 @@ public class IrcImages {
                     m.put(imageKey.modelClass, imageKey);
                 }
             }
-            /* both IrcUser and IrcChannelUser will have the same icon */
+            /* Assing images to some extra classes */
             m.put(IrcChannelUser.class, USER);
+            m.put(PlainIrcChannel.class, CHANNEL);
             CLASS_LOOKUP = Collections.unmodifiableMap(m);
         }
 
@@ -380,7 +383,8 @@ public class IrcImages {
 
     public Image[] getFlashingImage(IrcModel model, ImageSize size) {
         IrcAccountsStatistics stats = model.getAccountsStatistics();
-        if (stats.hasChannelsNamingMe()) {
+        IrcPreferences prefs = IrcPreferences.getInstance();
+        if (stats.hasChannelsNamingMe() && prefs.shouldTrayFlashOnNamingMe()) {
             return new Image[] { getImage(getOverlays(stats, true), size), getImage(getOverlays(stats, false), size) };
         } else {
             return new Image[] { getImage(getOverlays(stats, true), size) };

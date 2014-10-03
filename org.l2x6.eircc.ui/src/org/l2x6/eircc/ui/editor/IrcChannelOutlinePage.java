@@ -130,6 +130,7 @@ public class IrcChannelOutlinePage extends ContentOutlinePage implements IDouble
     }
 
     private final IrcEditor editor;
+    private IrcTreeAction<?> notifyAction;
     private IrcTreeAction<?> openPrivateChatAction;
 
     /**
@@ -157,9 +158,11 @@ public class IrcChannelOutlinePage extends ContentOutlinePage implements IDouble
 
         Tree tree = viewer.getTree();
         openPrivateChatAction = IrcTreeAction.createOpenPrivateChatAction(tree);
+        notifyAction = IrcTreeAction.createNotifyAction(tree);
         MenuManager accountsMenuManager = new MenuManager("#PopupMenu");
         Menu accountsMenu = accountsMenuManager.createContextMenu(tree);
         accountsMenuManager.add(openPrivateChatAction);
+        accountsMenuManager.add(notifyAction);
         tree.setMenu(accountsMenu);
         getSite().registerContextMenu(this.getClass().getName(), accountsMenuManager, viewer);
 

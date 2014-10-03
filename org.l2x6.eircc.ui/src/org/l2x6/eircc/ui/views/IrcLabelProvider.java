@@ -14,7 +14,6 @@ import org.l2x6.eircc.core.model.AbstractIrcChannel;
 import org.l2x6.eircc.core.model.IrcAccountsStatistics;
 import org.l2x6.eircc.core.model.IrcBase;
 import org.l2x6.eircc.core.model.IrcModel;
-import org.l2x6.eircc.core.model.IrcObject;
 import org.l2x6.eircc.ui.IrcUiMessages;
 import org.l2x6.eircc.ui.misc.IrcImages;
 
@@ -39,8 +38,8 @@ public class IrcLabelProvider extends LabelProvider {
 
     @Override
     public Image getImage(Object element) {
-        if (element instanceof IrcObject) {
-            return IrcImages.getInstance().getImage((IrcObject) element);
+        if (element instanceof IrcBase) {
+            return IrcImages.getInstance().getImage((IrcBase) element);
         }
         return null;
     }

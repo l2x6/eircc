@@ -10,13 +10,13 @@ package org.l2x6.eircc.ui.tests;
 
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
-import org.l2x6.eircc.core.model.search.tests.ModelSearchSuite;
+import org.l2x6.eircc.core.EirccCoreSuite;
 
 /**
  * All tests wrapper.
  *
  */
 @RunWith(Suite.class)
-@Suite.SuiteClasses({ ModelSearchSuite.class })
+@Suite.SuiteClasses({ EirccCoreSuite.class })
 public class AllTests {
 }
