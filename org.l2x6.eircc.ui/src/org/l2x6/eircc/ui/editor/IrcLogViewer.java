@@ -131,7 +131,7 @@ public class IrcLogViewer extends SourceViewer {
     public IrcLogViewer(Composite parent, IVerticalRuler verticalRuler, IOverviewRuler overviewRuler,
             boolean showAnnotationsOverview, int styles) {
         // SWT.MULTI | SWT.READ_ONLY | SWT.WRAP | SWT.H_SCROLL | SWT.V_SCROLL
-        super(parent, verticalRuler, overviewRuler, showAnnotationsOverview, styles);
+        super(parent, verticalRuler, overviewRuler, showAnnotationsOverview, styles | SWT.WRAP);
         this.setEditable(false);
         this.textWidget = this.getTextWidget();
         setDocument(new Document());
