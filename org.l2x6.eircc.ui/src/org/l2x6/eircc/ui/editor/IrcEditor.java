@@ -41,7 +41,6 @@ import org.eclipse.ui.IWorkbenchPartReference;
 import org.eclipse.ui.PartInitException;
 import org.eclipse.ui.texteditor.IDocumentProvider;
 import org.eclipse.ui.views.contentoutline.IContentOutlinePage;
-import org.l2x6.eircc.core.IrcController;
 import org.l2x6.eircc.core.IrcException;
 import org.l2x6.eircc.core.model.AbstractIrcChannel;
 import org.l2x6.eircc.core.model.IrcLog;
@@ -250,7 +249,7 @@ public class IrcEditor extends AbstractIrcEditor implements IrcModelEventListene
         try {
             AbstractIrcChannel channel = getChannel();
             if (channel != null) {
-                IrcController.getInstance().partChannel(channel);
+                EirccUi.getController().partChannel(channel);
             }
         } catch (Exception e) {
             EirccUi.log(e);
@@ -525,7 +524,7 @@ public class IrcEditor extends AbstractIrcEditor implements IrcModelEventListene
             }
             if (text.length() > 0) {
                 AbstractIrcChannel channel = getChannel();
-                IrcController.getInstance().postMessage(channel, text);
+                EirccUi.getController().postMessage(channel, text);
                 inputViewer.getDocument().set("");
             }
         }

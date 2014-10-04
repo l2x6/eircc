@@ -22,7 +22,6 @@ import org.eclipse.swt.widgets.Event;
 import org.eclipse.swt.widgets.Listener;
 import org.eclipse.swt.widgets.Tree;
 import org.eclipse.swt.widgets.TreeItem;
-import org.l2x6.eircc.core.IrcController;
 import org.l2x6.eircc.core.IrcException;
 import org.l2x6.eircc.core.model.AbstractIrcChannel;
 import org.l2x6.eircc.core.model.IrcAccount;
@@ -118,7 +117,7 @@ public class PromptAndJoinChannelAction extends Action implements Listener, IrcT
                 if (dialog.open() == Window.OK) {
                     String channelName = dialog.getValue();
                     PlainIrcChannel channel = new PlainIrcChannel(account.getServer(), channelName);
-                    IrcController.getInstance().joinChannel(channel);
+                    EirccUi.getController().joinChannel(channel);
                 }
             }
         } catch (IrcException | IrcResourceException e) {

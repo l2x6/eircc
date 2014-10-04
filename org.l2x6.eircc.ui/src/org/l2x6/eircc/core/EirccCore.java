@@ -9,6 +9,7 @@
 package org.l2x6.eircc.core;
 
 import org.l2x6.eircc.core.model.IrcModel;
+import org.l2x6.eircc.ui.EirccUi;
 
 /**
  * @author <a href="mailto:ppalaga@redhat.com">Peter Palaga</a>
@@ -28,7 +29,6 @@ public class EirccCore {
     }
 
     public void dispose() {
-        IrcController.getInstance().dispose();
         IrcModel.getInstance().dispose();
     }
 

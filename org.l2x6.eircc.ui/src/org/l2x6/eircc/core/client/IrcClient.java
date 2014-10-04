@@ -10,17 +10,22 @@ package org.l2x6.eircc.core.client;
 
 import java.io.IOException;
 import java.security.cert.X509Certificate;
+import java.text.MessageFormat;
+import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.StringTokenizer;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import org.eclipse.swt.widgets.Display;
 import org.l2x6.eircc.core.IrcController;
@@ -36,6 +41,8 @@ import org.l2x6.eircc.core.model.PlainIrcChannel;
 import org.l2x6.eircc.core.model.resource.IrcResourceException;
 import org.l2x6.eircc.core.util.IrcUtils;
 import org.l2x6.eircc.ui.EirccUi;
+import org.l2x6.eircc.ui.IrcUiMessages;
+import org.schwering.irc.lib.IRCCommand;
 import org.schwering.irc.lib.IRCConnection;
 import org.schwering.irc.lib.IRCEventListener;
 import org.schwering.irc.lib.IRCModeParser;
@@ -48,37 +55,36 @@ import org.schwering.irc.lib.ssl.SSLTrustManager;
  * @author <a href="mailto:ppalaga@redhat.com">Peter Palaga</a>
  */
 public class IrcClient {
-
     private static class IrcExecutor extends ThreadPoolExecutor {
-
         /**
+         * @param executorType
          * @return
          */
-        private static ThreadFactory createThreadFactory() {
+        private static ThreadFactory createThreadFactory(String executorType) {
             return new ThreadFactory() {
                 final ThreadFactory defaultFactory = Executors.defaultThreadFactory();
 
                 public Thread newThread(final Runnable r) {
                     Thread thread = defaultFactory.newThread(r);
-                    thread.setName("IrcClient-" + thread.getName());
+                    thread.setName("IrcClient"+ executorType +"-" + thread.getName());
                     return thread;
                 }
             };
         }
 
         /**
+         * @param executorType
          * @param corePoolSize
          * @param maximumPoolSize
          * @param keepAliveTime
          * @param unit
          * @param workQueue
          */
-        public IrcExecutor() {
-            super(1, 1, 0L, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<Runnable>(), createThreadFactory());
+        public IrcExecutor(String executorType) {
+            super(1, 1, 0L, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<Runnable>(), createThreadFactory(executorType));
         }
 
     }
-
     /**
      * A place where the <i>Man in the Middle</i> likes to reside.
      *
@@ -94,6 +100,37 @@ public class IrcClient {
         public boolean isTrusted(X509Certificate[] chain) {
             return true;
         }
+    }
+
+    private class TimeoutCheckTask implements Runnable {
+        private final Future<?> future;
+
+        /**
+         * @param future
+         */
+        public TimeoutCheckTask(Future<?> future) {
+            super();
+            this.future = future;
+        }
+
+        /**
+         * @see java.lang.Runnable#run()
+         */
+        @Override
+        public void run() {
+
+            try {
+                future.get(commandTimeout.toMillis(), TimeUnit.MILLISECONDS);
+            } catch (InterruptedException e) {
+            } catch (ExecutionException e) {
+                String msg = MessageFormat.format(IrcUiMessages.IrcClient_commandExecutionException, e.getMessage());
+                account.setOffline(new IrcException(msg, e, account));
+            } catch (TimeoutException e) {
+                account.setOffline(new IrcException(IrcUiMessages.IrcClient_commandTimeOut, e, account));
+            }
+
+        }
+
     }
 
     private class UiListener implements IRCEventListener {
@@ -165,7 +202,6 @@ public class IrcClient {
                 @Override
                 public void run() {
                     try {
-                        IrcController controller = IrcController.getInstance();
                         AbstractIrcChannel channel = controller.getOrCreateAccountChannel(account, channelName);
                         IrcServer server = account.getServer();
                         StringTokenizer st = new StringTokenizer(msg, " ");
@@ -250,14 +286,13 @@ public class IrcClient {
                 @Override
                 public void run() {
                     try {
-                        AbstractIrcChannel channel = IrcController.getInstance().getOrCreateAccountChannel(account,
+                        AbstractIrcChannel channel = controller.getOrCreateAccountChannel(account,
                                 chan);
                         String nick = user.getNick();
                         if (nick.equals(account.getAcceptedNick())) {
                             /* It is me who joined */
                             channel.setJoined(true);
                         } else {
-                            IrcController controller = IrcController.getInstance();
                             /* make sure the user info is stored in server */
                             controller.getOrCreateUser(account.getServer(), nick, user.getUsername());
                             channel.addNick(nick);
@@ -307,7 +342,7 @@ public class IrcClient {
             Display.getDefault().asyncExec(new Runnable() {
                 @Override
                 public void run() {
-                    IrcController.getInstance().changeNick(account.getServer(), user.getNick(), newNick,
+                    controller.changeNick(account.getServer(), user.getNick(), newNick,
                             user.getUsername());
                 }
             });
@@ -331,9 +366,9 @@ public class IrcClient {
             Display.getDefault().asyncExec(new Runnable() {
                 @Override
                 public void run() {
-                    AbstractIrcChannel channel = IrcController.getInstance().getAccountChannel(account, chan);
+                    AbstractIrcChannel channel = controller.getAccountChannel(account, chan);
                     if (channel != null) {
-                        IrcController.getInstance().userLeft(channel, user.getNick(), msg);
+                        controller.userLeft(channel, user.getNick(), msg);
                     }
                 }
             });
@@ -358,7 +393,6 @@ public class IrcClient {
                 public void run() {
                     try {
                         final boolean isP2p = target.equals(account.getAcceptedNick());
-                        IrcController controller = IrcController.getInstance();
                         IrcUser ircUser = controller.getOrCreateUser(account.getServer(), user.getNick(),
                                 user.getUsername());
                         AbstractIrcChannel channel;
@@ -387,7 +421,7 @@ public class IrcClient {
             Display.getDefault().asyncExec(new Runnable() {
                 @Override
                 public void run() {
-                    IrcController.getInstance().userQuit(account, user.getNick(), msg);
+                    controller.userQuit(account, user.getNick(), msg);
                 }
             });
         }
@@ -400,7 +434,6 @@ public class IrcClient {
             Display.getDefault().asyncExec(new Runnable() {
                 @Override
                 public void run() {
-                    IrcController controller = IrcController.getInstance();
                     IrcUser me = controller.getOrCreateUser(account.getServer(), connection.getNick(),
                             account.getUsername());
                     account.setMe(me);
@@ -467,22 +500,35 @@ public class IrcClient {
 
     public static final int DEFAULT_PORT = 6667;
 
+    /** Update UI by this many list entries. */
+    private static final int LIST_BUFFER_SIZE = 16;
+
     private IrcAccount account;
+    private Duration commandTimeout;
 
     private IRCConnection connection;
 
+    private final IrcController controller;
+
     private ExecutorService executor;
 
-    /** Update UI by this many list entries. */
-    private final int LIST_BUFFER_SIZE = 16;
     private final IrcNickGenerator nickGenerator = IrcNickGenerator.DEFAULT;
+    private Duration pingInterval;
+
+    private final IrcExecutor timeoutChecker;
 
     /**
+     * @param commandTimeout
+     * @param pingInterval
      *
      */
-    public IrcClient() {
+    public IrcClient(IrcController controller, Duration commandTimeout, Duration pingInterval) {
         super();
-        executor = new IrcExecutor();
+        this.controller = controller;
+        this.pingInterval = pingInterval;
+        this.commandTimeout = commandTimeout;
+        executor = new IrcExecutor("Executor");
+        timeoutChecker = new IrcExecutor("TaskValidator");
     }
 
     public void close() {
@@ -543,8 +589,17 @@ public class IrcClient {
                 throw new IrcException("Could not connect to '" + account.getLabel() + "': " + e.getMessage(), e,
                         account);
             }
+        } else {
+            throw new IllegalStateException("Must be connected");
         }
-        throw new IllegalStateException("Must be connected");
+    }
+
+    public Duration getCommandTimeout() {
+        return commandTimeout;
+    }
+
+    public Duration getPingInterval() {
+        return pingInterval;
     }
 
     /**
@@ -559,34 +614,53 @@ public class IrcClient {
      * @throws IOException
      */
     public void joinChannel(final AbstractIrcChannel channel) throws IrcException {
-        IrcUtils.assertUiThread();
-        ensureConnected();
-        executor.submit(new Runnable() {
+        submit(new Runnable() {
             @Override
             public void run() {
-                connection.doJoin(channel.getName());
+                try {
+                    ensureConnected();
+                    connection.doJoin(channel.getName());
+                } catch (final IrcException e) {
+                    notifyUi(e);
+                }
             }
         });
     }
 
     public void listChannels() throws IrcException {
-        IrcUtils.assertUiThread();
-        ensureConnected();
-        executor.submit(new Runnable() {
+        submit(new Runnable() {
             @Override
             public void run() {
-                connection.doList();
+                try {
+                    ensureConnected();
+                    connection.doList();
+                } catch (IrcException e) {
+                    notifyUi(e);
+                }
             }
         });
     }
 
     public void nick(final String newNick) throws IrcException {
-        IrcUtils.assertUiThread();
-        ensureConnected();
-        executor.submit(new Runnable() {
+        submit(new Runnable() {
             @Override
             public void run() {
-                connection.doNick(newNick);
+                try {
+                    ensureConnected();
+                    connection.doNick(newNick);
+                } catch (IrcException e) {
+                    notifyUi(e);
+                }
+            }
+        });
+    }
+
+    private void notifyUi(final IrcException e) {
+        Display.getDefault().asyncExec(new Runnable() {
+            @Override
+            public void run() {
+                EirccUi.log(e);
+                account.setOffline(e);
             }
         });
     }
@@ -595,7 +669,6 @@ public class IrcClient {
      * @param channel
      */
     public void partChannel(final AbstractIrcChannel channel) {
-        IrcUtils.assertUiThread();
         if (isConnected()) {
             executor.submit(new Runnable() {
                 @Override
@@ -608,29 +681,46 @@ public class IrcClient {
         }
     }
 
+    public void ping() throws IrcException {
+        submit(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    ensureConnected();
+                    connection.send(IRCCommand.PING.name());
+                } catch (IrcException e) {
+                    notifyUi(e);
+                }
+            }
+        });
+    }
+
     /**
      * @throws IOException
      *
      */
     public void postMessage(final AbstractIrcChannel channel, final String message) throws IrcException {
-        IrcUtils.assertUiThread();
-        ensureConnected();
-        executor.submit(new Runnable() {
+        submit(new Runnable() {
             @Override
             public void run() {
-                connection.doPrivmsg(channel.getName(), message);
-                /*
-                 * post back to model only after the above has not thrown an
-                 * exception
-                 */
-                Display.getDefault().asyncExec(new Runnable() {
-                    @Override
-                    public void run() {
-                        IrcMessage m = new IrcMessage(channel.getLog(), OffsetDateTime.now(), account.getMe(), message,
-                                channel.isP2p());
-                        channel.getLog().appendMessage(m);
-                    }
-                });
+                try {
+                    ensureConnected();
+                    connection.doPrivmsg(channel.getName(), message);
+                    /*
+                     * post back to model only after the above has not thrown an
+                     * exception
+                     */
+                    Display.getDefault().asyncExec(new Runnable() {
+                        @Override
+                        public void run() {
+                            IrcMessage m = new IrcMessage(channel.getLog(), OffsetDateTime.now(), account.getMe(), message,
+                                    channel.isP2p());
+                            channel.getLog().appendMessage(m);
+                        }
+                    });
+                } catch (IrcException e) {
+                    notifyUi(e);
+                }
             }
         });
     }
@@ -640,12 +730,15 @@ public class IrcClient {
      * @throws IOException
      */
     public void postRaw(final String rawCommand) throws IrcException {
-        IrcUtils.assertUiThread();
-        ensureConnected();
-        executor.submit(new Runnable() {
+        submit(new Runnable() {
             @Override
             public void run() {
-                connection.send(rawCommand);
+                try {
+                    ensureConnected();
+                    connection.send(rawCommand);
+                } catch (IrcException e) {
+                    notifyUi(e);
+                }
             }
         });
     }
@@ -655,7 +748,7 @@ public class IrcClient {
      */
     public void quitAndClose() {
         IrcUtils.assertUiThread();
-        if (connection != null && connection.isConnected()) {
+        if (isConnected()) {
             executor.submit(new Runnable() {
                 @Override
                 public void run() {
@@ -680,15 +773,36 @@ public class IrcClient {
         }
     }
 
-    public void whois(Collection<String> nicks) throws IrcException {
+    public void setCommandTimeout(Duration commandTimeout) {
+        this.commandTimeout = commandTimeout;
+    }
+
+    public void setPingInterval(Duration pingInterval) {
+        this.pingInterval = pingInterval;
+    }
+
+    /**
+     *
+     */
+    private void submit(Runnable task) {
         IrcUtils.assertUiThread();
+        Future<?> future = executor.submit(task);
+        timeoutChecker.submit(new TimeoutCheckTask(future));
+    }
+
+    public void whois(Collection<String> nicks) throws IrcException {
         if (nicks != null && !nicks.isEmpty()) {
-            ensureConnected();
+            IrcUtils.assertUiThread();
             for (final String nick : nicks) {
-                executor.submit(new Runnable() {
+                submit(new Runnable() {
                     @Override
                     public void run() {
-                        connection.doWhois(nick);
+                        try {
+                            ensureConnected();
+                            connection.doWhois(nick);
+                        } catch (IrcException e) {
+                            notifyUi(e);
+                        }
                     }
                 });
             }

@@ -44,7 +44,6 @@ import org.eclipse.ui.handlers.ExpandAllHandler;
 import org.eclipse.ui.handlers.IHandlerService;
 import org.eclipse.ui.part.PageBook;
 import org.eclipse.ui.part.ViewPart;
-import org.l2x6.eircc.core.IrcController;
 import org.l2x6.eircc.core.IrcException;
 import org.l2x6.eircc.core.model.AbstractIrcChannel;
 import org.l2x6.eircc.core.model.IrcAccount;
@@ -326,13 +325,13 @@ public class IrcAccountsView extends ViewPart implements IrcModelEventListener {
                                          * this should both join and open the
                                          * editor
                                          */
-                                        IrcController.getInstance().joinChannel(ch);
+                                        EirccUi.getController().joinChannel(ch);
                                     } else {
                                         EirccUi.getDefault().openEditor(ch);
                                     }
                                 } else if (data instanceof PlainIrcChannel) {
                                     PlainIrcChannel ch = (PlainIrcChannel) data;
-                                    IrcController.getInstance().joinChannel(ch);
+                                    EirccUi.getController().joinChannel(ch);
                                 }
                             }
                         }

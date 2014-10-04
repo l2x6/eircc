@@ -44,7 +44,7 @@ public class IrcTreeActions<E> extends Action implements Listener, IrcTreeAction
                 && ((IrcAccount) treeItem.getData()).getState() != IrcAccountState.ONLINE;
         Consumer<IrcAccount> itemAction = account -> {
             try {
-                IrcController.getInstance().connect(account);
+                EirccUi.getController().connect(account);
             } catch (IrcException e) {
                 EirccUi.log(e);
             }
@@ -58,7 +58,7 @@ public class IrcTreeActions<E> extends Action implements Listener, IrcTreeAction
                 && ((IrcAccount) treeItem.getData()).getState() == IrcAccountState.ONLINE;
         Consumer<IrcAccount> itemAction = account -> {
             try {
-                IrcController.getInstance().quit(account);
+                EirccUi.getController().quit(account);
             } catch (Exception e) {
                 EirccUi.log(e);
             }
@@ -72,7 +72,7 @@ public class IrcTreeActions<E> extends Action implements Listener, IrcTreeAction
                 .getData()).isJoined()) || treeItem.getData() instanceof PlainIrcChannel;
         Consumer<AbstractIrcChannel> itemAction = channel -> {
             try {
-                IrcController.getInstance().joinChannel(channel);
+                EirccUi.getController().joinChannel(channel);
             } catch (IrcException e) {
                 EirccUi.log(e);
             }
@@ -85,7 +85,7 @@ public class IrcTreeActions<E> extends Action implements Listener, IrcTreeAction
         Predicate<? super TreeItem> predicate = treeItem -> treeItem.getData() instanceof PlainIrcChannel;
         Consumer<PlainIrcChannel> itemAction = channel -> {
             try {
-                IrcController.getInstance().joinChannel(channel);
+                EirccUi.getController().joinChannel(channel);
             } catch (IrcException | IrcResourceException e) {
                 EirccUi.log(e);
             }
@@ -99,7 +99,7 @@ public class IrcTreeActions<E> extends Action implements Listener, IrcTreeAction
                 && ((AbstractIrcChannel) treeItem.getData()).isJoined();
         Consumer<AbstractIrcChannel> itemAction = channel -> {
             try {
-                IrcController.getInstance().partChannel(channel);
+                EirccUi.getController().partChannel(channel);
             } catch (IrcException e) {
                 EirccUi.log(e);
             }
@@ -112,7 +112,7 @@ public class IrcTreeActions<E> extends Action implements Listener, IrcTreeAction
         Predicate<? super TreeItem> predicate = treeItem -> treeItem.getData() instanceof IrcAccount;
         Consumer<IrcAccount> itemAction = account -> {
             try {
-                IrcController.getInstance().listChannels(account);
+                EirccUi.getController().listChannels(account);
             } catch (IrcException e) {
                 EirccUi.log(e);
             }
@@ -153,13 +153,13 @@ public class IrcTreeActions<E> extends Action implements Listener, IrcTreeAction
         Predicate<? super TreeItem> predicate = treeItem -> treeItem.getData() instanceof IrcChannelUser;
         Consumer<IrcChannelUser> itemAction = user -> {
             try {
-                IrcController controller = IrcController.getInstance();
+                IrcController controller = EirccUi.getController();
                 IrcUser p2pUser = controller.getOrCreateUser(user.getChannel().getAccount().getServer(),
                         user.getNick(), null);
                 AbstractIrcChannel ch = controller.getOrCreateP2pChannel(p2pUser);
                 if (!ch.isJoined()) {
                     /* this should both join and open the editor */
-                    IrcController.getInstance().joinChannel(ch);
+                    EirccUi.getController().joinChannel(ch);
                 } else {
                     EirccUi.getDefault().openEditor(ch);
                 }

@@ -107,6 +107,8 @@ public class EirccUi extends AbstractUIPlugin implements IrcModelEventListener, 
 
     private IProject project;
 
+    private static final IrcController INSTANCE = new IrcController();
+
     /**
      * @return
      */
@@ -144,7 +146,7 @@ public class EirccUi extends AbstractUIPlugin implements IrcModelEventListener, 
             try {
                 IrcAccount account = (IrcAccount) e.getModelObject();
                 if (account.getState() == IrcAccountState.ONLINE) {
-                    IrcController controller = IrcController.getInstance();
+                    IrcController controller = EirccUi.getController();
                     for (AbstractIrcChannel ch : account.getChannels()) {
                         if (ch.isAutoJoin() && !ch.isJoined()) {
                             controller.joinChannel(ch);
@@ -274,7 +276,7 @@ public class EirccUi extends AbstractUIPlugin implements IrcModelEventListener, 
         model.addModelEventListener(this);
         IrcRootResource rootResource = new IrcRootResource(ircProject, IrcDocumentProvider.getInstance());
         model.load(rootResource);
-        IrcController controller = IrcController.getInstance();
+        IrcController controller = EirccUi.getController();
         for (IrcAccount account : model.getAccounts()) {
             if (account.isAutoConnect()) {
                 try {
@@ -373,5 +375,9 @@ public class EirccUi extends AbstractUIPlugin implements IrcModelEventListener, 
     @Override
     public void windowOpened(IWorkbenchWindow window) {
         windowActivated(window);
+    }
+
+    public static IrcController getController() {
+        return INSTANCE;
     }
 }

@@ -9,6 +9,7 @@
 package org.l2x6.eircc.core;
 
 import java.io.IOException;
+import java.time.Duration;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -29,13 +30,9 @@ import org.schwering.irc.lib.IRCCommand;
  * @author <a href="mailto:ppalaga@redhat.com">Peter Palaga</a>
  */
 public class IrcController {
-    private static final IrcController INSTANCE = new IrcController();
-
-    public static IrcController getInstance() {
-        return INSTANCE;
-    }
-
     private final Map<String, IrcClient> clients = new HashMap<String, IrcClient>();
+    private Duration commandTimeout;
+    private Duration pingInterval;
 
     /**
      *
@@ -75,7 +72,7 @@ public class IrcController {
             client = null;
         }
         if (client == null) {
-            client = new IrcClient();
+            client = new IrcClient(this, commandTimeout, pingInterval);
             try {
                 client.connect(account);
                 clients.put(account.getLabel(), client);
@@ -85,6 +82,10 @@ public class IrcController {
             }
         }
         return client;
+    }
+
+    public Duration getCommandTimeout() {
+        return commandTimeout;
     }
 
     public AbstractIrcChannel getOrCreateAccountChannel(IrcAccount ircAccount, String channelName)
@@ -117,6 +118,10 @@ public class IrcController {
     public IrcUser getOrCreateUser(IrcServer server, String nick, String username) {
         IrcUtils.assertUiThread();
         return server.getOrCreateUser(nick, username);
+    }
+
+    public Duration getPingInterval() {
+        return pingInterval;
     }
 
     /**
@@ -225,6 +230,14 @@ public class IrcController {
         // My test server seems to be quite unhappy about serving many whois
         // requests at once.
         // getClientOrConnect(server.getAccount()).whois(nicks);
+    }
+
+    public void setCommandTimeout(Duration commandTimeout) {
+        this.commandTimeout = commandTimeout;
+    }
+
+    public void setPingInterval(Duration pingInterval) {
+        this.pingInterval = pingInterval;
     }
 
     /**

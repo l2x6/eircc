@@ -31,12 +31,12 @@ import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Text;
 import org.eclipse.ui.INewWizard;
 import org.eclipse.ui.IWorkbench;
-import org.l2x6.eircc.core.IrcController;
 import org.l2x6.eircc.core.IrcException;
 import org.l2x6.eircc.core.model.InitialIrcAccount;
 import org.l2x6.eircc.core.model.InitialIrcAccount.InitialIrcAccountField;
 import org.l2x6.eircc.core.model.IrcAccount;
 import org.l2x6.eircc.core.model.IrcModel;
+import org.l2x6.eircc.ui.EirccUi;
 import org.l2x6.eircc.ui.IrcUiMessages;
 
 /**
@@ -175,7 +175,7 @@ public class NewIrcAccountWizard extends Wizard implements INewWizard {
 
             if (newAccount.isAutoConnect()) {
                 try {
-                    IrcController.getInstance().connect(newAccount);
+                    EirccUi.getController().connect(newAccount);
                 } catch (IrcException e) {
                     setErrorMessage(e.getLocalizedMessage());
                     return false;

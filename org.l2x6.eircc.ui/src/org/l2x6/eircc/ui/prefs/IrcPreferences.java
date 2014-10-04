@@ -82,7 +82,10 @@ public class IrcPreferences {
 
     private static final TemporalAmount DEFAULT_EDITOR_LOOK_BACK_TIME_SPAN = Duration.ofHours(24);
 
+    private static final Duration DEFAULT_PING_INTERVAL = Duration.ofMinutes(1);
+    private static final Duration COMMAND_TIMEOUT = Duration.ofSeconds(3);
     private static final IrcPreferences INSTANCE = new IrcPreferences();
+
     public static final char NICKS_DELIMITER = ' ';
 
     private static final IInputValidator PATTERN_VALIDATOR = new IInputValidator() {
@@ -231,6 +234,14 @@ public class IrcPreferences {
         return messageTimeStyle;
     }
 
+    public Duration getPingInterval() {
+        return DEFAULT_PING_INTERVAL;
+    }
+
+    public Duration getPingTimeout() {
+        return COMMAND_TIMEOUT;
+    }
+
     /**
      * @param message
      * @return
@@ -243,7 +254,7 @@ public class IrcPreferences {
      * Calls
      * {@link IPreferencesService#getString(String, String, String, org.eclipse.core.runtime.preferences.IScopeContext[])}
      * using {@link Plugin#ID} and a default ({@code null}) context order.
-     * 
+     *
      * @param key
      * @return
      */
