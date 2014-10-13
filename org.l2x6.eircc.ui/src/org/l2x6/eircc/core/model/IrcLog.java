@@ -185,7 +185,7 @@ public class IrcLog extends IrcObject implements Iterable<IrcMessage> {
         if (document.getLength() > 0) {
             IrcLogReader reader = null;
             try {
-                reader = new IrcLogReader(document, logResource.getChannelResource().isP2p());
+                reader = new IrcLogReader(document, editorInput.getFile().toString(), logResource.getChannelResource().isP2p());
                 while (reader.hasNext()) {
                     PlainIrcMessage message = reader.next();
                     appendMessage(message.toIrcMessage(this));

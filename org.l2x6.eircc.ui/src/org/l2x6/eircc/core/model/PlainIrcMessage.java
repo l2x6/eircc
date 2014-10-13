@@ -11,6 +11,7 @@ package org.l2x6.eircc.core.model;
 import java.io.IOException;
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.time.temporal.ChronoUnit;
 
 import org.eclipse.jface.text.BadLocationException;
@@ -90,7 +91,11 @@ public class PlainIrcMessage {
         this.recordOffset = in.getCharCount();
         this.lineIndex = in.getLineIndex();
         String timeString = in.readToken(FIELD_DELIMITER, MULTILINE_MARKER);
-        this.arrivedAt = OffsetDateTime.parse(timeString, DateTimeFormatter.ISO_ZONED_DATE_TIME);
+        try {
+            this.arrivedAt = OffsetDateTime.parse(timeString, DateTimeFormatter.ISO_ZONED_DATE_TIME);
+        } catch (DateTimeParseException e) {
+            throw new IOException("Could not parse "+ in.getSource(), e);
+        }
         String nick = in.readToken(FIELD_DELIMITER, MULTILINE_MARKER);
         this.nick = nick == null || nick.isEmpty() ? null : nick;
         IrcLogChunk txtChunk = in.readChunk(RECORD_DELIMITER, MULTILINE_MARKER);

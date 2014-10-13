@@ -430,7 +430,7 @@ public class IrcEditor extends AbstractIrcEditor implements IrcModelEventListene
         try {
             provider.connect(input);
             IDocument document = provider.getDocument(input);
-            reader = new IrcLogReader(document, logResource.getChannelResource().isP2p());
+            reader = new IrcLogReader(document, logResource.getLogFile().toString(), logResource.getChannelResource().isP2p());
             while (reader.hasNext()) {
                 PlainIrcMessage m = reader.next();
                 logViewer.appendMessage(m);
@@ -473,7 +473,7 @@ public class IrcEditor extends AbstractIrcEditor implements IrcModelEventListene
 
     /**
      * Updates the input to point to the last log of the present channel.
-     * 
+     *
      * @throws IrcResourceException
      * @throws IOException
      * @throws CoreException

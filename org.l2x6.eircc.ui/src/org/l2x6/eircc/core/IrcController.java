@@ -20,11 +20,13 @@ import org.l2x6.eircc.core.model.AbstractIrcChannel;
 import org.l2x6.eircc.core.model.IrcAccount;
 import org.l2x6.eircc.core.model.IrcAccount.IrcAccountState;
 import org.l2x6.eircc.core.model.IrcNick;
+import org.l2x6.eircc.core.model.IrcObject;
 import org.l2x6.eircc.core.model.IrcServer;
 import org.l2x6.eircc.core.model.IrcUser;
 import org.l2x6.eircc.core.model.PlainIrcChannel;
 import org.l2x6.eircc.core.model.resource.IrcResourceException;
 import org.l2x6.eircc.core.util.IrcUtils;
+import org.l2x6.eircc.ui.EirccUi;
 import org.schwering.irc.lib.IRCCommand;
 
 /**
@@ -270,6 +272,15 @@ public class IrcController {
                 }
             }
         }
+    }
+
+    /**
+     * @param ircException
+     */
+    public void handle(IrcException ircException) {
+        IrcObject object = ircException.getModelObject();
+        //TODO: do some kind of if (object instanceof *) and emit some messages that will be shown in logs.
+        EirccUi.log(ircException);
     }
 
 }

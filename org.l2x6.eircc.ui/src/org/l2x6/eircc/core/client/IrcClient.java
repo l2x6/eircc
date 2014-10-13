@@ -549,6 +549,7 @@ public class IrcClient {
 
     public void connect(IrcAccount account) throws IrcException {
         IrcUtils.assertUiThread();
+        this.account = account;
         if (account.isSsl()) {
             SSLIRCConnection conn = new SSLIRCConnection(account.getHost(), new int[] { account.getPort() },
                     account.getPassword(), account.getPreferedNickOrUser(), account.getUsername(), account.getName(),
@@ -566,13 +567,18 @@ public class IrcClient {
         connection.setPong(true);
         connection.setDaemon(false);
         connection.setColors(false);
-        try {
-            connection.connect();
-        } catch (IOException e) {
-            throw new IrcException("Could not connect to '" + account.getLabel() + "': " + e.getClass().getName()
-                    + ": " + e.getMessage(), e, account);
-        }
-        this.account = account;
+        executor.submit(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    connection.connect();
+                } catch (Exception e) {
+                    controller.handle(new IrcException("Could not connect to '" + account.getLabel() + "': " + e.getClass().getName()
+                            + ": " + e.getMessage(), e, account));
+                }
+            }
+        });
+
     }
 
     /**

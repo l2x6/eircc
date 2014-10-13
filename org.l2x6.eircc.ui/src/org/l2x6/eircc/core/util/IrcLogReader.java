@@ -66,12 +66,13 @@ public class IrcLogReader implements Closeable {
     }
 
     private final CountedPushbackReader in;
-
     private final boolean isP2pChannel;
 
-    public IrcLogReader(IDocument document, boolean isP2pChannel) throws UnsupportedEncodingException,
+    private final String source;
+
+    public IrcLogReader(IDocument document, String source, boolean isP2pChannel) throws UnsupportedEncodingException,
             FileNotFoundException {
-        this(new DocumenReader(document), isP2pChannel);
+        this(new DocumenReader(document), source, isP2pChannel);
     }
 
     /**
@@ -80,14 +81,15 @@ public class IrcLogReader implements Closeable {
      * @throws UnsupportedEncodingException
      *
      */
-    public IrcLogReader(InputStream inputStream, boolean isP2pChannel) throws UnsupportedEncodingException,
+    public IrcLogReader(InputStream inputStream, String source, boolean isP2pChannel) throws UnsupportedEncodingException,
             FileNotFoundException {
-        this(new InputStreamReader(inputStream, "utf-8"), isP2pChannel);
+        this(new InputStreamReader(inputStream, "utf-8"), source, isP2pChannel);
     }
 
-    public IrcLogReader(Reader input, boolean isP2pChannel) throws UnsupportedEncodingException, FileNotFoundException {
+    public IrcLogReader(Reader input, String source, boolean isP2pChannel) throws UnsupportedEncodingException, FileNotFoundException {
         this.in = new CountedPushbackReader(input, 2);
         this.isP2pChannel = isP2pChannel;
+        this.source = source;
     }
 
     /**
@@ -109,6 +111,10 @@ public class IrcLogReader implements Closeable {
 
     public int getLineIndex() {
         return in.getLineIndex();
+    }
+
+    public String getSource() {
+        return source;
     }
 
     public boolean hasNext() throws IOException {
