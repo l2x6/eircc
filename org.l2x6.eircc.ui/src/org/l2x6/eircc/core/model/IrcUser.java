@@ -29,18 +29,6 @@ import org.l2x6.eircc.core.util.TypedField;
  * @author <a href="mailto:ppalaga@redhat.com">Peter Palaga</a>
  */
 public class IrcUser extends IrcObject implements PersistentIrcObject {
-    public static class IrcHistoricUser extends IrcUser {
-        /**
-         * @param server
-         * @param id
-         * @param nick
-         * @param username
-         */
-        public IrcHistoricUser(String nick) {
-            super(null, null, nick, null);
-        }
-
-    }
 
     public enum IrcUserField implements TypedField {
         host, nick, previousNicksString, username;

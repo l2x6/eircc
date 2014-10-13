@@ -78,12 +78,12 @@ public class IrcPreferences {
 
     }
 
+    private static final Duration COMMAND_TIMEOUT = Duration.ofSeconds(3);
+
     private static final int DEFAULT_EDITOR_LOOK_BACK_LINE_LIMIT = 512;
 
     private static final TemporalAmount DEFAULT_EDITOR_LOOK_BACK_TIME_SPAN = Duration.ofHours(24);
-
     private static final Duration DEFAULT_PING_INTERVAL = Duration.ofMinutes(1);
-    private static final Duration COMMAND_TIMEOUT = Duration.ofSeconds(3);
     private static final IrcPreferences INSTANCE = new IrcPreferences();
 
     public static final char NICKS_DELIMITER = ' ';

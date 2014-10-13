@@ -60,6 +60,8 @@ import org.osgi.framework.BundleContext;
  */
 public class EirccUi extends AbstractUIPlugin implements IrcModelEventListener, IWindowListener {
 
+    private static final IrcController INSTANCE = new IrcController();
+
     /** The singleton */
     private static EirccUi plugin;
 
@@ -67,6 +69,10 @@ public class EirccUi extends AbstractUIPlugin implements IrcModelEventListener, 
     public static final String PLUGIN_ID = "org.l2x6.eircc.ui";
 
     public static final String PROJECT_NAME = "IRC";
+
+    public static IrcController getController() {
+        return INSTANCE;
+    }
 
     /**
      * Returns the singleton.
@@ -106,8 +112,6 @@ public class EirccUi extends AbstractUIPlugin implements IrcModelEventListener, 
     }
 
     private IProject project;
-
-    private static final IrcController INSTANCE = new IrcController();
 
     /**
      * @return
@@ -375,9 +379,5 @@ public class EirccUi extends AbstractUIPlugin implements IrcModelEventListener, 
     @Override
     public void windowOpened(IWorkbenchWindow window) {
         windowActivated(window);
-    }
-
-    public static IrcController getController() {
-        return INSTANCE;
     }
 }

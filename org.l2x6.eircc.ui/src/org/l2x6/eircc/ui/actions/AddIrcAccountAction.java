@@ -15,10 +15,10 @@ import org.eclipse.jface.wizard.WizardDialog;
 import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.wizards.IWizardDescriptor;
 import org.l2x6.eircc.ui.EirccUi;
-import org.l2x6.eircc.ui.misc.IrcImages;
-import org.l2x6.eircc.ui.misc.NewIrcAccountWizard;
-import org.l2x6.eircc.ui.misc.IrcImages.ImageKey;
 import org.l2x6.eircc.ui.IrcUiMessages;
+import org.l2x6.eircc.ui.misc.IrcImages;
+import org.l2x6.eircc.ui.misc.IrcImages.ImageKey;
+import org.l2x6.eircc.ui.misc.NewIrcAccountWizard;
 
 /**
  * @author <a href="mailto:ppalaga@redhat.com">Peter Palaga</a>

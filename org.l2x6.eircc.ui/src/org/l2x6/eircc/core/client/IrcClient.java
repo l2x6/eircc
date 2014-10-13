@@ -35,6 +35,7 @@ import org.l2x6.eircc.core.model.IrcAccount;
 import org.l2x6.eircc.core.model.IrcAccount.IrcAccountState;
 import org.l2x6.eircc.core.model.IrcLog;
 import org.l2x6.eircc.core.model.IrcMessage;
+import org.l2x6.eircc.core.model.IrcNick;
 import org.l2x6.eircc.core.model.IrcServer;
 import org.l2x6.eircc.core.model.IrcUser;
 import org.l2x6.eircc.core.model.PlainIrcChannel;
@@ -205,12 +206,12 @@ public class IrcClient {
                         AbstractIrcChannel channel = controller.getOrCreateAccountChannel(account, channelName);
                         IrcServer server = account.getServer();
                         StringTokenizer st = new StringTokenizer(msg, " ");
-                        List<String> unseenNicks = new ArrayList<String>();
-                        List<String> allNicks = new ArrayList<String>();
+                        List<IrcNick> unseenNicks = new ArrayList<IrcNick>();
+                        List<IrcNick> allNicks = new ArrayList<IrcNick>();
                         while (st.hasMoreTokens()) {
-                            String nick = st.nextToken();
-                            IrcUser ircUser = server.findUser(nick);
+                            IrcNick nick = IrcNick.parse(st.nextToken());
                             allNicks.add(nick);
+                            IrcUser ircUser = server.findUser(nick.getCleanNick());
                             if (ircUser == null) {
                                 unseenNicks.add(nick);
                             }
@@ -295,7 +296,7 @@ public class IrcClient {
                         } else {
                             /* make sure the user info is stored in server */
                             controller.getOrCreateUser(account.getServer(), nick, user.getUsername());
-                            channel.addNick(nick);
+                            channel.addNick(IrcNick.parse(nick));
                         }
                     } catch (IrcResourceException e) {
                         EirccUi.log(e);

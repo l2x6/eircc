@@ -29,10 +29,10 @@ import org.l2x6.eircc.core.model.PlainIrcChannel;
 import org.l2x6.eircc.core.model.resource.IrcResourceException;
 import org.l2x6.eircc.core.util.NickComparator;
 import org.l2x6.eircc.ui.EirccUi;
+import org.l2x6.eircc.ui.IrcUiMessages;
 import org.l2x6.eircc.ui.misc.IrcImages;
 import org.l2x6.eircc.ui.misc.IrcImages.ImageKey;
 import org.l2x6.eircc.ui.prefs.IrcPreferences;
-import org.l2x6.eircc.ui.IrcUiMessages;
 
 /**
  * @author <a href="mailto:ppalaga@redhat.com">Peter Palaga</a>
@@ -130,7 +130,7 @@ public class IrcTreeActions<E> extends Action implements Listener, IrcTreeAction
         Consumer<IrcChannelUser> itemAction = user -> {
             try {
                 if (user != null) {
-                    String patternProposal = NickComparator.getBaseNick(user.getNick()) + ".*";
+                    String patternProposal = NickComparator.getBaseNick(user.getCleanNick()) + ".*";
                     IrcPreferences prefs = IrcPreferences.getInstance();
                     String pattern = prefs.showAddNickPatternDialog(patternProposal);
                     if (pattern != null) {
@@ -155,7 +155,7 @@ public class IrcTreeActions<E> extends Action implements Listener, IrcTreeAction
             try {
                 IrcController controller = EirccUi.getController();
                 IrcUser p2pUser = controller.getOrCreateUser(user.getChannel().getAccount().getServer(),
-                        user.getNick(), null);
+                        user.getCleanNick(), null);
                 AbstractIrcChannel ch = controller.getOrCreateP2pChannel(p2pUser);
                 if (!ch.isJoined()) {
                     /* this should both join and open the editor */

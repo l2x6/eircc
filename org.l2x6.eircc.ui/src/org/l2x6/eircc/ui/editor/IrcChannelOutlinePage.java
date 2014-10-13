@@ -120,7 +120,7 @@ public class IrcChannelOutlinePage extends ContentOutlinePage implements IDouble
             if (element instanceof IrcChannelUser) {
                 AbstractIrcChannel channel = editor.getChannel();
                 if (channel != null) {
-                    int index = channel.getUserIndex(((IrcChannelUser) element).getNick());
+                    int index = channel.getUserIndex(((IrcChannelUser) element).getCleanNick());
                     return new StyledString(super.getText(element), IrcPreferences.getInstance().getUserStyler(index));
                 }
             }

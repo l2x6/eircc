@@ -19,6 +19,7 @@ import org.l2x6.eircc.core.client.IrcClient;
 import org.l2x6.eircc.core.model.AbstractIrcChannel;
 import org.l2x6.eircc.core.model.IrcAccount;
 import org.l2x6.eircc.core.model.IrcAccount.IrcAccountState;
+import org.l2x6.eircc.core.model.IrcNick;
 import org.l2x6.eircc.core.model.IrcServer;
 import org.l2x6.eircc.core.model.IrcUser;
 import org.l2x6.eircc.core.model.PlainIrcChannel;
@@ -224,7 +225,7 @@ public class IrcController {
      * @param unseenNicks
      * @throws IOException
      */
-    public void resolveNicks(IrcServer server, Collection<String> nicks) throws IOException {
+    public void resolveNicks(IrcServer server, Collection<IrcNick> nicks) throws IOException {
         IrcUtils.assertUiThread();
         // TODO nicks resolving
         // My test server seems to be quite unhappy about serving many whois

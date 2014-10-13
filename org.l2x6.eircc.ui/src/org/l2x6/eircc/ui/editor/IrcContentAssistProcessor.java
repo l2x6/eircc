@@ -260,7 +260,7 @@ public class IrcContentAssistProcessor implements IContentAssistProcessor {
         AbstractIrcChannel channel = editor.getChannel();
         if (channel != null) {
             for (IrcChannelUser user : channel.getUsers()) {
-                String nick = user.getNick();
+                String nick = user.getCleanNick();
                 if (nick.toLowerCase().startsWith(prefix)) {
                     suggestions.add(nick + IrcPreferences.getInstance().getAddresseeSuffix());
                 }

@@ -83,18 +83,20 @@ public class IrcUiMessages extends NLS {
     public static String IrcChannelOutlinePage_Open_Private_Chat;
     public static String IrcChannelsSelector_delimiter;
 
+    public static String IrcClient_commandExecutionException;
+    public static String IrcClient_commandTimeOut;
     public static String IrcEditor_File_x_does_not_exist;
     public static String IrcNotificationsPreferencePage_addNickPatternText;
     public static String IrcNotificationsPreferencePage_addNickPatternTitle;
     public static String IrcNotificationsPreferencePage_cannotBeEmpty;
+
     public static String IrcNotificationsPreferencePage_invalidPattern;
     public static String IrcNotificationsPreferencePage_senderBasedNotification;
-
     public static String IrcSearchPage_anyTime;
     public static String IrcSearchPage_caseSensitive;
+
     public static String IrcSearchPage_channelNamePatterns_hint;
     public static String IrcSearchPage_containingText_hint;
-
     public static String IrcSearchPage_containingText_text;
     public static String IrcSearchPage_custom;
     public static String IrcSearchPage_fromNick;
@@ -102,16 +104,18 @@ public class IrcUiMessages extends NLS {
     public static String IrcSearchPage_ignore;
     public static String IrcSearchPage_ignoreMessagesFromMe;
     public static String IrcSearchPage_ignoreSystemMessages;
+
     public static String IrcSearchPage_inChannels;
     public static String IrcSearchPage_inChannelsAssist;
-
     public static String IrcSearchPage_lastMonth;
     public static String IrcSearchPage_lastWeek;
     public static String IrcSearchPage_lastYear;
     public static String IrcSearchPage_messageTime;
     public static String IrcSearchPage_regularExpression;
     public static String IrcSearchPage_Search_in_Channels_label;
+
     public static String IrcSearchPage_searchproblems_message;
+
     public static String IrcSearchPage_searchproblems_title;
 
     public static String IrcSearchPage_Select_button;
@@ -135,9 +139,7 @@ public class IrcUiMessages extends NLS {
     public static String Message_x_joined;
 
     public static String Message_x_left;
-
     public static String Message_x_left_with_message;
-
     public static String Message_You_are_known_as_x;
     public static String Message_You_joined_as_nick;
     public static String Message_You_left;
@@ -150,8 +152,6 @@ public class IrcUiMessages extends NLS {
     public static String TextSearchVisitor_progress_updating_job;
     public static String TextSearchVisitor_scanning;
     public static String TextSearchVisitor_textsearch_task_label;
-    public static String IrcClient_commandTimeOut;
-    public static String IrcClient_commandExecutionException;
     static {
         NLS.initializeMessages(BUNDLE_NAME, IrcUiMessages.class);
     }

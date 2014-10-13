@@ -61,7 +61,7 @@ public class IrcSystemMessagesGenerator implements IrcModelEventListener {
     private void channelUserJoined(IrcChannelUser user) {
         IrcLog log = user.getChannel().getLog();
         if (log != null) {
-            String text = MessageFormat.format(IrcUiMessages.Message_x_joined, user.getNick());
+            String text = MessageFormat.format(IrcUiMessages.Message_x_joined, user.getCleanNick());
             log.appendSystemMessage(text);
         }
     }
@@ -75,9 +75,9 @@ public class IrcSystemMessagesGenerator implements IrcModelEventListener {
             String msg = user.getLeftWithMessage();
             String text;
             if (msg != null && msg.length() > 0) {
-                text = MessageFormat.format(IrcUiMessages.Message_x_left_with_message, user.getNick(), msg);
+                text = MessageFormat.format(IrcUiMessages.Message_x_left_with_message, user.getCleanNick(), msg);
             } else {
-                text = MessageFormat.format(IrcUiMessages.Message_x_left, user.getNick());
+                text = MessageFormat.format(IrcUiMessages.Message_x_left, user.getCleanNick());
             }
             log.appendSystemMessage(text);
         }

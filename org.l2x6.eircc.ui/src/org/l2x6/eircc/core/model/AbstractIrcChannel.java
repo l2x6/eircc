@@ -72,9 +72,9 @@ public abstract class AbstractIrcChannel extends IrcObject implements Persistent
     /**
      * @param result
      */
-    public void addNick(String nick) {
+    public void addNick(IrcNick nick) {
         if (seenUsers.get(nick) == null) {
-            seenUsers.put(nick, seenUsers.size());
+            seenUsers.put(nick.getCleanNick(), seenUsers.size());
         }
         addNickInternal(nick);
         account.getModel().fire(new IrcModelEvent(EventType.CHANNEL_USER_JOINED, new IrcChannelUser(this, nick)));
@@ -83,7 +83,7 @@ public abstract class AbstractIrcChannel extends IrcObject implements Persistent
     /**
      * @param user
      */
-    void addNickInternal(String nick) {
+    void addNickInternal(IrcNick nick) {
         // if (user.getServer() != account.getServer()) {
         // throw new
         // IllegalArgumentException("Cannot add user with parent distinct from this "
@@ -96,18 +96,18 @@ public abstract class AbstractIrcChannel extends IrcObject implements Persistent
         // + account.getHost() + "' of the account '" + account.getLabel() +
         // "'.");
         // }
-        users.put(nick, createUser(nick));
+        users.put(nick.getCleanNick(), createUser(nick));
         usersArray = null;
     }
 
     /**
      * @param users2
      */
-    public void addNicks(Collection<String> nicks) {
-        for (String nick : nicks) {
+    public void addNicks(Collection<IrcNick> nicks) {
+        for (IrcNick nick : nicks) {
             addNickInternal(nick);
             if (seenUsers.get(nick) == null) {
-                seenUsers.put(nick, seenUsers.size());
+                seenUsers.put(nick.getCleanNick(), seenUsers.size());
             }
         }
         account.getModel().fire(new IrcModelEvent(EventType.CHANNEL_USERS_CHANGED, this));
@@ -120,7 +120,7 @@ public abstract class AbstractIrcChannel extends IrcObject implements Persistent
     public void changeNick(String oldNick, String newNick) {
         Integer i = seenUsers.get(oldNick);
         users.remove(oldNick);
-        addNickInternal(newNick);
+        addNickInternal(IrcNick.parse(newNick));
         seenUsers.put(newNick, i != null ? i : Integer.valueOf(seenUsers.size()));
         account.getModel().fire(new IrcModelEvent(EventType.CHANNEL_USERS_CHANGED, this));
     }
@@ -128,7 +128,7 @@ public abstract class AbstractIrcChannel extends IrcObject implements Persistent
     /**
      * @return
      */
-    public IrcChannelUser createUser(String nick) {
+    public IrcChannelUser createUser(IrcNick nick) {
         return new IrcChannelUser(this, nick);
     }
 

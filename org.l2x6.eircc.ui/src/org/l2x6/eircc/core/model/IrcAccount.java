@@ -445,7 +445,7 @@ public class IrcAccount extends InitialIrcAccount implements PersistentIrcObject
         this.me = me;
         for (AbstractIrcChannel channel : channels) {
             if (channel.isP2p() && !channel.isPresent(me.getNick())) {
-                channel.addNick(me.getNick());
+                channel.addNick(IrcNick.parse(me.getNick()));
             }
         }
     }

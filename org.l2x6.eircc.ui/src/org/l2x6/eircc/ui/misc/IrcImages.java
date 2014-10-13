@@ -102,7 +102,7 @@ public class IrcImages {
 
         /*
          * (non-Javadoc)
-         * 
+         *
          * @see Object#equals(Object)
          */
         @Override
@@ -113,7 +113,7 @@ public class IrcImages {
 
         /*
          * (non-Javadoc)
-         * 
+         *
          * @see ImageDescriptor#getImageData()
          */
         @Override
@@ -123,7 +123,7 @@ public class IrcImages {
 
         /*
          * (non-Javadoc)
-         * 
+         *
          * @see Object#hashCode()
          */
         @Override
@@ -135,6 +135,7 @@ public class IrcImages {
     public enum ImageKey {
         ACCOUNT("account.gif", IrcAccount.class), //
         ACCOUNT_NEW("account-new.png"), //
+        ADMIN_OVERLAY("admin-overlay.png", null, SWT.NONE, "admin-overlay.svg", ImageSize._7x8), //
         BLUE_BALL_OVERLAY("blue-ball-overlay.png", null, SWT.NONE, "blue-ball-overlay.svg", ImageSize._7x7), //
         CHANNEL("channel.png", AbstractIrcChannel.class, SWT.NONE, "channel.svg", ImageSize._16x16), //
         CHANNEL_HISTORY("channel-history.png", AbstractIrcChannel.class, SWT.NONE, "channel-history.svg",
@@ -419,6 +420,8 @@ public class IrcImages {
             return getImage(getOverlays((AbstractIrcChannel) element));
         } else if (element instanceof IrcModel) {
             return getImage(getOverlays(((IrcModel) element).getAccountsStatistics(), true));
+        } else if (element instanceof IrcChannelUser) {
+            return getImage(getOverlays((IrcChannelUser) element));
         }
         return getImage(element.getClass());
     }
@@ -597,6 +600,30 @@ public class IrcImages {
         } else {
             return new ImageKey[] { base };
         }
+    }
+
+    /**
+     * @param element
+     * @return
+     */
+    private ImageKey[] getOverlays(IrcChannelUser user) {
+        boolean hasOverlays = false;
+        ImageKey topLeftOverlay = null;
+        ImageKey topRightOverlay = null;
+        ImageKey bottomLeftOverlay = null;
+        ImageKey bottomRightOverlay = null;
+        ImageKey underlay = null;
+        if (user != null && user.isOp()) {
+            bottomRightOverlay = ImageKey.ADMIN_OVERLAY;
+            hasOverlays = true;
+        }
+        if (hasOverlays) {
+            return new ImageKey[] { ImageKey.USER, topLeftOverlay, topRightOverlay, bottomLeftOverlay,
+                    bottomRightOverlay, underlay };
+        } else {
+            return new ImageKey[] { ImageKey.USER };
+        }
+
     }
 
     private ImageDescriptor[] toOverlayDescriptors(ImageKey[] overlays, ImageSize size) {
