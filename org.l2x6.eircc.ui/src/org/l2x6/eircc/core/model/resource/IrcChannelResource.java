@@ -266,12 +266,8 @@ public class IrcChannelResource {
         if (lastLogResource == null) {
             return true;
         }
-        // long logDay =
-        // lastLogResource.getTime().truncatedTo(ChronoUnit.DAYS).toEpochSecond();
-        long logDay = lastLogResource.getTime().truncatedTo(ChronoUnit.MINUTES).toEpochSecond();
-        // long today =
-        // OffsetDateTime.now().truncatedTo(ChronoUnit.DAYS).toEpochSecond();
-        long today = OffsetDateTime.now().truncatedTo(ChronoUnit.MINUTES).toEpochSecond();
+        long logDay = lastLogResource.getTime().truncatedTo(ChronoUnit.DAYS).toEpochSecond();
+        long today = OffsetDateTime.now().truncatedTo(ChronoUnit.DAYS).toEpochSecond();
         return today != logDay;
     }
 
