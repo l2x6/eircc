@@ -61,7 +61,7 @@ public class IrcRootResource {
      */
     public IrcAccountResource getAccountResource(IFolder accountChannelsFolder) throws IrcResourceException {
         String accountName = IrcAccountResource.getAccountName(accountChannelsFolder);
-        IrcAccountResource result = getAccoutResource(accountName);
+        IrcAccountResource result = getAccountResource(accountName);
         if (result == null) {
             if (IrcAccountResource.isAccountChannelsFolder(accountChannelsFolder)) {
                 result = new IrcAccountResource(this, accountChannelsFolder);
@@ -75,7 +75,7 @@ public class IrcRootResource {
         return result;
     }
 
-    public IrcAccountResource getAccoutResource(String accountName) {
+    public IrcAccountResource getAccountResource(String accountName) {
         return accountResources.get(accountName);
     }
 
@@ -94,6 +94,20 @@ public class IrcRootResource {
         IrcAccountResource accountResource = getAccountResource(accountChannelsFolder);
         IrcChannelResource channelResource = accountResource.getChannelResource(logsFolder);
         return channelResource.getLogResource(logFile);
+    }
+
+    /**
+     * @param label
+     * @return
+     * @throws IrcResourceException
+     */
+    public IrcAccountResource getOrCreateAccountResource(String label) throws IrcResourceException {
+        IrcAccountResource result = getAccountResource(label);
+        if (result == null) {
+            result = new IrcAccountResource(this, IrcAccountResource.getChannelsFolder(project, label));
+            accountResources.put(result.getAccountName(), result);
+        }
+        return result;
     }
 
     public IProject getProject() {

@@ -55,6 +55,7 @@ import org.l2x6.eircc.core.model.resource.IrcLogResource;
 import org.l2x6.eircc.core.model.resource.IrcResourceException;
 import org.l2x6.eircc.core.util.IrcLogReader;
 import org.l2x6.eircc.core.util.IrcUtils;
+import org.l2x6.eircc.core.util.IrcLogReader.IrcLogReaderException;
 import org.l2x6.eircc.ui.EirccUi;
 import org.l2x6.eircc.ui.IrcUiMessages;
 import org.l2x6.eircc.ui.misc.IrcImages;
@@ -436,6 +437,8 @@ public class IrcEditor extends AbstractIrcEditor implements IrcModelEventListene
                 logViewer.appendMessage(m);
                 lastMessageTime = m.getArrivedAt();
             }
+        } catch (IrcLogReaderException e) {
+            EirccUi.log(e);
         } finally {
             if (reader != null) {
                 reader.close();

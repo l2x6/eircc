@@ -19,7 +19,9 @@ import org.eclipse.core.resources.IFolder;
 import org.eclipse.core.resources.IResource;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IPath;
+import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.NullProgressMonitor;
+import org.l2x6.eircc.core.util.IrcUtils;
 
 /**
  * @author <a href="mailto:ppalaga@redhat.com">Peter Palaga</a>
@@ -114,7 +116,8 @@ public class IrcChannelResource {
         SortedMap<OffsetDateTime, IrcLogResource> result = new TreeMap<OffsetDateTime, IrcLogResource>();
         try {
             if (!logsFolder.exists()) {
-                logsFolder.create(true, true, new NullProgressMonitor());
+                IProgressMonitor monitor = new NullProgressMonitor();
+                IrcUtils.mkdirs(logsFolder, monitor);
             }
             for (IResource r : logsFolder.members()) {
                 if (IrcLogResource.isLogFile(r)) {

@@ -14,10 +14,14 @@ import java.util.Map;
 import org.eclipse.core.resources.IContainer;
 import org.eclipse.core.resources.IFile;
 import org.eclipse.core.resources.IFolder;
+import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.IResource;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IPath;
+import org.eclipse.core.runtime.IProgressMonitor;
+import org.eclipse.core.runtime.NullProgressMonitor;
 import org.eclipse.core.runtime.Path;
+import org.l2x6.eircc.core.util.IrcUtils;
 
 /**
  * @author <a href="mailto:ppalaga@redhat.com">Peter Palaga</a>
@@ -27,6 +31,10 @@ public class IrcAccountResource {
     public static final String FILE_EXTENSION = ".account.properties";
     /**  */
     public static final String USERS_FOLDER_SUFFIX = "-users";
+
+    public static final IFolder getChannelsFolder(IProject rootFolder, String accountLabel) {
+        return rootFolder.getFolder(accountLabel + CHANNELS_FOLDER_SUFFIX);
+    }
 
     /**
      * @param f
@@ -108,6 +116,11 @@ public class IrcAccountResource {
     private Map<String, IrcChannelResource> collectChannelResources() throws IrcResourceException {
         Map<String, IrcChannelResource> result = new HashMap<String, IrcChannelResource>();
         try {
+            if (!channelsFolder.exists()) {
+                IProgressMonitor monitor = new NullProgressMonitor();
+                IrcUtils.mkdirs(channelsFolder, monitor);
+                channelsFolder.create(true, true, new NullProgressMonitor());
+            }
             for (IResource r : channelsFolder.members()) {
                 if (IrcChannelResource.isChannelLogsFolder(r)) {
                     IrcChannelResource channelResource = new IrcChannelResource(this, (IFolder) r);

@@ -47,6 +47,32 @@ public class IrcLogReader implements Closeable {
         }
     }
 
+    public static class IrcLogReaderException extends Exception {
+
+        /**
+         * @param message
+         */
+        public IrcLogReaderException(String message) {
+            super(message);
+        }
+
+        /**
+         * @param message
+         * @param cause
+         */
+        public IrcLogReaderException(String message, Throwable cause) {
+            super(message, cause);
+        }
+
+        /**
+         * @param cause
+         */
+        public IrcLogReaderException(Throwable cause) {
+            super(cause);
+        }
+
+    }
+
     public static void append(CharSequence token, Appendable out, char delimiter) throws IOException {
         for (int i = 0; i < token.length(); i++) {
             char ch = token.charAt(i);
@@ -118,12 +144,13 @@ public class IrcLogReader implements Closeable {
     }
 
     public boolean hasNext() throws IOException {
+        System.out.println("reading from "+ getSource());
         int ch = in.read();
         in.unread(ch);
         return ch >= 0;
     }
 
-    public PlainIrcMessage next() throws IOException {
+    public PlainIrcMessage next() throws IrcLogReaderException, IOException {
         if (!hasNext()) {
             throw new IllegalStateException("No more IrcMessages to return.");
         } else {
@@ -134,7 +161,11 @@ public class IrcLogReader implements Closeable {
     public IrcLogChunk readChunk(char delimiter, char multilineMarker) throws IOException {
         StringBuilder result = new StringBuilder();
         int ch;
-        while ((ch = in.read()) >= 0) {
+        while (true) {
+            if ((ch = in.read()) >= 0) {
+            } else {
+                break;
+            }
             if (ch == '\n') {
                 int ch2 = in.read();
                 if (ch2 == multilineMarker) {

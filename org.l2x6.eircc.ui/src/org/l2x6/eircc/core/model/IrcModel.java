@@ -86,7 +86,7 @@ public class IrcModel extends IrcBase {
         }
     }
 
-    public IrcAccount createAccount(String label) {
+    public IrcAccount createAccount(String label) throws IrcResourceException {
         return new IrcAccount(this, label, System.currentTimeMillis());
     }
 

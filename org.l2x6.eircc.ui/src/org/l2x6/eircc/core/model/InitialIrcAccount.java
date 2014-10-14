@@ -8,6 +8,7 @@
 
 package org.l2x6.eircc.core.model;
 
+import org.l2x6.eircc.core.model.resource.IrcResourceException;
 import org.l2x6.eircc.core.util.TypedField;
 import org.l2x6.eircc.ui.IrcUiMessages;
 
@@ -43,7 +44,15 @@ public class InitialIrcAccount extends IrcObject {
                 return Boolean.valueOf(value);
             }
         }, //
-        username(IrcUiMessages.Account_Username)//
+        username(IrcUiMessages.Account_Username),//
+        socksProxyHost(IrcUiMessages.Account_SOCKS_Proxy_Host), //
+        socksProxyPort(IrcUiMessages.Account_SOCKS_Proxy_Port) {
+            @Override
+            public Object fromString(String value) {
+                return value == null || value.isEmpty() ? null : Integer.valueOf(value);
+            }
+        } //
+
         ;//
         private final String label_;
         private final TypedFieldData typedFieldData;
@@ -78,14 +87,16 @@ public class InitialIrcAccount extends IrcObject {
     protected String host;
 
     private String label;
-
     protected String password;
-
     protected int port;
 
     protected String preferedNick;
 
     protected String realName;
+
+    protected String socksProxyHost;
+
+    protected Integer socksProxyPort;
 
     protected boolean ssl;
 
@@ -113,8 +124,9 @@ public class InitialIrcAccount extends IrcObject {
 
     /**
      * @return
+     * @throws IrcResourceException
      */
-    public IrcAccount freeze() {
+    public IrcAccount freeze() throws IrcResourceException {
         return new IrcAccount(this);
     }
 
@@ -144,6 +156,14 @@ public class InitialIrcAccount extends IrcObject {
 
     public String getPreferedNickOrUser() {
         return preferedNick != null ? preferedNick : username;
+    }
+
+    public String getSocksProxyHost() {
+        return socksProxyHost;
+    }
+
+    public Integer getSocksProxyPort() {
+        return socksProxyPort;
     }
 
     public String getUsername() {
@@ -184,6 +204,14 @@ public class InitialIrcAccount extends IrcObject {
 
     public void setPreferedNick(String nick) {
         this.preferedNick = nick;
+    }
+
+    public void setSocksProxyHost(String sockProxyHost) {
+        this.socksProxyHost = sockProxyHost;
+    }
+
+    public void setSocksProxyPort(Integer sockProxyPort) {
+        this.socksProxyPort = sockProxyPort;
     }
 
     public void setSsl(boolean ssl) {

@@ -152,6 +152,8 @@ public class IrcUiMessages extends NLS {
     public static String TextSearchVisitor_progress_updating_job;
     public static String TextSearchVisitor_scanning;
     public static String TextSearchVisitor_textsearch_task_label;
+    public static String Account_SOCKS_Proxy_Port;
+    public static String Account_SOCKS_Proxy_Host;
     static {
         NLS.initializeMessages(BUNDLE_NAME, IrcUiMessages.class);
     }

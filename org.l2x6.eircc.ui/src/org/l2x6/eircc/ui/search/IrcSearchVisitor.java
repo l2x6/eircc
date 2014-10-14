@@ -53,6 +53,7 @@ import org.l2x6.eircc.core.model.PlainIrcMessage;
 import org.l2x6.eircc.core.model.resource.IrcChannelResource;
 import org.l2x6.eircc.core.model.resource.IrcLogResource;
 import org.l2x6.eircc.core.util.IrcLogReader;
+import org.l2x6.eircc.core.util.IrcLogReader.IrcLogReaderException;
 import org.l2x6.eircc.ui.EirccUi;
 import org.l2x6.eircc.ui.IrcUiMessages;
 import org.l2x6.eircc.ui.search.IrcSearchPage.IrcSearchPatternData;
@@ -298,6 +299,8 @@ public class IrcSearchVisitor {
                             locateMatches(file, message);
                         }
                     }
+                } catch (IrcLogReaderException e) {
+                    EirccUi.log(e);
                 } catch (IOException | CoreException e1) {
                     EirccUi.log(e1);
                 } finally {

@@ -18,6 +18,7 @@ import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.IDocument;
 import org.l2x6.eircc.core.util.IrcLogReader;
 import org.l2x6.eircc.core.util.IrcLogReader.IrcLogChunk;
+import org.l2x6.eircc.core.util.IrcLogReader.IrcLogReaderException;
 import org.l2x6.eircc.core.util.IrcToken;
 import org.l2x6.eircc.core.util.IrcTokenizer;
 import org.l2x6.eircc.ui.misc.Colors;
@@ -87,14 +88,14 @@ public class PlainIrcMessage {
      * @param myNick
      * @throws IOException
      */
-    public PlainIrcMessage(IrcLogReader in, boolean isP2pChannel) throws IOException {
+    public PlainIrcMessage(IrcLogReader in, boolean isP2pChannel) throws IrcLogReaderException, IOException {
         this.recordOffset = in.getCharCount();
         this.lineIndex = in.getLineIndex();
         String timeString = in.readToken(FIELD_DELIMITER, MULTILINE_MARKER);
         try {
             this.arrivedAt = OffsetDateTime.parse(timeString, DateTimeFormatter.ISO_ZONED_DATE_TIME);
         } catch (DateTimeParseException e) {
-            throw new IOException("Could not parse "+ in.getSource(), e);
+            throw new IrcLogReaderException("Could not parse "+ in.getSource(), e);
         }
         String nick = in.readToken(FIELD_DELIMITER, MULTILINE_MARKER);
         this.nick = nick == null || nick.isEmpty() ? null : nick;

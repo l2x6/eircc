@@ -553,6 +553,7 @@ public class IrcClient {
         if (account.isSsl()) {
             SSLIRCConnection conn = new SSLIRCConnection(account.getHost(), new int[] { account.getPort() },
                     account.getPassword(), account.getPreferedNickOrUser(), account.getUsername(), account.getName(),
+                    account.getSocksProxyHost(), account.getSocksProxyPort(),
                     account.getTraffciLogger());
             conn.addTrustManager(new MitmLounge());
             connection = conn;
@@ -560,6 +561,7 @@ public class IrcClient {
         } else {
             connection = new IRCConnection(account.getHost(), new int[] { account.getPort() }, account.getPassword(),
                     account.getPreferedNickOrUser(), account.getUsername(), account.getName(),
+                    account.getSocksProxyHost(), account.getSocksProxyPort(),
                     account.getTraffciLogger());
         }
         connection.addIRCEventListener(new UiListener());

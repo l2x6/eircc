@@ -24,6 +24,7 @@ import org.l2x6.eircc.core.model.event.IrcModelEvent;
 import org.l2x6.eircc.core.model.event.IrcModelEvent.EventType;
 import org.l2x6.eircc.core.model.resource.IrcLogResource;
 import org.l2x6.eircc.core.util.IrcLogReader;
+import org.l2x6.eircc.core.util.IrcLogReader.IrcLogReaderException;
 import org.l2x6.eircc.ui.EirccUi;
 
 /**
@@ -192,6 +193,8 @@ public class IrcLog extends IrcObject implements Iterable<IrcMessage> {
                 }
             } catch (IOException e) {
                 throw new RuntimeException(e);
+            } catch (IrcLogReaderException e) {
+                EirccUi.log(e);
             } finally {
                 try {
                     reader.close();

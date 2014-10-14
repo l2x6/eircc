@@ -22,8 +22,6 @@ import org.eclipse.jface.wizard.WizardPage;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.ModifyEvent;
 import org.eclipse.swt.events.ModifyListener;
-import org.eclipse.swt.events.VerifyEvent;
-import org.eclipse.swt.events.VerifyListener;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Composite;
@@ -36,6 +34,7 @@ import org.l2x6.eircc.core.model.InitialIrcAccount;
 import org.l2x6.eircc.core.model.InitialIrcAccount.InitialIrcAccountField;
 import org.l2x6.eircc.core.model.IrcAccount;
 import org.l2x6.eircc.core.model.IrcModel;
+import org.l2x6.eircc.core.model.resource.IrcResourceException;
 import org.l2x6.eircc.ui.EirccUi;
 import org.l2x6.eircc.ui.IrcUiMessages;
 
@@ -65,6 +64,9 @@ public class NewIrcAccountWizard extends Wizard implements INewWizard {
         private InitialIrcAccount result;
         @SuppressWarnings("unused")
         private Text usernameText;
+        @SuppressWarnings("unused")
+        private Text socksProxyHostText;
+        private Text socksProxyPortText;
 
         @SuppressWarnings("unused")
         private Button useSslCheckbox;
@@ -99,18 +101,7 @@ public class NewIrcAccountWizard extends Wizard implements INewWizard {
             labelText.setFocus();
             hostText = createTextField(composite, ctx, InitialIrcAccountField.host);
             portText = createTextField(composite, ctx, InitialIrcAccountField.port);
-            portText.addVerifyListener(new VerifyListener() {
-                @Override
-                public void verifyText(VerifyEvent e) {
-                    final String oldText = portText.getText();
-                    final String newS = oldText.substring(0, e.start) + e.text + oldText.substring(e.end);
-                    try {
-                        Integer.parseInt(newS);
-                    } catch (final NumberFormatException numberFormatException) {
-                        e.doit = false;
-                    }
-                }
-            });
+            portText.addVerifyListener(new NumericTextVerifier());
 
             usernameText = createTextField(composite, ctx, InitialIrcAccountField.username);
             passwordText = createTextField(composite, ctx, InitialIrcAccountField.password);
@@ -119,6 +110,10 @@ public class NewIrcAccountWizard extends Wizard implements INewWizard {
 
             useSslCheckbox = createCheckboxField(composite, ctx, InitialIrcAccountField.ssl);
             autoConnectCheckbox = createCheckboxField(composite, ctx, InitialIrcAccountField.autoConnect);
+
+            socksProxyHostText = createTextField(composite, ctx, InitialIrcAccountField.socksProxyHost);
+            socksProxyPortText = createTextField(composite, ctx, InitialIrcAccountField.socksProxyPort);
+            socksProxyPortText.addVerifyListener(new NumericTextVerifier());
 
             ctx.updateTargets();
 
@@ -169,17 +164,18 @@ public class NewIrcAccountWizard extends Wizard implements INewWizard {
         public boolean performFinish() {
             IrcModel ircModel = IrcModel.getInstance();
 
-            IrcAccount newAccount = result.freeze();
+            try {
+                IrcAccount newAccount = result.freeze();
 
-            ircModel.addAccount(newAccount);
+                ircModel.addAccount(newAccount);
 
-            if (newAccount.isAutoConnect()) {
-                try {
+                if (newAccount.isAutoConnect()) {
                     EirccUi.getController().connect(newAccount);
-                } catch (IrcException e) {
-                    setErrorMessage(e.getLocalizedMessage());
-                    return false;
                 }
+            } catch (IrcException | IrcResourceException e) {
+                e.printStackTrace();
+                setErrorMessage(e.getLocalizedMessage());
+                return false;
             }
             return true;
         }

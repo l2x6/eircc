@@ -13,6 +13,7 @@ import java.io.Reader;
 
 import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.IDocument;
+import org.eclipse.jface.text.ISynchronizable;
 
 /**
  * @author <a href="mailto:ppalaga@redhat.com">Peter Palaga</a>
@@ -20,6 +21,7 @@ import org.eclipse.jface.text.IDocument;
 public class DocumenReader extends Reader {
     private final IDocument document;
     private int offset = 0;
+    private final Object lock;
 
     /**
      * @param document
@@ -27,6 +29,18 @@ public class DocumenReader extends Reader {
     public DocumenReader(IDocument document) {
         super();
         this.document = document;
+
+        if (document instanceof ISynchronizable) {
+            Object l = ((ISynchronizable) document).getLockObject();
+            if (l == null) {
+                l = new Object();
+                ((ISynchronizable) document).setLockObject(l);
+            }
+            this.lock = l;
+        } else {
+            this.lock = new Object();
+        }
+
     }
 
     /**
@@ -41,19 +55,22 @@ public class DocumenReader extends Reader {
      */
     @Override
     public int read(char[] cbuf, int off, int len) throws IOException {
-        if (offset < document.getLength()) {
+        synchronized (lock) {
+            IrcUtils.assertUiThread();
             try {
                 int count = 0;
-                while (offset < document.getLength() && count < len) {
-                    cbuf[off + count] = document.getChar(offset++);
+                while (count < len) {
+                    System.out.println("DocumenReader.read() docLen = "+ document.getLength() + " offset = "+ offset);
+                    char ch = document.getChar(offset++);
+                    System.out.println("DocumenReader.read() ch = "+ ch);
+                    cbuf[off + count] = ch;
                     count++;
                 }
                 return count;
             } catch (BadLocationException e) {
-                throw new IOException(e);
+                return -1;
             }
-        } else {
-            return -1;
         }
     }
+
 }

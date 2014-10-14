@@ -68,6 +68,13 @@ public class IrcAccount extends InitialIrcAccount implements PersistentIrcObject
                 return Boolean.valueOf(value);
             }
         }, //
+        socksProxyHost(IrcUiMessages.Account_SOCKS_Proxy_Host), //
+        socksProxyPort(IrcUiMessages.Account_SOCKS_Proxy_Port) {
+            @Override
+            public Object fromString(String value) {
+                return value == null || value.isEmpty() ? null : Integer.valueOf(value);
+            }
+        }, //
         username(IrcUiMessages.Account_Username)//
         ;//
         private final String label_;
@@ -118,7 +125,7 @@ public class IrcAccount extends InitialIrcAccount implements PersistentIrcObject
 
     private TrafficLogger trafficLogger;
 
-    public IrcAccount(InitialIrcAccount src) {
+    public IrcAccount(InitialIrcAccount src) throws IrcResourceException {
         this(src.getModel(), src.getLabel(), System.currentTimeMillis());
         this.autoConnect = src.autoConnect;
         this.host = src.host;
@@ -128,6 +135,8 @@ public class IrcAccount extends InitialIrcAccount implements PersistentIrcObject
         this.realName = src.realName;
         this.ssl = src.ssl;
         this.username = src.username;
+        this.socksProxyHost = src.socksProxyHost;
+        this.socksProxyPort = src.socksProxyPort;
     }
 
     /**
@@ -143,7 +152,7 @@ public class IrcAccount extends InitialIrcAccount implements PersistentIrcObject
     public IrcAccount(IrcModel model, IFile f) throws UnsupportedEncodingException, FileNotFoundException, IOException,
             CoreException, IrcResourceException {
         super(model, IrcAccountResource.getAccountName(f));
-        this.accountResource = model.getRootResource().getAccoutResource(getLabel());
+        this.accountResource = model.getRootResource().getOrCreateAccountResource(getLabel());
         this.server = new IrcServer(this);
         load(f);
 
@@ -173,10 +182,11 @@ public class IrcAccount extends InitialIrcAccount implements PersistentIrcObject
     /**
      * @param model
      * @param label
+     * @throws IrcResourceException
      */
-    public IrcAccount(IrcModel model, String label, long createdOn) {
+    public IrcAccount(IrcModel model, String label, long createdOn) throws IrcResourceException {
         super(model, label);
-        this.accountResource = model.getRootResource().getAccoutResource(label);
+        this.accountResource = model.getRootResource().getOrCreateAccountResource(label);
         this.createdOn = createdOn;
         this.server = new IrcServer(this);
     }
