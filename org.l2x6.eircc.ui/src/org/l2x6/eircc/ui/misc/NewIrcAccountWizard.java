@@ -63,10 +63,10 @@ public class NewIrcAccountWizard extends Wizard implements INewWizard {
         private Text portText;
         private InitialIrcAccount result;
         @SuppressWarnings("unused")
-        private Text usernameText;
-        @SuppressWarnings("unused")
         private Text socksProxyHostText;
         private Text socksProxyPortText;
+        @SuppressWarnings("unused")
+        private Text usernameText;
 
         @SuppressWarnings("unused")
         private Button useSslCheckbox;

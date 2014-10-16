@@ -32,10 +32,6 @@ public class IrcAccountResource {
     /**  */
     public static final String USERS_FOLDER_SUFFIX = "-users";
 
-    public static final IFolder getChannelsFolder(IProject rootFolder, String accountLabel) {
-        return rootFolder.getFolder(accountLabel + CHANNELS_FOLDER_SUFFIX);
-    }
-
     /**
      * @param f
      * @return
@@ -58,6 +54,10 @@ public class IrcAccountResource {
     public static String getAccountNameFromChannelsFolder(IPath path) {
         String name = path.lastSegment();
         return name.substring(0, name.length() - CHANNELS_FOLDER_SUFFIX.length());
+    }
+
+    public static final IFolder getChannelsFolder(IProject rootFolder, String accountLabel) {
+        return rootFolder.getFolder(accountLabel + CHANNELS_FOLDER_SUFFIX);
     }
 
     /**

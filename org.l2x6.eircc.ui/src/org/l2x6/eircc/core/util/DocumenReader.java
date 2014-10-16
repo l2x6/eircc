@@ -20,8 +20,8 @@ import org.eclipse.jface.text.ISynchronizable;
  */
 public class DocumenReader extends Reader {
     private final IDocument document;
-    private int offset = 0;
     private final Object lock;
+    private int offset = 0;
 
     /**
      * @param document
@@ -60,9 +60,9 @@ public class DocumenReader extends Reader {
             try {
                 int count = 0;
                 while (count < len) {
-                    System.out.println("DocumenReader.read() docLen = "+ document.getLength() + " offset = "+ offset);
+                    System.out.println("DocumenReader.read() docLen = " + document.getLength() + " offset = " + offset);
                     char ch = document.getChar(offset++);
-                    System.out.println("DocumenReader.read() ch = "+ ch);
+                    System.out.println("DocumenReader.read() ch = " + ch);
                     cbuf[off + count] = ch;
                     count++;
                 }

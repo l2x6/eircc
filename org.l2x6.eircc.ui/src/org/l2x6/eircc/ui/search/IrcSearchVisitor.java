@@ -286,10 +286,11 @@ public class IrcSearchVisitor {
                 IrcLogReader reader = null;
                 try {
                     if (document != null) {
-                        reader = new IrcLogReader(document, file.toString(), IrcChannelResource.isP2pChannel(file.getFullPath()));
-                    } else {
-                        reader = new IrcLogReader(file.getContents(), file.toString(), IrcChannelResource.isP2pChannel(file
+                        reader = new IrcLogReader(document, file.toString(), IrcChannelResource.isP2pChannel(file
                                 .getFullPath()));
+                    } else {
+                        reader = new IrcLogReader(file.getContents(), file.toString(),
+                                IrcChannelResource.isP2pChannel(file.getFullPath()));
                     }
                     while (reader.hasNext()) {
                         PlainIrcMessage message = reader.next();

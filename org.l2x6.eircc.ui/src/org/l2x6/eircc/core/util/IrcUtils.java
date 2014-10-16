@@ -21,6 +21,7 @@ import org.eclipse.core.resources.IResource;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.swt.widgets.Display;
+import org.schwering.irc.lib.CTCPCommand;
 import org.schwering.irc.lib.IRCCommand;
 
 /**
@@ -55,6 +56,23 @@ public class IrcUtils {
             }
         }
         return result.toString();
+    }
+
+    /**
+     * @param msg
+     * @return
+     */
+    public static CTCPCommand getCtcpCommand(String msg) {
+        if (msg == null || msg.length() < CTCPCommand.SHORTEST_COMMAND_LENGTH) {
+            return null;
+        }
+        msg = msg.trim();
+        int i = 0;
+        while (i < msg.length() && !Character.isWhitespace(msg.charAt(i))) {
+            i++;
+        }
+        String cmd = msg.substring(0, i);
+        return CTCPCommand.fastValueOf(cmd);
     }
 
     /**

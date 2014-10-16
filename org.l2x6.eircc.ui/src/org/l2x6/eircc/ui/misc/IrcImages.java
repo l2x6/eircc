@@ -102,7 +102,7 @@ public class IrcImages {
 
         /*
          * (non-Javadoc)
-         *
+         * 
          * @see Object#equals(Object)
          */
         @Override
@@ -113,7 +113,7 @@ public class IrcImages {
 
         /*
          * (non-Javadoc)
-         *
+         * 
          * @see ImageDescriptor#getImageData()
          */
         @Override
@@ -123,7 +123,7 @@ public class IrcImages {
 
         /*
          * (non-Javadoc)
-         *
+         * 
          * @see Object#hashCode()
          */
         @Override

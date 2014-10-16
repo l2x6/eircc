@@ -38,22 +38,20 @@ public class InitialIrcAccount extends IrcObject {
             }
         }, //
         preferedNick(IrcUiMessages.Account_Nick), //
-        ssl(IrcUiMessages.Account_Use_SSL) {
-            @Override
-            public Object fromString(String value) {
-                return Boolean.valueOf(value);
-            }
-        }, //
-        username(IrcUiMessages.Account_Username),//
         socksProxyHost(IrcUiMessages.Account_SOCKS_Proxy_Host), //
         socksProxyPort(IrcUiMessages.Account_SOCKS_Proxy_Port) {
             @Override
             public Object fromString(String value) {
                 return value == null || value.isEmpty() ? null : Integer.valueOf(value);
             }
-        } //
-
-        ;//
+        }, //
+        ssl(IrcUiMessages.Account_Use_SSL) {
+            @Override
+            public Object fromString(String value) {
+                return Boolean.valueOf(value);
+            }
+        }, //
+        username(IrcUiMessages.Account_Username);//
         private final String label_;
         private final TypedFieldData typedFieldData;
 

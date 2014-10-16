@@ -43,6 +43,7 @@ import org.l2x6.eircc.core.model.resource.IrcResourceException;
 import org.l2x6.eircc.core.util.IrcUtils;
 import org.l2x6.eircc.ui.EirccUi;
 import org.l2x6.eircc.ui.IrcUiMessages;
+import org.schwering.irc.lib.CTCPCommand;
 import org.schwering.irc.lib.IRCCommand;
 import org.schwering.irc.lib.IRCConnection;
 import org.schwering.irc.lib.IRCEventListener;
@@ -67,7 +68,7 @@ public class IrcClient {
 
                 public Thread newThread(final Runnable r) {
                     Thread thread = defaultFactory.newThread(r);
-                    thread.setName("IrcClient"+ executorType +"-" + thread.getName());
+                    thread.setName("IrcClient" + executorType + "-" + thread.getName());
                     return thread;
                 }
             };
@@ -82,10 +83,12 @@ public class IrcClient {
          * @param workQueue
          */
         public IrcExecutor(String executorType) {
-            super(1, 1, 0L, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<Runnable>(), createThreadFactory(executorType));
+            super(1, 1, 0L, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<Runnable>(),
+                    createThreadFactory(executorType));
         }
 
     }
+
     /**
      * A place where the <i>Man in the Middle</i> likes to reside.
      *
@@ -287,8 +290,7 @@ public class IrcClient {
                 @Override
                 public void run() {
                     try {
-                        AbstractIrcChannel channel = controller.getOrCreateAccountChannel(account,
-                                chan);
+                        AbstractIrcChannel channel = controller.getOrCreateAccountChannel(account, chan);
                         String nick = user.getNick();
                         if (nick.equals(account.getAcceptedNick())) {
                             /* It is me who joined */
@@ -343,8 +345,7 @@ public class IrcClient {
             Display.getDefault().asyncExec(new Runnable() {
                 @Override
                 public void run() {
-                    controller.changeNick(account.getServer(), user.getNick(), newNick,
-                            user.getUsername());
+                    controller.changeNick(account.getServer(), user.getNick(), newNick, user.getUsername());
                 }
             });
         }
@@ -393,6 +394,18 @@ public class IrcClient {
                 @Override
                 public void run() {
                     try {
+                        String useMsg = msg;
+                        CTCPCommand ctcpCommand = IrcUtils.getCtcpCommand(msg);
+                        if (ctcpCommand != null) {
+                            switch (ctcpCommand) {
+                            case ACTION:
+                                useMsg = "*** " + user.getNick() + " "
+                                        + msg.substring(ctcpCommand.name().length()).trim();
+                                break;
+                            default:
+                                break;
+                            }
+                        }
                         final boolean isP2p = target.equals(account.getAcceptedNick());
                         IrcUser ircUser = controller.getOrCreateUser(account.getServer(), user.getNick(),
                                 user.getUsername());
@@ -404,7 +417,7 @@ public class IrcClient {
                         }
                         channel.setJoined(true);
                         IrcLog log = channel.getLog();
-                        IrcMessage message = new IrcMessage(log, OffsetDateTime.now(), ircUser, msg, channel.isP2p());
+                        IrcMessage message = new IrcMessage(log, OffsetDateTime.now(), ircUser, useMsg, channel.isP2p());
                         log.appendMessage(message);
                     } catch (IrcResourceException e) {
                         EirccUi.log(e);
@@ -553,16 +566,14 @@ public class IrcClient {
         if (account.isSsl()) {
             SSLIRCConnection conn = new SSLIRCConnection(account.getHost(), new int[] { account.getPort() },
                     account.getPassword(), account.getPreferedNickOrUser(), account.getUsername(), account.getName(),
-                    account.getSocksProxyHost(), account.getSocksProxyPort(),
-                    account.getTraffciLogger());
+                    account.getSocksProxyHost(), account.getSocksProxyPort(), account.getTraffciLogger());
             conn.addTrustManager(new MitmLounge());
             connection = conn;
 
         } else {
             connection = new IRCConnection(account.getHost(), new int[] { account.getPort() }, account.getPassword(),
                     account.getPreferedNickOrUser(), account.getUsername(), account.getName(),
-                    account.getSocksProxyHost(), account.getSocksProxyPort(),
-                    account.getTraffciLogger());
+                    account.getSocksProxyHost(), account.getSocksProxyPort(), account.getTraffciLogger());
         }
         connection.addIRCEventListener(new UiListener());
         connection.setEncoding("UTF-8");
@@ -575,8 +586,8 @@ public class IrcClient {
                 try {
                     connection.connect();
                 } catch (Exception e) {
-                    controller.handle(new IrcException("Could not connect to '" + account.getLabel() + "': " + e.getClass().getName()
-                            + ": " + e.getMessage(), e, account));
+                    controller.handle(new IrcException("Could not connect to '" + account.getLabel() + "': "
+                            + e.getClass().getName() + ": " + e.getMessage(), e, account));
                 }
             }
         });
@@ -722,8 +733,8 @@ public class IrcClient {
                     Display.getDefault().asyncExec(new Runnable() {
                         @Override
                         public void run() {
-                            IrcMessage m = new IrcMessage(channel.getLog(), OffsetDateTime.now(), account.getMe(), message,
-                                    channel.isP2p());
+                            IrcMessage m = new IrcMessage(channel.getLog(), OffsetDateTime.now(), account.getMe(),
+                                    message, channel.isP2p());
                             channel.getLog().appendMessage(m);
                         }
                     });

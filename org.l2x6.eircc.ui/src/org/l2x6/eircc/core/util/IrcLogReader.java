@@ -107,12 +107,13 @@ public class IrcLogReader implements Closeable {
      * @throws UnsupportedEncodingException
      *
      */
-    public IrcLogReader(InputStream inputStream, String source, boolean isP2pChannel) throws UnsupportedEncodingException,
-            FileNotFoundException {
+    public IrcLogReader(InputStream inputStream, String source, boolean isP2pChannel)
+            throws UnsupportedEncodingException, FileNotFoundException {
         this(new InputStreamReader(inputStream, "utf-8"), source, isP2pChannel);
     }
 
-    public IrcLogReader(Reader input, String source, boolean isP2pChannel) throws UnsupportedEncodingException, FileNotFoundException {
+    public IrcLogReader(Reader input, String source, boolean isP2pChannel) throws UnsupportedEncodingException,
+            FileNotFoundException {
         this.in = new CountedPushbackReader(input, 2);
         this.isP2pChannel = isP2pChannel;
         this.source = source;
@@ -144,7 +145,7 @@ public class IrcLogReader implements Closeable {
     }
 
     public boolean hasNext() throws IOException {
-        System.out.println("reading from "+ getSource());
+        System.out.println("reading from " + getSource());
         int ch = in.read();
         in.unread(ch);
         return ch >= 0;

@@ -95,7 +95,7 @@ public class PlainIrcMessage {
         try {
             this.arrivedAt = OffsetDateTime.parse(timeString, DateTimeFormatter.ISO_ZONED_DATE_TIME);
         } catch (DateTimeParseException e) {
-            throw new IrcLogReaderException("Could not parse "+ in.getSource(), e);
+            throw new IrcLogReaderException("Could not parse " + in.getSource(), e);
         }
         String nick = in.readToken(FIELD_DELIMITER, MULTILINE_MARKER);
         this.nick = nick == null || nick.isEmpty() ? null : nick;

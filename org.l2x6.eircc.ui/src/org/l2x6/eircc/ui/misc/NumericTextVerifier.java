@@ -18,7 +18,7 @@ import org.eclipse.swt.widgets.Text;
 public class NumericTextVerifier implements VerifyListener {
     @Override
     public void verifyText(VerifyEvent e) {
-        final String oldText = ((Text)e.widget).getText();
+        final String oldText = ((Text) e.widget).getText();
         final String newS = oldText.substring(0, e.start) + e.text + oldText.substring(e.end);
         try {
             Integer.parseInt(newS);

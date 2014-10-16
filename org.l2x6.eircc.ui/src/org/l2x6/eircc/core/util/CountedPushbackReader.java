@@ -72,7 +72,7 @@ public class CountedPushbackReader extends PushbackReader {
         int result = super.read();
         checkLine(result, INCREMENT);
         String s = result >= 0 ? String.valueOf((char) result) : String.valueOf(result);
-        System.out.println("CountedPushbackReader.read() = "+ s);
+        System.out.println("CountedPushbackReader.read() = " + s);
         return result;
     }
 
@@ -108,7 +108,7 @@ public class CountedPushbackReader extends PushbackReader {
     @Override
     public void unread(int c) throws IOException {
         String s = c >= 0 ? String.valueOf((char) c) : String.valueOf(c);
-        System.out.println("CountedPushbackReader.unread() = "+ s);
+        System.out.println("CountedPushbackReader.unread() = " + s);
         charCount--;
         checkLine(c, DECREMENT);
         super.unread(c);

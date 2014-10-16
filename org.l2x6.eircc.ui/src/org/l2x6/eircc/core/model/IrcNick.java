@@ -36,6 +36,7 @@ public class IrcNick {
     private final String cleanNick;
     private final boolean op;
     private final boolean voice;
+
     /**
      * @param cleanNick
      * @param op
@@ -47,12 +48,15 @@ public class IrcNick {
         this.op = op;
         this.voice = voice;
     }
+
     public String getCleanNick() {
         return cleanNick;
     }
+
     public boolean hasVoice() {
         return voice;
     }
+
     public boolean isOp() {
         return op;
     }

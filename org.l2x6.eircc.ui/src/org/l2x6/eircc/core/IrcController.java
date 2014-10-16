@@ -128,6 +128,16 @@ public class IrcController {
     }
 
     /**
+     * @param ircException
+     */
+    public void handle(IrcException ircException) {
+        IrcObject object = ircException.getModelObject();
+        // TODO: do some kind of if (object instanceof *) and emit some messages
+        // that will be shown in channel logs.
+        EirccUi.log(ircException);
+    }
+
+    /**
      * @param channel
      * @throws IOException
      */
@@ -272,15 +282,6 @@ public class IrcController {
                 }
             }
         }
-    }
-
-    /**
-     * @param ircException
-     */
-    public void handle(IrcException ircException) {
-        IrcObject object = ircException.getModelObject();
-        //TODO: do some kind of if (object instanceof *) and emit some messages that will be shown in channel logs.
-        EirccUi.log(ircException);
     }
 
 }
