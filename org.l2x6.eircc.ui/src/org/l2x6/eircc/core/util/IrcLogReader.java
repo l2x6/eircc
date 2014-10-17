@@ -49,6 +49,9 @@ public class IrcLogReader implements Closeable {
 
     public static class IrcLogReaderException extends Exception {
 
+        /**  */
+        private static final long serialVersionUID = -3533362196506404856L;
+
         /**
          * @param message
          */

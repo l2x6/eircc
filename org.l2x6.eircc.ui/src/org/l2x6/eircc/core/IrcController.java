@@ -19,6 +19,7 @@ import org.l2x6.eircc.core.client.IrcClient;
 import org.l2x6.eircc.core.model.AbstractIrcChannel;
 import org.l2x6.eircc.core.model.IrcAccount;
 import org.l2x6.eircc.core.model.IrcAccount.IrcAccountState;
+import org.l2x6.eircc.core.model.IrcLog;
 import org.l2x6.eircc.core.model.IrcNick;
 import org.l2x6.eircc.core.model.IrcObject;
 import org.l2x6.eircc.core.model.IrcServer;
@@ -132,6 +133,20 @@ public class IrcController {
      */
     public void handle(IrcException ircException) {
         IrcObject object = ircException.getModelObject();
+        if (object instanceof IrcAccount) {
+            IrcAccount account = (IrcAccount) object;
+            for (AbstractIrcChannel channel : account.getChannels()) {
+                IrcLog log = channel.getLog();
+                if (log != null) {
+                    log.appendErrorMessage(ircException.getLocalizedMessage());
+                }
+            }
+        } else if (object instanceof AbstractIrcChannel) {
+            IrcLog log = ((AbstractIrcChannel) object).getLog();
+            if (log != null) {
+                log.appendErrorMessage(ircException.getLocalizedMessage());
+            }
+        }
         // TODO: do some kind of if (object instanceof *) and emit some messages
         // that will be shown in channel logs.
         EirccUi.log(ircException);

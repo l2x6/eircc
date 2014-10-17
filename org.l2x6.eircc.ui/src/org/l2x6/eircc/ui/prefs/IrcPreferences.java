@@ -121,6 +121,7 @@ public class IrcPreferences {
 
     private IrcSearchMessageFormatter searchFormatter = new IrcSearchMessageFormatter(this);
     private final IrcSystemMessageFormatter systemFormatter = new IrcSystemMessageFormatter(this);
+    private final IrcSystemMessageFormatter errorFormatter = new IrcSystemMessageFormatter(this);
 
     private final ExtendedTextStyle systemMessageStyle;
     private Map<String, Pattern> trackedNicks;
@@ -224,10 +225,14 @@ public class IrcPreferences {
      * @return
      */
     public IrcDefaultMessageFormatter getFormatter(PlainIrcMessage m) {
-        if (m.isSystemMessage()) {
+        switch (m.getType()) {
+        case SYSTEM:
             return systemFormatter;
+        case ERROR:
+            return errorFormatter;
+        default:
+            return defaultFormatter;
         }
-        return defaultFormatter;
     }
 
     public ExtendedTextStyle getMessageTimeStyle() {

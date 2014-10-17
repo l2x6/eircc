@@ -13,6 +13,9 @@ import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.time.temporal.ChronoUnit;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.IDocument;
@@ -22,11 +25,36 @@ import org.l2x6.eircc.core.util.IrcLogReader.IrcLogReaderException;
 import org.l2x6.eircc.core.util.IrcToken;
 import org.l2x6.eircc.core.util.IrcTokenizer;
 import org.l2x6.eircc.ui.misc.Colors;
+import org.schwering.irc.lib.IRCCommand;
 
 /**
  * @author <a href="mailto:ppalaga@redhat.com">Peter Palaga</a>
  */
 public class PlainIrcMessage {
+
+    public enum IrcMessageType {CHAT, ERROR, SYSTEM;
+        private static final Map<String, IrcMessageType> FAST_LOOKUP;
+        static {
+            Map<String, IrcMessageType> fastLookUp = new HashMap<String, IrcMessageType>(64);
+            IrcMessageType[] values = values();
+            for (IrcMessageType value : values) {
+                fastLookUp.put(value.name(), value);
+            }
+            FAST_LOOKUP = Collections.unmodifiableMap(fastLookUp);
+        }
+        /**
+         * A {@link HashMap}-backed and {@code null}-tolerant alternative to
+         * {@link #valueOf(String)}. The lookup is case-sensitive.
+         *
+         * @param command
+         *            the command as a {@link String}
+         * @return the {@link IRCCommand} that corresponds to the given string
+         *         {@code command} or {@code null} if no such command exists
+         */
+        public static IrcMessageType fastValueOf(String command) {
+            return FAST_LOOKUP.get(command);
+        }
+    };
 
     protected static final char FIELD_DELIMITER = ' ';
     protected static final char MULTILINE_MARKER = ' ';
@@ -56,6 +84,7 @@ public class PlainIrcMessage {
     protected final String text;
     protected final int textOffset;
     private boolean tokenized = false;
+    protected final IrcMessageType type;
     protected final int userColorIndex;
 
     /**
@@ -66,9 +95,10 @@ public class PlainIrcMessage {
      * @param myNick
      * @param isP2pChannel
      * @param recordOffset
+     * @param type
      */
     public PlainIrcMessage(int recordOffset, int lineIndex, OffsetDateTime arrivedAt, String nick, String text,
-            int userColorIndex, String myNick, boolean isP2pChannel) {
+            int userColorIndex, String myNick, boolean isP2pChannel, IrcMessageType type) {
         super();
         this.recordOffset = recordOffset;
         this.lineIndex = lineIndex;
@@ -78,6 +108,7 @@ public class PlainIrcMessage {
         this.userColorIndex = userColorIndex;
         this.myNick = myNick;
         this.isP2pChannel = isP2pChannel;
+        this.type = type;
         this.lineCount = countLines();
         this.textOffset = computeTextOffset();
         this.recordLenght = computeRecordLength();
@@ -101,7 +132,19 @@ public class PlainIrcMessage {
         this.nick = nick == null || nick.isEmpty() ? null : nick;
         IrcLogChunk txtChunk = in.readChunk(RECORD_DELIMITER, MULTILINE_MARKER);
 
-        this.myNick = txtChunk.tail(FIELD_DELIMITER);
+        String tail = txtChunk.tail(FIELD_DELIMITER);
+        IrcMessageType type = IrcMessageType.fastValueOf(tail);
+        if (type != null) {
+            /* there was a type stored explicitly in the file */
+            tail = txtChunk.tail(FIELD_DELIMITER);
+        } else {
+            /* there was no explicit type stored in the file.
+            * nick == null is a legacy way of finding out if this is a system message */
+            type = nick == null ? IrcMessageType.SYSTEM : IrcMessageType.CHAT;
+        }
+        this.type = type;
+
+        this.myNick = tail;
         String index = txtChunk.tail(FIELD_DELIMITER);
         this.userColorIndex = Integer.parseInt(index);
         this.text = txtChunk.rest();
@@ -110,6 +153,7 @@ public class PlainIrcMessage {
         this.recordLenght = computeRecordLength();
         this.lineCount = countLines();
         this.isP2pChannel = isP2pChannel;
+
     }
 
     /**
@@ -175,6 +219,10 @@ public class PlainIrcMessage {
         return textOffset;
     }
 
+    public IrcMessageType getType() {
+        return type;
+    }
+
     public int getUserColorIndex() {
         return userColorIndex;
     }
@@ -188,7 +236,7 @@ public class PlainIrcMessage {
      * @return
      */
     public boolean isMeNamed() {
-        if (isSystemMessage()) {
+        if (type != IrcMessageType.CHAT) {
             return false;
         }
         if (isFromMe()) {
@@ -204,12 +252,12 @@ public class PlainIrcMessage {
     }
 
     public boolean isSystemMessage() {
-        return nick == null;
+        return this.type == IrcMessageType.SYSTEM;
     }
 
     public IrcMessage toIrcMessage(IrcLog log) {
         IrcUser u = nick == null ? null : log.getChannel().getAccount().getServer().getOrCreateUser(nick, nick);
-        return new IrcMessage(log, arrivedAt, u, text, myNick, isP2pChannel);
+        return new IrcMessage(log, arrivedAt, u, text, myNick, isP2pChannel, type);
     }
 
     /**
@@ -253,6 +301,8 @@ public class PlainIrcMessage {
             out.append(String.valueOf(userColorIndex));
             out.append(FIELD_DELIMITER);
             out.append(myNick);
+            out.append(FIELD_DELIMITER);
+            out.append(type.name());
             out.append(RECORD_DELIMITER);
 
             document.replace(document.getLength(), 0, out.toString());

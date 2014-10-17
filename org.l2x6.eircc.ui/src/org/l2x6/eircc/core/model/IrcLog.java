@@ -20,6 +20,7 @@ import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.jface.text.IDocument;
 import org.eclipse.ui.IFileEditorInput;
 import org.eclipse.ui.texteditor.IDocumentProvider;
+import org.l2x6.eircc.core.model.PlainIrcMessage.IrcMessageType;
 import org.l2x6.eircc.core.model.event.IrcModelEvent;
 import org.l2x6.eircc.core.model.event.IrcModelEvent.EventType;
 import org.l2x6.eircc.core.model.resource.IrcLogResource;
@@ -48,7 +49,7 @@ public class IrcLog extends IrcObject implements Iterable<IrcMessage> {
     public static final int NOTHING_SAVED = -1;
     private final AbstractIrcChannel channel;
     private int charLength = 0;
-    private int lastNonSystemMessageIndex = -1;
+    private int lastChatMessageIndex = -1;
     /** The user has read all messages till (and including) this instant */
     private int lastReadIndex = -1;
     /** The time of the last non-system message that arrived */
@@ -83,8 +84,8 @@ public class IrcLog extends IrcObject implements Iterable<IrcMessage> {
 
     public void appendMessage(IrcMessage message) {
         messages.add(message);
-        if (!message.isSystemMessage() && !message.isFromMe()) {
-            lastNonSystemMessageIndex = messages.size() - 1;
+        if (message.getType() == IrcMessageType.CHAT && !message.isFromMe()) {
+            lastChatMessageIndex = messages.size() - 1;
         }
         channel.getAccount().getModel().fire(new IrcModelEvent(EventType.NEW_MESSAGE, message));
         charLength += message.getRecordLenght();
@@ -92,7 +93,12 @@ public class IrcLog extends IrcObject implements Iterable<IrcMessage> {
     }
 
     public void appendSystemMessage(String text) {
-        IrcMessage m = new IrcMessage(this, OffsetDateTime.now(), text, channel.isP2p());
+        IrcMessage m = new IrcMessage(this, OffsetDateTime.now(), null, text, channel.isP2p(), IrcMessageType.SYSTEM);
+        appendMessage(m);
+    }
+
+    public void appendErrorMessage(String text) {
+        IrcMessage m = new IrcMessage(this, OffsetDateTime.now(), null, text, channel.isP2p(), IrcMessageType.ERROR);
         appendMessage(m);
     }
 
@@ -217,7 +223,7 @@ public class IrcLog extends IrcObject implements Iterable<IrcMessage> {
     }
 
     public void updateState() {
-        boolean hasUnreadMessages = !messages.isEmpty() && lastReadIndex < lastNonSystemMessageIndex;
+        boolean hasUnreadMessages = !messages.isEmpty() && lastReadIndex < lastChatMessageIndex;
         if (hasUnreadMessages) {
             /* look if me is named */
             ListIterator<IrcMessage> it = messages.listIterator(messages.size());

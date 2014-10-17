@@ -39,6 +39,7 @@ import org.l2x6.eircc.core.model.IrcNick;
 import org.l2x6.eircc.core.model.IrcServer;
 import org.l2x6.eircc.core.model.IrcUser;
 import org.l2x6.eircc.core.model.PlainIrcChannel;
+import org.l2x6.eircc.core.model.PlainIrcMessage.IrcMessageType;
 import org.l2x6.eircc.core.model.resource.IrcResourceException;
 import org.l2x6.eircc.core.util.IrcUtils;
 import org.l2x6.eircc.ui.EirccUi;
@@ -417,7 +418,7 @@ public class IrcClient {
                         }
                         channel.setJoined(true);
                         IrcLog log = channel.getLog();
-                        IrcMessage message = new IrcMessage(log, OffsetDateTime.now(), ircUser, useMsg, channel.isP2p());
+                        IrcMessage message = new IrcMessage(log, OffsetDateTime.now(), ircUser, useMsg, channel.isP2p(), IrcMessageType.CHAT);
                         log.appendMessage(message);
                     } catch (IrcResourceException e) {
                         EirccUi.log(e);
@@ -606,8 +607,8 @@ public class IrcClient {
             try {
                 connection.connect();
             } catch (IOException e) {
-                throw new IrcException("Could not connect to '" + account.getLabel() + "': " + e.getMessage(), e,
-                        account);
+                controller.handle(new IrcException("Could not connect to '" + account.getLabel() + "': " + e.getMessage(), e,
+                        account));
             }
         } else {
             throw new IllegalStateException("Must be connected");
@@ -679,7 +680,7 @@ public class IrcClient {
         Display.getDefault().asyncExec(new Runnable() {
             @Override
             public void run() {
-                EirccUi.log(e);
+                controller.handle(e);
                 account.setOffline(e);
             }
         });
@@ -734,7 +735,7 @@ public class IrcClient {
                         @Override
                         public void run() {
                             IrcMessage m = new IrcMessage(channel.getLog(), OffsetDateTime.now(), account.getMe(),
-                                    message, channel.isP2p());
+                                    message, channel.isP2p(), IrcMessageType.CHAT);
                             channel.getLog().appendMessage(m);
                         }
                     });
