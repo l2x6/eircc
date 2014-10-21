@@ -44,28 +44,27 @@ import org.schwering.irc.lib.TrafficLogger;
  */
 public class IrcModel extends IrcBase {
 
-    private static final IrcModel INSTANCE = new IrcModel();
-
-    public static IrcModel getInstance() {
-        return INSTANCE;
-    }
-
     /** {@link IrcAccount}s by {@link IrcAccount#getLabel()} */
     private final Map<String, IrcAccount> accounts = new TreeMap<String, IrcAccount>();
 
     private IrcAccount[] accountsArray;
+
     private List<IrcModelEventListener> listeners = Collections.emptyList();
+    private final IrcNotificationLevelProvider notificationLevelProvider;
 
     private IrcRootResource rootResource;
 
-    private TrafficLoggerFactory trafficLoggerFactory;
+    private final TrafficLoggerFactory trafficLoggerFactory;
 
     /**
-     *
+     * @param trafficLoggerFactory
+     * @param notificationLevelProvider
      */
-    public IrcModel() {
+    public IrcModel(TrafficLoggerFactory trafficLoggerFactory, IrcNotificationLevelProvider notificationLevelProvider) {
+        super();
+        this.trafficLoggerFactory = trafficLoggerFactory;
+        this.notificationLevelProvider = notificationLevelProvider;
     }
-
     public void addAccount(IrcAccount account) {
         if (account.getModel() != this) {
             throw new IllegalArgumentException("Cannot add account with parent distinct from this "
@@ -137,6 +136,7 @@ public class IrcModel extends IrcBase {
         int channelsOnline = 0;
         int channelsOffline = 0;
         int channelsWithUnreadMessages = 0;
+        int channelsWithUnreadFromTrackedUsers = 0;
         int channelsNamingMe = 0;
         int channelsOfflineAfterError = 0;
         for (IrcAccount account : accounts.values()) {
@@ -163,6 +163,9 @@ public class IrcModel extends IrcBase {
                     case UNREAD_MESSAGES:
                         channelsWithUnreadMessages++;
                         break;
+                    case UNREAD_MESSAGES_FROM_A_TRACKED_USER:
+                        channelsWithUnreadFromTrackedUsers++;
+                        break;
                     case NO_NOTIFICATION:
                         /* do nothing */
                         break;
@@ -170,8 +173,12 @@ public class IrcModel extends IrcBase {
                 }
             }
         }
-        return new IrcAccountsStatistics(channelsOnline, channelsOffline, channelsWithUnreadMessages, channelsNamingMe,
+        return new IrcAccountsStatistics(channelsOnline, channelsOffline, channelsWithUnreadMessages, channelsWithUnreadFromTrackedUsers, channelsNamingMe,
                 channelsOfflineAfterError);
+    }
+
+    public IrcNotificationLevelProvider getNotificationLevelProvider() {
+        return notificationLevelProvider;
     }
 
     public IProject getProject() {
@@ -259,13 +266,6 @@ public class IrcModel extends IrcBase {
         for (IrcAccount account : accounts.values()) {
             account.save(monitor);
         }
-    }
-
-    /**
-     * @param instance2
-     */
-    public void setTrafficLogFactory(TrafficLoggerFactory trafficLoggerFactory) {
-        this.trafficLoggerFactory = trafficLoggerFactory;
     }
 
 }

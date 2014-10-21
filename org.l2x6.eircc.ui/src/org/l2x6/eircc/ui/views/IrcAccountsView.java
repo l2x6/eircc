@@ -168,7 +168,7 @@ public class IrcAccountsView extends ViewPart implements IrcModelEventListener {
         // TODO server users pane
 
         /* connect the model */
-        IrcModel ircModel = IrcModel.getInstance();
+        IrcModel ircModel = EirccUi.getDefault().getModel();
         ircModel.addModelEventListener(this);
         accountsTreeViewer.setInput(ircModel);
         setEmptyLabelVisible(!ircModel.hasAccounts());
@@ -264,7 +264,7 @@ public class IrcAccountsView extends ViewPart implements IrcModelEventListener {
             serverChannelsTree.removeMouseListener(getTreeMouseListener());
             serverChannelsTree.removeFocusListener(treesFocusListener);
         }
-        IrcModel.getInstance().removeModelEventListener(this);
+        EirccUi.getDefault().getModel().removeModelEventListener(this);
 
         Arrays.stream(treeActions).forEach(action -> action.dispose());
 
@@ -365,7 +365,7 @@ public class IrcAccountsView extends ViewPart implements IrcModelEventListener {
             break;
         case ACCOUNT_REMOVED:
             accountsTreeViewer.refresh();
-            if (!IrcModel.getInstance().hasAccounts()) {
+            if (!EirccUi.getDefault().getModel().hasAccounts()) {
                 /* removed the last account */
                 setEmptyLabelVisible(true);
             }

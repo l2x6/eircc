@@ -21,7 +21,8 @@ import javax.sound.sampled.LineListener;
 import javax.sound.sampled.LineUnavailableException;
 import javax.sound.sampled.UnsupportedAudioFileException;
 
-import org.l2x6.eircc.core.model.IrcNotificationLevel;
+import org.l2x6.eircc.core.model.IrcMessage;
+import org.l2x6.eircc.ui.prefs.IrcPreferences;
 
 /**
  * @author <a href="mailto:ppalaga@redhat.com">Peter Palaga</a>
@@ -58,20 +59,22 @@ public class IrcSoundNotifier {
         super();
     }
 
-    public void notify(IrcNotificationLevel level) throws LineUnavailableException, IOException, UnsupportedAudioFileException {
-        switch (level) {
-        case NO_NOTIFICATION:
-            break;
-        case UNREAD_MESSAGES:
-            break;
-        case UNREAD_MESSAGES_FROM_A_TRACKED_USER:
-            play(SoundFile.MESSAGE_FROM_TRACKED_USER);
-            break;
-        case ME_NAMED:
-            play(SoundFile.ME_NAMED);
-            break;
-        default:
-            break;
+    public void notify(IrcMessage m) throws LineUnavailableException, IOException, UnsupportedAudioFileException {
+        if (IrcPreferences.getInstance().shouldPlaySoundForMessage(m)) {
+            switch (m.getNotificationLevel()) {
+            case NO_NOTIFICATION:
+                break;
+            case UNREAD_MESSAGES:
+                break;
+            case UNREAD_MESSAGES_FROM_A_TRACKED_USER:
+                play(SoundFile.MESSAGE_FROM_TRACKED_USER);
+                break;
+            case ME_NAMED:
+                play(SoundFile.ME_NAMED);
+                break;
+            default:
+                break;
+            }
         }
     }
 

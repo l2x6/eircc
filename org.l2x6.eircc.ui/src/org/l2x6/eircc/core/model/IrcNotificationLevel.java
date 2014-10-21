@@ -12,7 +12,7 @@ package org.l2x6.eircc.core.model;
  * @author <a href="mailto:ppalaga@redhat.com">Peter Palaga</a>
  */
 public enum IrcNotificationLevel {
-    /* Keep the items a ordered by level */
+    /* Keep the items a ordered by level so that the natural ordering in e.g. sets works as expected */
     NO_NOTIFICATION(0, false), UNREAD_MESSAGES(1, true), UNREAD_MESSAGES_FROM_A_TRACKED_USER(2, true), ME_NAMED(3, true);
     private final boolean hasUnreadMessages;
     private final int level;

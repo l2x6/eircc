@@ -16,6 +16,7 @@ public class IrcAccountsStatistics {
     private final int channelsOffline;
     private final int channelsOfflineAfterError;
     private final int channelsOnline;
+    private final int channelsWithUnreadFromTrackedUsers;
     private final int channelsWithUnreadMessages;
 
     /**
@@ -25,11 +26,13 @@ public class IrcAccountsStatistics {
      * @param channelsOfflineAfterError
      */
     public IrcAccountsStatistics(int channelsOnline, int channelsOffline, int channelsWithUnseenMessages,
+            int channelsWithUnreadFromTrackedUsers,
             int channelsNamingMe, int channelsOfflineAfterError) {
         super();
         this.channelsOnline = channelsOnline;
         this.channelsOffline = channelsOffline;
         this.channelsWithUnreadMessages = channelsWithUnseenMessages;
+        this.channelsWithUnreadFromTrackedUsers = channelsWithUnreadFromTrackedUsers;
         this.channelsNamingMe = channelsNamingMe;
         this.channelsOfflineAfterError = channelsOfflineAfterError;
     }
@@ -48,6 +51,10 @@ public class IrcAccountsStatistics {
 
     public int getChannelsOnline() {
         return channelsOnline;
+    }
+
+    public int getChannelsWithUnreadFromTrackedUsers() {
+        return channelsWithUnreadFromTrackedUsers;
     }
 
     public int getChannelsWithUnreadMessages() {
@@ -72,6 +79,9 @@ public class IrcAccountsStatistics {
 
     public boolean hasChannelsWithUnreadMessages() {
         return channelsWithUnreadMessages > 0;
+    }
+    public boolean hasChannelsWithUnreadMessagesFromTrackedUsers() {
+        return channelsWithUnreadFromTrackedUsers > 0;
     }
 
 }

@@ -16,6 +16,7 @@ import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Tray;
 import org.eclipse.swt.widgets.TrayItem;
 import org.l2x6.eircc.core.model.IrcModel;
+import org.l2x6.eircc.ui.EirccUi;
 import org.l2x6.eircc.ui.misc.IrcImages;
 import org.l2x6.eircc.ui.misc.IrcImages.ImageSize;
 import org.l2x6.eircc.ui.views.IrcLabelProvider;
@@ -81,7 +82,7 @@ public class IrcTray {
 
     public void update() {
         if (trayItem != null) {
-            IrcModel model = IrcModel.getInstance();
+            IrcModel model = EirccUi.getDefault().getModel();
             trayItem.setToolTipText(IrcLabelProvider.getInstance().getTooltipText(model));
 
             /*

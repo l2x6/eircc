@@ -243,7 +243,7 @@ public class IrcEditor extends AbstractIrcEditor implements IrcModelEventListene
             EirccUi.log(e1);
         }
         try {
-            IrcModel.getInstance().removeModelEventListener(this);
+            EirccUi.getDefault().getModel().removeModelEventListener(this);
         } catch (Exception e1) {
             EirccUi.log(e1);
         }
@@ -370,18 +370,18 @@ public class IrcEditor extends AbstractIrcEditor implements IrcModelEventListene
                         fileInput.getFile().getFullPath().toString()));
             }
             IFile logFile = fileInput.getFile();
-            IrcModel model = IrcModel.getInstance();
+            IrcModel model = EirccUi.getDefault().getModel();
             try {
                 IrcLogResource logResource = model.getRootResource().getLogResource(logFile);
                 lastMessageTime = logResource.getTime();
                 logResources.add(logResource);
                 updateMode();
                 if (isHistoryViewer()) {
-                    IrcModel.getInstance().removeModelEventListener(this);
+                    EirccUi.getDefault().getModel().removeModelEventListener(this);
                     site.getPage().removePartListener(readMessagesUpdater);
                 } else {
                     updateReadMessages();
-                    IrcModel.getInstance().addModelEventListener(this);
+                    EirccUi.getDefault().getModel().addModelEventListener(this);
                     site.getPage().addPartListener(readMessagesUpdater);
                 }
 
@@ -562,7 +562,7 @@ public class IrcEditor extends AbstractIrcEditor implements IrcModelEventListene
             IrcChannelResource channelResource = logResource.getChannelResource();
             IrcAccountResource accountResource = channelResource.getAccountResource();
             try {
-                this.channel = IrcModel.getInstance().getAccount(accountResource.getAccountName())
+                this.channel = EirccUi.getDefault().getModel().getAccount(accountResource.getAccountName())
                         .getOrCreateChannel(logResource);
             } catch (IrcResourceException e) {
                 throw new RuntimeException(e);

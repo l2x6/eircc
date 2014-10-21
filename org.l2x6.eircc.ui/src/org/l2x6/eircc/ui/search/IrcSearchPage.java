@@ -65,7 +65,7 @@ import org.eclipse.ui.fieldassist.ContentAssistCommandAdapter;
 import org.eclipse.ui.texteditor.ITextEditorActionDefinitionIds;
 import org.l2x6.eircc.core.model.AbstractIrcChannel;
 import org.l2x6.eircc.core.model.IrcAccount;
-import org.l2x6.eircc.core.model.IrcModel;
+import org.l2x6.eircc.ui.EirccUi;
 import org.l2x6.eircc.ui.IrcUiMessages;
 
 /**
@@ -512,7 +512,7 @@ public class IrcSearchPage extends DialogPage implements ISearchPage {
 
     private FileTextSearchScope getAllScope() throws CoreException {
         List<IResource> resources = new ArrayList<IResource>();
-        for (IrcAccount account : IrcModel.getInstance().getSearchableAccounts()) {
+        for (IrcAccount account : EirccUi.getDefault().getModel().getSearchableAccounts()) {
             for (AbstractIrcChannel channel : account.getSearchableChannels()) {
                 for (IFile log : channel.listSearchableLogFiles()) {
                     resources.add(log);

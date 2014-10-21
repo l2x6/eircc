@@ -29,11 +29,11 @@ import org.eclipse.ui.IWorkbenchWindow;
 import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.plugin.AbstractUIPlugin;
 import org.eclipse.ui.texteditor.IDocumentProvider;
-import org.l2x6.eircc.core.EirccCore;
 import org.l2x6.eircc.core.IrcController;
 import org.l2x6.eircc.core.model.AbstractIrcChannel;
 import org.l2x6.eircc.core.model.IrcAccount;
 import org.l2x6.eircc.core.model.IrcAccount.IrcAccountState;
+import org.l2x6.eircc.core.model.IrcLog;
 import org.l2x6.eircc.core.model.IrcMessage;
 import org.l2x6.eircc.core.model.IrcModel;
 import org.l2x6.eircc.core.model.IrcUser;
@@ -112,6 +112,8 @@ public class EirccUi extends AbstractUIPlugin implements IrcModelEventListener {
 
     private IProject project;
     private IrcNotificationController notificationController;
+
+    private IrcModel model;
 
     /**
      * @return
@@ -300,8 +302,7 @@ public class EirccUi extends AbstractUIPlugin implements IrcModelEventListener {
 
         IProject ircProject = getIrcProject();
 
-        IrcModel model = IrcModel.getInstance();
-        model.setTrafficLogFactory(IrcConsole.getInstance());
+        this.model = new IrcModel(IrcConsole.getInstance(), IrcPreferences.getInstance());
         model.addModelEventListener(this);
         IrcRootResource rootResource = new IrcRootResource(ircProject, IrcDocumentProvider.getInstance());
         model.load(rootResource);
@@ -329,6 +330,11 @@ public class EirccUi extends AbstractUIPlugin implements IrcModelEventListener {
     public void stop(BundleContext context) throws Exception {
         IrcUtils.markShutDownThread();
         try {
+            saveAll();
+        } catch (Exception e) {
+            log(e);
+        }
+        try {
             IrcSystemMessagesGenerator.getInstance().dispose();
         } catch (Exception e) {
             log(e);
@@ -351,12 +357,33 @@ public class EirccUi extends AbstractUIPlugin implements IrcModelEventListener {
             log(e);
         }
         try {
-            EirccCore.getInstance().dispose();
+            model.dispose();
         } catch (Exception e) {
             log(e);
         }
         plugin = null;
         super.stop(context);
 
+    }
+
+    /**
+     * @throws CoreException
+     *
+     */
+    private void saveAll() throws CoreException {
+
+        for (IrcAccount account : model.getAccounts()) {
+            for (AbstractIrcChannel channel : account.getChannels()) {
+                IrcLog log = channel.getLog();
+                if (log != null) {
+                    log.ensureAllSaved(new NullProgressMonitor());
+                }
+            }
+        }
+
+    }
+
+    public IrcModel getModel() {
+        return model;
     }
 }

@@ -214,25 +214,28 @@ public class IrcLog extends IrcObject implements Iterable<IrcMessage> {
     }
 
     public void updateNotificationLevel() {
+        IrcNotificationLevel newLevel = IrcNotificationLevel.NO_NOTIFICATION;
         boolean hasUnreadMessages = !messages.isEmpty() && lastReadIndex < lastChatMessageIndex;
         if (hasUnreadMessages) {
-            /* look if me is named */
+            newLevel = IrcNotificationLevel.UNREAD_MESSAGES;
             ListIterator<IrcMessage> it = messages.listIterator(messages.size());
             while (it.hasPrevious()) {
                 int i = it.previousIndex();
                 if (lastReadIndex >= i) {
                     break;
                 }
-                PlainIrcMessage m = it.previous();
-                if (m.isMeNamed()) {
-                    setNotificationLevel(IrcNotificationLevel.ME_NAMED);
-                    return;
+                IrcMessage m = it.previous();
+                IrcNotificationLevel level = m.getNotificationLevel();
+                if (level.getLevel() > newLevel.getLevel()) {
+                    newLevel = level;
+                    if (newLevel == IrcNotificationLevel.ME_NAMED) {
+                        /* higher level is not possible */
+                        break;
+                    }
                 }
             }
-            setNotificationLevel(IrcNotificationLevel.UNREAD_MESSAGES);
-            return;
         }
-        setNotificationLevel(IrcNotificationLevel.NO_NOTIFICATION);
+        setNotificationLevel(newLevel);
         return;
     }
 

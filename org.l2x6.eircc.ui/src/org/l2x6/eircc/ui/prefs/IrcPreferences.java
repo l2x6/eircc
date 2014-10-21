@@ -31,6 +31,7 @@ import org.eclipse.swt.widgets.Display;
 import org.l2x6.eircc.core.model.AbstractIrcChannel;
 import org.l2x6.eircc.core.model.IrcMessage;
 import org.l2x6.eircc.core.model.IrcNotificationLevel;
+import org.l2x6.eircc.core.model.IrcNotificationLevelProvider;
 import org.l2x6.eircc.core.model.PlainIrcMessage;
 import org.l2x6.eircc.ui.EirccUi;
 import org.l2x6.eircc.ui.IrcUiMessages;
@@ -43,7 +44,7 @@ import org.l2x6.eircc.ui.misc.ExtendedTextStyle;
 /**
  * @author <a href="mailto:ppalaga@redhat.com">Peter Palaga</a>
  */
-public class IrcPreferences {
+public class IrcPreferences implements IrcNotificationLevelProvider {
 
     /**
      * Preference keys and their default values.
@@ -376,5 +377,25 @@ public class IrcPreferences {
     private boolean shouldPlaySoundOnMessageInChannel(AbstractIrcChannel channel) {
         return true;
     }
+
+    /**
+     * @param level
+     * @return
+     */
+    public boolean shouldPlaySoundForMessage(IrcMessage m) {
+        switch (m.getNotificationLevel()) {
+        case NO_NOTIFICATION:
+            return false;
+        case UNREAD_MESSAGES:
+            return shouldPlaySoundOnMessageInChannel(m.getLog().getChannel());
+        case UNREAD_MESSAGES_FROM_A_TRACKED_USER:
+            return shouldPlaySoundOnMessageFromNick(m.getNick());
+        case ME_NAMED:
+            return shouldTrayFlashOnNamingMe();
+        default:
+            return false;
+        }
+    }
+
 
 }

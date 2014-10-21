@@ -94,7 +94,7 @@ public class NewIrcAccountWizard extends Wizard implements INewWizard {
             composite.setLayoutData(new GridData(GridData.HORIZONTAL_ALIGN_FILL));
             setControl(composite);
 
-            result = IrcModel.getInstance().proposeNextAccount();
+            result = EirccUi.getDefault().getModel().proposeNextAccount();
             DataBindingContext ctx = new DataBindingContext();
 
             labelText = createTextField(composite, ctx, InitialIrcAccountField.label);
@@ -162,7 +162,7 @@ public class NewIrcAccountWizard extends Wizard implements INewWizard {
          * @return
          */
         public boolean performFinish() {
-            IrcModel ircModel = IrcModel.getInstance();
+            IrcModel ircModel = EirccUi.getDefault().getModel();
 
             try {
                 IrcAccount newAccount = result.freeze();

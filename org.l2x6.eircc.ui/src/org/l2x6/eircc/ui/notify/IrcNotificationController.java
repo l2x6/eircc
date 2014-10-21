@@ -18,12 +18,10 @@ import org.l2x6.eircc.core.model.AbstractIrcChannel;
 import org.l2x6.eircc.core.model.IrcLog;
 import org.l2x6.eircc.core.model.IrcMessage;
 import org.l2x6.eircc.core.model.IrcModel;
-import org.l2x6.eircc.core.model.IrcNotificationLevel;
 import org.l2x6.eircc.core.model.event.IrcModelEvent;
 import org.l2x6.eircc.core.model.event.IrcModelEventListener;
 import org.l2x6.eircc.ui.EirccUi;
 import org.l2x6.eircc.ui.editor.IrcEditor;
-import org.l2x6.eircc.ui.prefs.IrcPreferences;
 
 /**
  * @author <a href="mailto:ppalaga@redhat.com">Peter Palaga</a>
@@ -112,14 +110,11 @@ public class IrcNotificationController implements IrcModelEventListener {
      */
     @Override
     public void handle(IrcModelEvent e) {
-        IrcPreferences prefs = IrcPreferences.getInstance();
-
         try {
             switch (e.getEventType()) {
             case NEW_MESSAGE:
                 IrcMessage m = (IrcMessage) e.getModelObject();
-                IrcNotificationLevel level = prefs.getNotificationLevel(m);
-                soundNotifier.notify(level);
+                soundNotifier.notify(m);
                 break;
             case ACCOUNT_STATE_CHANGED:
             case LOG_STATE_CHANGED:

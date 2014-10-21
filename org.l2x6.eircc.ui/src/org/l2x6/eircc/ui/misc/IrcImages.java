@@ -102,7 +102,7 @@ public class IrcImages {
 
         /*
          * (non-Javadoc)
-         * 
+         *
          * @see Object#equals(Object)
          */
         @Override
@@ -113,7 +113,7 @@ public class IrcImages {
 
         /*
          * (non-Javadoc)
-         * 
+         *
          * @see ImageDescriptor#getImageData()
          */
         @Override
@@ -123,7 +123,7 @@ public class IrcImages {
 
         /*
          * (non-Javadoc)
-         * 
+         *
          * @see Object#hashCode()
          */
         @Override
@@ -142,6 +142,7 @@ public class IrcImages {
                 ImageSize._16x16), //
         CONNECT("connect.gif"), //
         DISCONNECT("disconnect.gif"), //
+        ORANGE_BALL_OVERLAY("orange-ball-overlay.png", null, SWT.NONE, "orange-ball-overlay.svg", ImageSize._7x7), //
         GREEN_BALL_OVERLAY("green-ball-overlay.png", null, SWT.NONE, "green-ball-overlay.svg", ImageSize._7x7), //
         IRC_CLIENT("eircc.png", IrcModel.class, SWT.NONE, "eircc.svg", ImageSize._16x16), //
         IRC_CLIENT_DISABLED(IRC_CLIENT, SWT.IMAGE_GRAY), //
@@ -520,6 +521,10 @@ public class IrcImages {
                 topRightOverlay = ImageKey.BLUE_BALL_OVERLAY;
                 hasOverlays = true;
                 break;
+            case UNREAD_MESSAGES_FROM_A_TRACKED_USER:
+                topRightOverlay = ImageKey.ORANGE_BALL_OVERLAY;
+                hasOverlays = true;
+                break;
             case NO_NOTIFICATION:
                 if (channel.isJoined()) {
                     topRightOverlay = ImageKey.GREEN_BALL_OVERLAY;
@@ -587,6 +592,8 @@ public class IrcImages {
 
         if (stats.hasChannelsNamingMe()) {
             topRightOverlay = withUnseenBall ? ImageKey.SMILEY_OVERLAY : null;
+        } else if (stats.hasChannelsWithUnreadMessagesFromTrackedUsers()) {
+            topRightOverlay = ImageKey.ORANGE_BALL_OVERLAY;
         } else if (stats.hasChannelsWithUnreadMessages()) {
             topRightOverlay = ImageKey.BLUE_BALL_OVERLAY;
         }

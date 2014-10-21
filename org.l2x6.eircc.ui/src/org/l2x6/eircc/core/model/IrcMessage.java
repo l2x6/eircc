@@ -17,6 +17,8 @@ import org.l2x6.eircc.ui.misc.Colors;
  */
 public class IrcMessage extends PlainIrcMessage {
     final IrcLog log;
+    private IrcNotificationLevel notificationLevel;
+
     protected final IrcUser user;
 
     /**
@@ -46,6 +48,15 @@ public class IrcMessage extends PlainIrcMessage {
         return log;
     }
 
+    /**
+     * @return
+     */
+    public IrcNotificationLevel getNotificationLevel() {
+        if (this.notificationLevel == null) {
+            this.notificationLevel = log.getChannel().getModel().getNotificationLevelProvider().getNotificationLevel(this);
+        }
+        return notificationLevel;
+    }
     public IrcUser getUser() {
         return user;
     }

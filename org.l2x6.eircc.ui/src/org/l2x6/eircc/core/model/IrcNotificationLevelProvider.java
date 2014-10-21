@@ -12,5 +12,5 @@ package org.l2x6.eircc.core.model;
  * @author <a href="mailto:ppalaga@redhat.com">Peter Palaga</a>
  */
 public interface IrcNotificationLevelProvider {
-    IrcNotificationLevel getIrcNotificationLevel(IrcMessage message);
+    IrcNotificationLevel getNotificationLevel(IrcMessage message);
 }

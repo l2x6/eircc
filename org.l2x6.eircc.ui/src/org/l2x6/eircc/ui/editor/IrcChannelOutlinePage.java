@@ -23,7 +23,6 @@ import org.eclipse.swt.widgets.Tree;
 import org.eclipse.ui.views.contentoutline.ContentOutlinePage;
 import org.l2x6.eircc.core.model.AbstractIrcChannel;
 import org.l2x6.eircc.core.model.IrcChannelUser;
-import org.l2x6.eircc.core.model.IrcModel;
 import org.l2x6.eircc.core.model.event.IrcModelEvent;
 import org.l2x6.eircc.core.model.event.IrcModelEventListener;
 import org.l2x6.eircc.ui.EirccUi;
@@ -154,7 +153,7 @@ public class IrcChannelOutlinePage extends ContentOutlinePage implements IDouble
         viewer.addSelectionChangedListener(this);
         viewer.addDoubleClickListener(this);
         updateInput();
-        IrcModel.getInstance().addModelEventListener(this);
+        EirccUi.getDefault().getModel().addModelEventListener(this);
 
         Tree tree = viewer.getTree();
         openPrivateChatAction = IrcTreeActions.createOpenPrivateChatAction(tree);
@@ -171,7 +170,7 @@ public class IrcChannelOutlinePage extends ContentOutlinePage implements IDouble
     @Override
     public void dispose() {
         try {
-            IrcModel.getInstance().removeModelEventListener(this);
+            EirccUi.getDefault().getModel().removeModelEventListener(this);
         } catch (Exception e) {
             EirccUi.log(e);
         }

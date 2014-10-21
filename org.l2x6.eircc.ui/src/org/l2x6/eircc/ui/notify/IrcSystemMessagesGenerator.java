@@ -14,10 +14,10 @@ import org.l2x6.eircc.core.model.AbstractIrcChannel;
 import org.l2x6.eircc.core.model.IrcAccount;
 import org.l2x6.eircc.core.model.IrcChannelUser;
 import org.l2x6.eircc.core.model.IrcLog;
-import org.l2x6.eircc.core.model.IrcModel;
 import org.l2x6.eircc.core.model.IrcUser;
 import org.l2x6.eircc.core.model.event.IrcModelEvent;
 import org.l2x6.eircc.core.model.event.IrcModelEventListener;
+import org.l2x6.eircc.ui.EirccUi;
 import org.l2x6.eircc.ui.IrcUiMessages;
 
 /**
@@ -35,7 +35,7 @@ public class IrcSystemMessagesGenerator implements IrcModelEventListener {
      */
     public IrcSystemMessagesGenerator() {
         super();
-        IrcModel.getInstance().addModelEventListener(this);
+        EirccUi.getDefault().getModel().addModelEventListener(this);
     }
 
     /**
@@ -84,7 +84,7 @@ public class IrcSystemMessagesGenerator implements IrcModelEventListener {
     }
 
     public void dispose() {
-        IrcModel.getInstance().removeModelEventListener(this);
+        EirccUi.getDefault().getModel().removeModelEventListener(this);
     }
 
     /**
