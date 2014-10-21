@@ -334,6 +334,12 @@ public class IrcEditor extends AbstractIrcEditor implements IrcModelEventListene
     public void handle(IrcModelEvent e) {
         IrcUtils.assertUiThread();
         switch (e.getEventType()) {
+        case LOG_STATE_CHANGED:
+            IrcLog log = (IrcLog) e.getModelObject();
+            if (log.getLogResource() == getLastLogResource()) {
+                updateTitle();
+            }
+            break;
         case CHANNEL_JOINED_CHANGED:
             AbstractIrcChannel ch = (AbstractIrcChannel) e.getModelObject();
             if (ch == getChannel()) {
@@ -389,7 +395,7 @@ public class IrcEditor extends AbstractIrcEditor implements IrcModelEventListene
         }
     }
 
-    private boolean isBeingRead() {
+    public boolean isBeingRead() {
         Shell myShell = getEditorSite().getShell();
         boolean windowActive = myShell.getDisplay().getActiveShell() == myShell;
         return windowActive && logViewer != null && logViewer.isVisible();
@@ -576,7 +582,7 @@ public class IrcEditor extends AbstractIrcEditor implements IrcModelEventListene
                     log.allRead();
                 } else {
                     /* let us update the channel state */
-                    log.updateState();
+                    log.updateNotificationLevel();
                 }
             }
             updateTitle();
@@ -595,7 +601,7 @@ public class IrcEditor extends AbstractIrcEditor implements IrcModelEventListene
     /**
     *
     */
-    private void updateTitle() {
+    public void updateTitle() {
         IrcLogResource lastLogResource = getLastLogResource();
         if (lastLogResource != null) {
             String channelName = lastLogResource.getChannelResource().getChannelName();

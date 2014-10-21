@@ -156,14 +156,14 @@ public class IrcModel extends IrcBase {
             for (AbstractIrcChannel channel : account.getChannels()) {
                 IrcLog log = channel.getLog();
                 if (log != null) {
-                    switch (log.getState()) {
+                    switch (log.getNotificationLevel()) {
                     case ME_NAMED:
                         channelsNamingMe++;
                         break;
                     case UNREAD_MESSAGES:
                         channelsWithUnreadMessages++;
                         break;
-                    case NONE:
+                    case NO_NOTIFICATION:
                         /* do nothing */
                         break;
                     }

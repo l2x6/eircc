@@ -47,6 +47,7 @@ import org.eclipse.ui.part.ViewPart;
 import org.l2x6.eircc.core.IrcException;
 import org.l2x6.eircc.core.model.AbstractIrcChannel;
 import org.l2x6.eircc.core.model.IrcAccount;
+import org.l2x6.eircc.core.model.IrcLog;
 import org.l2x6.eircc.core.model.IrcModel;
 import org.l2x6.eircc.core.model.PlainIrcChannel;
 import org.l2x6.eircc.core.model.event.IrcModelEvent;
@@ -377,8 +378,8 @@ public class IrcAccountsView extends ViewPart implements IrcModelEventListener {
             accountsTreeViewer.refresh();
             break;
         case ACCOUNT_STATE_CHANGED:
-            accountsTreeViewer.refresh();
             IrcAccount account = (IrcAccount) e.getModelObject();
+            accountsTreeViewer.update(account, null);
             accountsTreeViewer.setExpandedState(account, true);
             IStatusLineManager statusLineManager = getViewSite().getActionBars().getStatusLineManager();
             switch (account.getState()) {
@@ -400,6 +401,10 @@ public class IrcAccountsView extends ViewPart implements IrcModelEventListener {
             serverChannelsTreeViewer.refresh();
             Arrays.stream(treeActions).forEach(action -> action.updateEnablement());
             break;
+        case LOG_STATE_CHANGED:
+            IrcLog log = (IrcLog) e.getModelObject();
+            accountsTreeViewer.update(log.getChannel(), null);
+            break;
         case SERVER_CHANNEL_ADDED:
         case SERVER_CHANNELS_ADDED:
         case SERVER_CHANNEL_REMOVED:
@@ -408,7 +413,6 @@ public class IrcAccountsView extends ViewPart implements IrcModelEventListener {
         case CHANNEL_USERS_CHANGED:
         case USER_ADDED:
         case USER_REMOVED:
-        case NEW_MESSAGE:
             /* ignore */
             break;
         default:

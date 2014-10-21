@@ -24,7 +24,6 @@ import org.eclipse.swt.widgets.Shell;
 import org.eclipse.ui.IEditorInput;
 import org.eclipse.ui.IEditorPart;
 import org.eclipse.ui.IEditorReference;
-import org.eclipse.ui.IWindowListener;
 import org.eclipse.ui.IWorkbenchPage;
 import org.eclipse.ui.IWorkbenchWindow;
 import org.eclipse.ui.PlatformUI;
@@ -58,7 +57,7 @@ import org.osgi.framework.BundleContext;
 /**
  * @author <a href="mailto:ppalaga@redhat.com">Peter Palaga</a>
  */
-public class EirccUi extends AbstractUIPlugin implements IrcModelEventListener, IWindowListener {
+public class EirccUi extends AbstractUIPlugin implements IrcModelEventListener {
 
     private static final IrcController INSTANCE = new IrcController();
 
@@ -112,6 +111,7 @@ public class EirccUi extends AbstractUIPlugin implements IrcModelEventListener, 
     }
 
     private IProject project;
+    private IrcNotificationController notificationController;
 
     /**
      * @return
@@ -200,6 +200,31 @@ public class EirccUi extends AbstractUIPlugin implements IrcModelEventListener, 
         default:
             break;
         }
+    }
+    public boolean isBeingRead(AbstractIrcChannel channel) throws IrcResourceException {
+        IrcEditor editor = findOpenEditor(channel);
+        return editor != null && editor.isBeingRead();
+    }
+
+    public IrcEditor findOpenEditor(AbstractIrcChannel channel) throws IrcResourceException {
+        IrcUtils.assertUiThread();
+        IWorkbenchPage page = PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage();
+        IrcChannelResource channelResource = channel.getChannelResource();
+        IrcLogResource logResource = channelResource.getActiveLogResource();
+        IEditorInput input = logResource.getEditorInput();
+
+        IEditorReference[] editorRefs = page.getEditorReferences();
+        for (IEditorReference editorRef : editorRefs) {
+            IEditorPart editor = editorRef.getEditor(true);
+            if (editor instanceof IrcEditor) {
+                IrcEditor ircEditor = (IrcEditor) editor;
+                IEditorInput editorInput = ircEditor.getEditorInput();
+                if (input.equals(editorInput)) {
+                    return ircEditor;
+                }
+            }
+        }
+        return null;
     }
 
     public void openEditor(AbstractIrcChannel channel) throws IrcResourceException, CoreException, IOException {
@@ -291,11 +316,10 @@ public class EirccUi extends AbstractUIPlugin implements IrcModelEventListener, 
             }
         }
         /* Touch IrcTray to create it */
-        IrcNotificationController.getInstance();
+        this.notificationController = new IrcNotificationController(model);
 
         IrcSystemMessagesGenerator.getInstance();
 
-        PlatformUI.getWorkbench().addWindowListener(this);
     }
 
     /**
@@ -305,17 +329,14 @@ public class EirccUi extends AbstractUIPlugin implements IrcModelEventListener, 
     public void stop(BundleContext context) throws Exception {
         IrcUtils.markShutDownThread();
         try {
-            PlatformUI.getWorkbench().removeWindowListener(this);
-        } catch (Exception e) {
-            log(e);
-        }
-        try {
             IrcSystemMessagesGenerator.getInstance().dispose();
         } catch (Exception e) {
             log(e);
         }
         try {
-            IrcNotificationController.getInstance().dispose();
+            if (this.notificationController != null) {
+                notificationController.dispose();
+            }
         } catch (Exception e) {
             log(e);
         }
@@ -337,47 +358,5 @@ public class EirccUi extends AbstractUIPlugin implements IrcModelEventListener, 
         plugin = null;
         super.stop(context);
 
-    }
-
-    /**
-     * @see org.eclipse.ui.IWindowListener#windowActivated(org.eclipse.ui.IWorkbenchWindow)
-     */
-    @Override
-    public void windowActivated(IWorkbenchWindow window) {
-
-        IWorkbenchPage page = window.getActivePage();
-        if (page != null) {
-            IEditorReference[] editorRefs = page.getEditorReferences();
-            for (IEditorReference ref : editorRefs) {
-                IEditorPart editor = ref.getEditor(false);
-                if (editor instanceof IrcEditor) {
-                    IrcEditor channelEditor = (IrcEditor) editor;
-                    channelEditor.updateReadMessages();
-                }
-            }
-        }
-
-    }
-
-    /**
-     * @see org.eclipse.ui.IWindowListener#windowClosed(org.eclipse.ui.IWorkbenchWindow)
-     */
-    @Override
-    public void windowClosed(IWorkbenchWindow window) {
-    }
-
-    /**
-     * @see org.eclipse.ui.IWindowListener#windowDeactivated(org.eclipse.ui.IWorkbenchWindow)
-     */
-    @Override
-    public void windowDeactivated(IWorkbenchWindow window) {
-    }
-
-    /**
-     * @see org.eclipse.ui.IWindowListener#windowOpened(org.eclipse.ui.IWorkbenchWindow)
-     */
-    @Override
-    public void windowOpened(IWorkbenchWindow window) {
-        windowActivated(window);
     }
 }

@@ -33,19 +33,6 @@ import org.l2x6.eircc.ui.EirccUi;
  */
 public class IrcLog extends IrcObject implements Iterable<IrcMessage> {
 
-    public enum LogState {
-        ME_NAMED(true), NONE(false), UNREAD_MESSAGES(true);
-        private final boolean hasUnreadMessages;
-
-        private LogState(boolean hasUnreadMessages) {
-            this.hasUnreadMessages = hasUnreadMessages;
-        }
-
-        public boolean hasUnreadMessages() {
-            return hasUnreadMessages;
-        }
-    }
-
     public static final int NOTHING_SAVED = -1;
     private final AbstractIrcChannel channel;
     private int charLength = 0;
@@ -59,8 +46,8 @@ public class IrcLog extends IrcObject implements Iterable<IrcMessage> {
 
     private final IrcLogResource logResource;
     private final List<IrcMessage> messages = new ArrayList<IrcMessage>();
-    private LogState state = LogState.NONE;
 
+    private IrcNotificationLevel notificationLevel = IrcNotificationLevel.NO_NOTIFICATION;
     /**
      * @param id
      * @param channel
@@ -79,7 +66,12 @@ public class IrcLog extends IrcObject implements Iterable<IrcMessage> {
      */
     public void allRead() {
         lastReadIndex = messages.size() - 1;
-        setState(LogState.NONE);
+        setNotificationLevel(IrcNotificationLevel.NO_NOTIFICATION);
+    }
+
+    public void appendErrorMessage(String text) {
+        IrcMessage m = new IrcMessage(this, OffsetDateTime.now(), null, text, channel.isP2p(), IrcMessageType.ERROR);
+        appendMessage(m);
     }
 
     public void appendMessage(IrcMessage message) {
@@ -94,11 +86,6 @@ public class IrcLog extends IrcObject implements Iterable<IrcMessage> {
 
     public void appendSystemMessage(String text) {
         IrcMessage m = new IrcMessage(this, OffsetDateTime.now(), null, text, channel.isP2p(), IrcMessageType.SYSTEM);
-        appendMessage(m);
-    }
-
-    public void appendErrorMessage(String text) {
-        IrcMessage m = new IrcMessage(this, OffsetDateTime.now(), null, text, channel.isP2p(), IrcMessageType.ERROR);
         appendMessage(m);
     }
 
@@ -145,16 +132,20 @@ public class IrcLog extends IrcObject implements Iterable<IrcMessage> {
         return lineIndex;
     }
 
+    public IrcLogResource getLogResource() {
+        return logResource;
+    }
+
     public int getMessageCount() {
         return messages.size();
     }
 
-    public OffsetDateTime getStartedOn() {
-        return logResource.getTime();
+    public IrcNotificationLevel getNotificationLevel() {
+        return notificationLevel;
     }
 
-    public LogState getState() {
-        return state;
+    public OffsetDateTime getStartedOn() {
+        return logResource.getTime();
     }
 
     /**
@@ -214,15 +205,15 @@ public class IrcLog extends IrcObject implements Iterable<IrcMessage> {
         lastSavedMessageIndex = messages.size() - 1;
     }
 
-    public void setState(LogState state) {
-        LogState oldState = this.state;
-        this.state = state;
+    public void setNotificationLevel(IrcNotificationLevel state) {
+        IrcNotificationLevel oldState = this.notificationLevel;
+        this.notificationLevel = state;
         if (oldState != state) {
             channel.getAccount().getModel().fire(new IrcModelEvent(EventType.LOG_STATE_CHANGED, this));
         }
     }
 
-    public void updateState() {
+    public void updateNotificationLevel() {
         boolean hasUnreadMessages = !messages.isEmpty() && lastReadIndex < lastChatMessageIndex;
         if (hasUnreadMessages) {
             /* look if me is named */
@@ -234,14 +225,14 @@ public class IrcLog extends IrcObject implements Iterable<IrcMessage> {
                 }
                 PlainIrcMessage m = it.previous();
                 if (m.isMeNamed()) {
-                    setState(LogState.ME_NAMED);
+                    setNotificationLevel(IrcNotificationLevel.ME_NAMED);
                     return;
                 }
             }
-            setState(LogState.UNREAD_MESSAGES);
+            setNotificationLevel(IrcNotificationLevel.UNREAD_MESSAGES);
             return;
         }
-        setState(LogState.NONE);
+        setNotificationLevel(IrcNotificationLevel.NO_NOTIFICATION);
         return;
     }
 

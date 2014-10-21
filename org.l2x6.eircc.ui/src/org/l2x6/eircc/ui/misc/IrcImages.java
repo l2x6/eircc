@@ -511,7 +511,7 @@ public class IrcImages {
         ImageKey underlay = null;
         IrcLog log = channel.getLog();
         if (log != null) {
-            switch (log.getState()) {
+            switch (log.getNotificationLevel()) {
             case ME_NAMED:
                 topRightOverlay = ImageKey.SMILEY_OVERLAY;
                 hasOverlays = true;
@@ -520,7 +520,7 @@ public class IrcImages {
                 topRightOverlay = ImageKey.BLUE_BALL_OVERLAY;
                 hasOverlays = true;
                 break;
-            case NONE:
+            case NO_NOTIFICATION:
                 if (channel.isJoined()) {
                     topRightOverlay = ImageKey.GREEN_BALL_OVERLAY;
                     hasOverlays = true;

@@ -8,12 +8,21 @@
 
 package org.l2x6.eircc.ui.notify;
 
-import org.l2x6.eircc.core.model.IrcLog.LogState;
+import org.eclipse.ui.IEditorPart;
+import org.eclipse.ui.IEditorReference;
+import org.eclipse.ui.IWindowListener;
+import org.eclipse.ui.IWorkbenchPage;
+import org.eclipse.ui.IWorkbenchWindow;
+import org.eclipse.ui.PlatformUI;
+import org.l2x6.eircc.core.model.AbstractIrcChannel;
+import org.l2x6.eircc.core.model.IrcLog;
 import org.l2x6.eircc.core.model.IrcMessage;
 import org.l2x6.eircc.core.model.IrcModel;
+import org.l2x6.eircc.core.model.IrcNotificationLevel;
 import org.l2x6.eircc.core.model.event.IrcModelEvent;
 import org.l2x6.eircc.core.model.event.IrcModelEventListener;
 import org.l2x6.eircc.ui.EirccUi;
+import org.l2x6.eircc.ui.editor.IrcEditor;
 import org.l2x6.eircc.ui.prefs.IrcPreferences;
 
 /**
@@ -21,29 +30,80 @@ import org.l2x6.eircc.ui.prefs.IrcPreferences;
  */
 public class IrcNotificationController implements IrcModelEventListener {
 
-    private static final IrcNotificationController INSTANCE = new IrcNotificationController();
+    private final IWindowListener notificationsCleaner = new IWindowListener() {
 
-    public static IrcNotificationController getInstance() {
-        return INSTANCE;
-    }
+        /**
+         * @see org.eclipse.ui.IWindowListener#windowActivated(org.eclipse.ui.IWorkbenchWindow)
+         */
+        @Override
+        public void windowActivated(IWorkbenchWindow window) {
+            IWorkbenchPage page = window.getActivePage();
+            if (page != null) {
+                IEditorReference[] editorRefs = page.getEditorReferences();
+                for (IEditorReference ref : editorRefs) {
+                    IEditorPart editor = ref.getEditor(false);
+                    if (editor instanceof IrcEditor) {
+                        IrcEditor ircEditor = (IrcEditor) editor;
+                        if (ircEditor.isBeingRead()) {
+                            AbstractIrcChannel channel = ircEditor.getChannel();
+                            if (channel != null) {
+                                IrcLog log = channel.getLog();
+                                if (log != null) {
+                                    log.allRead();
+                                }
+                            }
+                            ircEditor.updateTitle();
+                        }
+                    }
+                }
+            }
+        }
+
+        /**
+         * @see org.eclipse.ui.IWindowListener#windowClosed(org.eclipse.ui.IWorkbenchWindow)
+         */
+        @Override
+        public void windowClosed(IWorkbenchWindow window) {
+        }
+
+        /**
+         * @see org.eclipse.ui.IWindowListener#windowDeactivated(org.eclipse.ui.IWorkbenchWindow)
+         */
+        @Override
+        public void windowDeactivated(IWorkbenchWindow window) {
+        }
+
+        /**
+         * @see org.eclipse.ui.IWindowListener#windowOpened(org.eclipse.ui.IWorkbenchWindow)
+         */
+        @Override
+        public void windowOpened(IWorkbenchWindow window) {
+            windowActivated(window);
+        }
+
+    };
 
     private final IrcSoundNotifier soundNotifier;
+    private final IrcModel model;
 
     private final IrcTray tray;
 
     /**
+     * @param model
      *
      */
-    public IrcNotificationController() {
+    public IrcNotificationController(IrcModel model) {
         super();
+        this.model = model;
         this.soundNotifier = new IrcSoundNotifier();
         this.tray = new IrcTray();
-
-        IrcModel.getInstance().addModelEventListener(this);
+        this.model.addModelEventListener(this);
+        PlatformUI.getWorkbench().addWindowListener(notificationsCleaner);
     }
 
     public void dispose() {
-        IrcModel.getInstance().removeModelEventListener(this);
+        PlatformUI.getWorkbench().removeWindowListener(notificationsCleaner);
+        model.removeModelEventListener(this);
         tray.dispose();
     }
 
@@ -58,12 +118,8 @@ public class IrcNotificationController implements IrcModelEventListener {
             switch (e.getEventType()) {
             case NEW_MESSAGE:
                 IrcMessage m = (IrcMessage) e.getModelObject();
-                if (m.isMeNamed() && m.getLog().getState() == LogState.ME_NAMED && prefs.shouldPlaySoundOnNamingMe()) {
-                    soundNotifier.meNamed();
-                } else if (!m.isFromMe() && m.getUser() != null
-                        && prefs.shouldPlaySoundOnMessageFromNick(m.getUser().getNick())) {
-                    soundNotifier.messageFromTrackedUser();
-                }
+                IrcNotificationLevel level = prefs.getNotificationLevel(m);
+                soundNotifier.notify(level);
                 break;
             case ACCOUNT_STATE_CHANGED:
             case LOG_STATE_CHANGED:

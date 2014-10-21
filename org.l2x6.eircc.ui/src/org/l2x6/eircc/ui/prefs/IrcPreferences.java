@@ -28,6 +28,9 @@ import org.eclipse.jface.window.Window;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.widgets.Display;
+import org.l2x6.eircc.core.model.AbstractIrcChannel;
+import org.l2x6.eircc.core.model.IrcMessage;
+import org.l2x6.eircc.core.model.IrcNotificationLevel;
 import org.l2x6.eircc.core.model.PlainIrcMessage;
 import org.l2x6.eircc.ui.EirccUi;
 import org.l2x6.eircc.ui.IrcUiMessages;
@@ -349,6 +352,29 @@ public class IrcPreferences {
             return dialog.getValue();
         }
         return null;
+    }
+
+    /**
+     * @param m
+     * @return
+     */
+    public IrcNotificationLevel getNotificationLevel(IrcMessage m) {
+        if (m.isMeNamed() && m.getLog().getNotificationLevel() == IrcNotificationLevel.ME_NAMED && shouldPlaySoundOnNamingMe()) {
+            return IrcNotificationLevel.ME_NAMED;
+        } else if (!m.isFromMe() && m.getUser() != null && shouldPlaySoundOnMessageFromNick(m.getUser().getNick())) {
+            return IrcNotificationLevel.UNREAD_MESSAGES_FROM_A_TRACKED_USER;
+        } else if (!m.isFromMe() && m.getUser() != null && shouldPlaySoundOnMessageInChannel(m.getLog().getChannel())) {
+            return IrcNotificationLevel.UNREAD_MESSAGES;
+        }
+        return IrcNotificationLevel.NO_NOTIFICATION;
+    }
+
+    /**
+     * @param channel
+     * @return
+     */
+    private boolean shouldPlaySoundOnMessageInChannel(AbstractIrcChannel channel) {
+        return true;
     }
 
 }
