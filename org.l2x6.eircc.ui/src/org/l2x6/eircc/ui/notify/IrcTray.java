@@ -9,13 +9,20 @@
 package org.l2x6.eircc.ui.notify;
 
 import java.awt.SystemTray;
+import java.io.IOException;
 
+import org.eclipse.core.runtime.CoreException;
+import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.widgets.Display;
+import org.eclipse.swt.widgets.Event;
+import org.eclipse.swt.widgets.Listener;
 import org.eclipse.swt.widgets.Tray;
 import org.eclipse.swt.widgets.TrayItem;
+import org.l2x6.eircc.core.model.IrcAccountsStatistics;
 import org.l2x6.eircc.core.model.IrcModel;
+import org.l2x6.eircc.core.model.resource.IrcResourceException;
 import org.l2x6.eircc.ui.EirccUi;
 import org.l2x6.eircc.ui.misc.IrcImages;
 import org.l2x6.eircc.ui.misc.IrcImages.ImageSize;
@@ -69,6 +76,16 @@ public class IrcTray {
         tray = Display.getDefault().getSystemTray();
         if (tray != null) {
             trayItem = new TrayItem(tray, SWT.NONE);
+            trayItem.addListener(SWT.DefaultSelection, new Listener() {
+                @Override
+                public void handleEvent(Event event) {
+                    try {
+                        EirccUi.getDefault().revealHottest();
+                    } catch (IrcResourceException | CoreException | IOException | BadLocationException e) {
+                        EirccUi.log(e);
+                    }
+                }
+            });
             update();
         }
     }
@@ -83,7 +100,8 @@ public class IrcTray {
     public void update() {
         if (trayItem != null) {
             IrcModel model = EirccUi.getDefault().getModel();
-            trayItem.setToolTipText(IrcLabelProvider.getInstance().getTooltipText(model));
+            IrcAccountsStatistics stats = model.getAccountsStatistics();
+            trayItem.setToolTipText(IrcLabelProvider.getInstance().getTooltipText(stats));
 
             /*
              * Find out the icon size required by the tray using AWT. Feel free
@@ -91,7 +109,7 @@ public class IrcTray {
              */
             SystemTray awtTray = SystemTray.getSystemTray();
             ImageSize size = awtTray != null ? new ImageSize(awtTray.getTrayIconSize()) : ImageSize._16x16;
-            Image[] images = IrcImages.getInstance().getFlashingImage(model, size);
+            Image[] images = IrcImages.getInstance().getFlashingImage(stats, size);
             if (images.length > 1) {
                 this.flasher = new Flasher(images);
                 this.flasher.run();

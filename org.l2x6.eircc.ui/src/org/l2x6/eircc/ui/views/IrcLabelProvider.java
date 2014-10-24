@@ -53,21 +53,25 @@ public class IrcLabelProvider extends LabelProvider {
             return null;
         } else if (object instanceof IrcModel) {
             IrcModel model = (IrcModel) object;
-            StringBuilder sb = new StringBuilder();
             IrcAccountsStatistics stats = model.getAccountsStatistics();
-            if (stats.hasChannelsWithUnreadMessages()) {
-                sb.append(IrcUiMessages.Channel_You_have_unseen_messages);
-            }
-            if (sb.length() > 0) {
-                sb.append(" - ");
-            }
-            sb.append(IrcUiMessages.Eclipse_IRC_Client);
-            return sb.toString();
+            return getTooltipText(stats);
         } else if (object instanceof AbstractIrcChannel) {
             AbstractIrcChannel channel = (AbstractIrcChannel) object;
             return channel.getName() + "@" + channel.getAccount().getLabel() + " - " + getChannelJoinedLabel(channel);
         }
         return object.toString();
+    }
+
+    public String getTooltipText(IrcAccountsStatistics stats) {
+        StringBuilder sb = new StringBuilder();
+        if (stats.hasChannelsWithUnreadMessages()) {
+            sb.append(IrcUiMessages.Channel_You_have_unseen_messages);
+        }
+        if (sb.length() > 0) {
+            sb.append(" - ");
+        }
+        sb.append(IrcUiMessages.Eclipse_IRC_Client);
+        return sb.toString();
     }
 
 }

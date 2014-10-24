@@ -473,12 +473,20 @@ public class IrcEditor extends AbstractIrcEditor implements IrcModelEventListene
      */
     public void reveal(IrcMatch ircMatch) throws BadLocationException {
         PlainIrcMessage message = ircMatch.getMessageMatches().getMessage();
+        reveal(message, ircMatch.getOffsetInMessageText(), ircMatch.getLength());
+    }
+
+    public void reveal(PlainIrcMessage message) throws BadLocationException {
+        reveal(message, 0, message.getText().length());
+    }
+
+    public void reveal(PlainIrcMessage message, int offsetInMessageText, int length) throws BadLocationException {
         int lineOffset = logViewer.getDocument().getLineOffset(message.getLineIndex());
         String nick = message.getNick();
         int nickLength = nick != null ? nick.length() + 2 : 0;
         int relativeTextOfset = IrcDefaultMessageFormatter.TimeStyle.TIME.getCharacterLength() + 1 + nickLength
-                + ircMatch.getOffsetInMessageText();
-        selectAndReveal(lineOffset + relativeTextOfset, ircMatch.getLength());
+                + offsetInMessageText;
+        selectAndReveal(lineOffset + relativeTextOfset, length);
     }
 
     /**

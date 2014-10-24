@@ -214,10 +214,16 @@ public class IrcLog extends IrcObject implements Iterable<IrcMessage> {
     }
 
     public void updateNotificationLevel() {
-        IrcNotificationLevel newLevel = IrcNotificationLevel.NO_NOTIFICATION;
+        IrcMessage hottestMessage = getHottestMessage();
+        IrcNotificationLevel newLevel = hottestMessage != null ? hottestMessage.getNotificationLevel() : IrcNotificationLevel.NO_NOTIFICATION;
+        setNotificationLevel(newLevel);
+        return;
+    }
+
+    public IrcMessage getHottestMessage() {
+        IrcMessage result = null;
         boolean hasUnreadMessages = !messages.isEmpty() && lastReadIndex < lastChatMessageIndex;
         if (hasUnreadMessages) {
-            newLevel = IrcNotificationLevel.UNREAD_MESSAGES;
             ListIterator<IrcMessage> it = messages.listIterator(messages.size());
             while (it.hasPrevious()) {
                 int i = it.previousIndex();
@@ -225,18 +231,19 @@ public class IrcLog extends IrcObject implements Iterable<IrcMessage> {
                     break;
                 }
                 IrcMessage m = it.previous();
-                IrcNotificationLevel level = m.getNotificationLevel();
-                if (level.getLevel() > newLevel.getLevel()) {
-                    newLevel = level;
-                    if (newLevel == IrcNotificationLevel.ME_NAMED) {
-                        /* higher level is not possible */
-                        break;
+                if (m.getType() == IrcMessageType.CHAT) {
+                    IrcNotificationLevel level = m.getNotificationLevel();
+                    if (result == null || level.getLevel() > result.getNotificationLevel().getLevel()) {
+                        result = m;
+                        if (result.getNotificationLevel() == IrcNotificationLevel.ME_NAMED) {
+                            /* higher level is not possible */
+                            return m;
+                        }
                     }
                 }
             }
         }
-        setNotificationLevel(newLevel);
-        return;
+        return result;
     }
 
 }

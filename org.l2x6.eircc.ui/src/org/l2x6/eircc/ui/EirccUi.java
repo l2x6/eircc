@@ -20,6 +20,7 @@ import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.NullProgressMonitor;
 import org.eclipse.core.runtime.Status;
+import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.ui.IEditorInput;
 import org.eclipse.ui.IEditorPart;
@@ -229,7 +230,7 @@ public class EirccUi extends AbstractUIPlugin implements IrcModelEventListener {
         return null;
     }
 
-    public void openEditor(AbstractIrcChannel channel) throws IrcResourceException, CoreException, IOException {
+    public IrcEditor openEditor(AbstractIrcChannel channel) throws IrcResourceException, CoreException, IOException {
         IrcUtils.assertUiThread();
         IWorkbenchPage page = PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage();
         IrcChannelResource channelResource = channel.getChannelResource();
@@ -250,7 +251,7 @@ public class EirccUi extends AbstractUIPlugin implements IrcModelEventListener {
                      * just need to activate it
                      */
                     page.activate(editor);
-                    return;
+                    return ircEditor;
                 }
                 /*
                  * we should somehow ensure that there is only one connected
@@ -284,12 +285,13 @@ public class EirccUi extends AbstractUIPlugin implements IrcModelEventListener {
                 /* lookBackStart is between editorStart and editorEnd */
                 lastEditor.rotate();
                 page.activate(lastEditor);
-                return;
+                return lastEditor;
             }
         }
 
         /* there was no open editor belonging to this channel */
-        page.openEditor(input, IrcEditor.ID);
+        IEditorPart part = page.openEditor(input, IrcEditor.ID);
+        return (IrcEditor) part;
     }
 
     /**
@@ -385,5 +387,38 @@ public class EirccUi extends AbstractUIPlugin implements IrcModelEventListener {
 
     public IrcModel getModel() {
         return model;
+    }
+
+    /**
+     * @throws IOException
+     * @throws CoreException
+     * @throws IrcResourceException
+     * @throws BadLocationException
+     *
+     */
+    public void revealHottest() throws IrcResourceException, CoreException, IOException, BadLocationException {
+        Shell shell = PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell();
+        if (shell.getMinimized()) {
+            shell.setMinimized(false);
+        }
+        shell.forceActive();
+
+        IrcMessage hottestMessage = null;
+        for (IrcAccount account : model.getAccounts()) {
+            for (AbstractIrcChannel channel : account.getChannels()) {
+                IrcLog log = channel.getLog();
+                if (log != null) {
+                    IrcMessage m = log.getHottestMessage();
+                    if (m != null && (hottestMessage == null || hottestMessage.getNotificationLevel().getLevel() < m.getNotificationLevel().getLevel())) {
+                        hottestMessage = m;
+                    }
+                }
+            }
+        }
+        if (hottestMessage != null) {
+            AbstractIrcChannel ch = hottestMessage.getLog().getChannel();
+            IrcEditor editor = openEditor(ch);
+            editor.reveal(hottestMessage);
+        }
     }
 }

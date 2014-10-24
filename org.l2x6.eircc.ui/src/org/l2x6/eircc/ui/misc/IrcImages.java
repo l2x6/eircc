@@ -383,8 +383,7 @@ public class IrcImages {
         imageRegistry.dispose();
     }
 
-    public Image[] getFlashingImage(IrcModel model, ImageSize size) {
-        IrcAccountsStatistics stats = model.getAccountsStatistics();
+    public Image[] getFlashingImage(IrcAccountsStatistics stats, ImageSize size) {
         IrcPreferences prefs = IrcPreferences.getInstance();
         if (stats.hasChannelsNamingMe() && prefs.shouldTrayFlashOnNamingMe()) {
             return new Image[] { getImage(getOverlays(stats, true), size), getImage(getOverlays(stats, false), size) };
