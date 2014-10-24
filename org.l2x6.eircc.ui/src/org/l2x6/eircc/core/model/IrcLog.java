@@ -75,13 +75,18 @@ public class IrcLog extends IrcObject implements Iterable<IrcMessage> {
     }
 
     public void appendMessage(IrcMessage message) {
+        appendMessage(message, true);
+    }
+    private void appendMessage(IrcMessage message, boolean fireEvent) {
         messages.add(message);
         if (message.getType() == IrcMessageType.CHAT && !message.isFromMe()) {
             lastChatMessageIndex = messages.size() - 1;
         }
-        channel.getAccount().getModel().fire(new IrcModelEvent(EventType.NEW_MESSAGE, message));
         charLength += message.getRecordLenght();
         lineIndex += message.getLineCount();
+        if (fireEvent) {
+            channel.getAccount().getModel().fire(new IrcModelEvent(EventType.NEW_MESSAGE, message));
+        }
     }
 
     public void appendSystemMessage(String text) {
@@ -97,27 +102,41 @@ public class IrcLog extends IrcObject implements Iterable<IrcMessage> {
     }
 
     public void ensureAllSaved(IProgressMonitor monitor) throws CoreException {
-        if (lastSavedMessageIndex == messages.size() - 1) {
-            return;
-        }
-        IFileEditorInput editorInput = logResource.getEditorInput();
-        IDocumentProvider documentProvider = getModel().getRootResource().getDocumentProvider();
-        IDocument document = documentProvider.getDocument(editorInput);
+        Object lock = logResource.getLockObject();
+        synchronized (lock) {
+            if (lastSavedMessageIndex == messages.size() - 1) {
+                return;
+            }
 
-        if (lastSavedMessageIndex == IrcLog.NOTHING_SAVED) {
-            document.set("");
-        }
+            if (loading) {
+                System.out.println("saving while loading");
+            }
 
-        // boolean newFile = lastSavedMessageIndex < 0 || !path.exists();
-        /* append unsaved messages */
-        for (int i = lastSavedMessageIndex + 1; i < messages.size(); i++) {
-            PlainIrcMessage m = messages.get(i);
-            m.write(document);
-            // out.flush();
+            IFileEditorInput editorInput = logResource.getEditorInput();
+            IDocumentProvider documentProvider = getModel().getRootResource().getDocumentProvider();
+            IDocument document = logResource.getDocument();
+
+            try {
+                documentProvider.aboutToChange(editorInput);
+
+                if (lastSavedMessageIndex == IrcLog.NOTHING_SAVED) {
+                    document.set("");
+                }
+
+                // boolean newFile = lastSavedMessageIndex < 0 || !path.exists();
+                /* append unsaved messages */
+                for (int i = lastSavedMessageIndex + 1; i < messages.size(); i++) {
+                    PlainIrcMessage m = messages.get(i);
+                    m.write(document);
+                    // out.flush();
+                }
+                documentProvider.saveDocument(monitor, editorInput, document, true);
+                lastSavedMessageIndex = messages.size() - 1;
+            } finally {
+                documentProvider.changed(editorInput);
+                monitor.done();
+            }
         }
-        documentProvider.saveDocument(monitor, editorInput, document, true);
-        lastSavedMessageIndex = messages.size() - 1;
-        monitor.done();
     }
 
     public AbstractIrcChannel getChannel() {
@@ -173,21 +192,26 @@ public class IrcLog extends IrcObject implements Iterable<IrcMessage> {
         };
     }
 
+    private boolean loading = false;
+
     /**
      *
      */
     private void load() {
-        IFileEditorInput editorInput = logResource.getEditorInput();
-        IDocumentProvider documentProvider = getModel().getRootResource().getDocumentProvider();
-        IDocument document = documentProvider.getDocument(editorInput);
-        if (document.getLength() > 0) {
+        Object lock = logResource.getLockObject();
+        synchronized (lock) {
+            loading = true;
+            IFileEditorInput editorInput = logResource.getEditorInput();
             IrcLogReader reader = null;
             try {
-                reader = new IrcLogReader(document, editorInput.getFile().toString(), logResource.getChannelResource()
-                        .isP2p());
-                while (reader.hasNext()) {
-                    PlainIrcMessage message = reader.next();
-                    appendMessage(message.toIrcMessage(this));
+                IDocument document = logResource.getDocument();
+                if (document.getLength() > 0) {
+                        reader = new IrcLogReader(document, editorInput.getFile().toString(), logResource.getChannelResource()
+                                .isP2p());
+                        while (reader.hasNext()) {
+                            PlainIrcMessage message = reader.next();
+                            appendMessage(message.toIrcMessage(this), false);
+                        }
                 }
             } catch (IOException e) {
                 throw new RuntimeException(e);
@@ -195,14 +219,17 @@ public class IrcLog extends IrcObject implements Iterable<IrcMessage> {
                 EirccUi.log(e);
             } finally {
                 try {
-                    reader.close();
+                    if (reader != null) {
+                        reader.close();
+                    }
                 } catch (IOException e) {
                     EirccUi.log(e);
                 }
             }
+            lastSavedMessageIndex = messages.size() - 1;
+            loading = false;
+            allRead();
         }
-        allRead();
-        lastSavedMessageIndex = messages.size() - 1;
     }
 
     public void setNotificationLevel(IrcNotificationLevel state) {

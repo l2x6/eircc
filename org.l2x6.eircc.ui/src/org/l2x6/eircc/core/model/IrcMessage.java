@@ -16,7 +16,7 @@ import org.l2x6.eircc.ui.misc.Colors;
  * @author <a href="mailto:ppalaga@redhat.com">Peter Palaga</a>
  */
 public class IrcMessage extends PlainIrcMessage {
-    final IrcLog log;
+    private final IrcLog log;
     private IrcNotificationLevel notificationLevel;
 
     protected final IrcUser user;
@@ -57,6 +57,7 @@ public class IrcMessage extends PlainIrcMessage {
         }
         return notificationLevel;
     }
+
     public IrcUser getUser() {
         return user;
     }

@@ -39,7 +39,6 @@ import org.eclipse.ui.IFileEditorInput;
 import org.eclipse.ui.IPartListener2;
 import org.eclipse.ui.IWorkbenchPartReference;
 import org.eclipse.ui.PartInitException;
-import org.eclipse.ui.texteditor.IDocumentProvider;
 import org.eclipse.ui.views.contentoutline.IContentOutlinePage;
 import org.l2x6.eircc.core.IrcException;
 import org.l2x6.eircc.core.model.AbstractIrcChannel;
@@ -54,8 +53,8 @@ import org.l2x6.eircc.core.model.resource.IrcChannelResource;
 import org.l2x6.eircc.core.model.resource.IrcLogResource;
 import org.l2x6.eircc.core.model.resource.IrcResourceException;
 import org.l2x6.eircc.core.util.IrcLogReader;
-import org.l2x6.eircc.core.util.IrcUtils;
 import org.l2x6.eircc.core.util.IrcLogReader.IrcLogReaderException;
+import org.l2x6.eircc.core.util.IrcUtils;
 import org.l2x6.eircc.ui.EirccUi;
 import org.l2x6.eircc.ui.IrcUiMessages;
 import org.l2x6.eircc.ui.misc.IrcImages;
@@ -431,29 +430,49 @@ public class IrcEditor extends AbstractIrcEditor implements IrcModelEventListene
             logViewer.addHorizontalLine();
         }
 
-        IrcLogReader reader = null;
-        IEditorInput input = logResource.getEditorInput();
-        IDocumentProvider provider = getDocumentProvider();
-        try {
-            provider.connect(input);
-            IDocument document = provider.getDocument(input);
-            reader = new IrcLogReader(document, logResource.getLogFile().toString(), logResource.getChannelResource()
-                    .isP2p());
-            while (reader.hasNext()) {
-                PlainIrcMessage m = reader.next();
-                logViewer.appendMessage(m);
-                lastMessageTime = m.getArrivedAt();
+        AbstractIrcChannel ch = getChannel();
+        if (ch != null) {
+            IrcLog log = ch.findLog(logResource);
+            if (log != null) {
+                Iterator<? extends PlainIrcMessage> it = log.iterator();
+                while (it.hasNext()) {
+                    PlainIrcMessage m = it.next();
+                    appenMessage(m);
+                }
+                logResources.add(logResource);
+                return;
             }
-        } catch (IrcLogReaderException e) {
-            EirccUi.log(e);
-        } finally {
-            if (reader != null) {
-                reader.close();
-            }
-            provider.disconnect(input);
         }
 
+        /* ch.findLog returned null */
+        Object lock = logResource.getLockObject();
+        synchronized (lock) {
+            IrcLogReader reader = null;
+            try {
+                IDocument document = logResource.getDocument();
+                reader = new IrcLogReader(document, logResource.getLogFile().toString(), logResource.getChannelResource()
+                        .isP2p());
+                while (reader.hasNext()) {
+                    PlainIrcMessage m = reader.next();
+                    appenMessage(m);
+                }
+            } catch (IrcLogReaderException e) {
+                EirccUi.log(e);
+            } finally {
+                if (reader != null) {
+                    reader.close();
+                }
+            }
+        }
         logResources.add(logResource);
+    }
+
+    /**
+     * @param m
+     */
+    private void appenMessage(PlainIrcMessage m) {
+        logViewer.appendMessage(m);
+        lastMessageTime = m.getArrivedAt();
     }
 
     private void reload() throws IOException, CoreException {

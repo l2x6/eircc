@@ -113,6 +113,14 @@ public abstract class AbstractIrcChannel extends IrcObject implements Persistent
         account.getModel().fire(new IrcModelEvent(EventType.CHANNEL_USERS_CHANGED, this));
     }
 
+    public IrcLog findLog(IrcLogResource logResource) {
+        IrcLog log = getLog();
+        if (log != null && logResource.equals(log.getLogResource())) {
+            return log;
+        }
+        return null;
+    }
+
     /**
      * @param oldNick
      * @param newUser

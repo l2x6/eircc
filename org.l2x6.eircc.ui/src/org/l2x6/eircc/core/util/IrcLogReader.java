@@ -15,6 +15,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.io.UnsupportedEncodingException;
+import java.util.Iterator;
 
 import org.eclipse.jface.text.IDocument;
 import org.l2x6.eircc.core.model.PlainIrcMessage;
@@ -72,6 +73,47 @@ public class IrcLogReader implements Closeable {
          */
         public IrcLogReaderException(Throwable cause) {
             super(cause);
+        }
+
+    }
+
+    public static class PlainIrcMessageIterator implements Iterator<PlainIrcMessage> {
+        private final ExceptionHandler exceptionHandler;
+
+        private final IrcLogReader reader;
+        /**
+         * @param reader
+         * @param exceptionHandler
+         */
+        public PlainIrcMessageIterator(IrcLogReader reader, ExceptionHandler exceptionHandler) {
+            super();
+            this.reader = reader;
+            this.exceptionHandler = exceptionHandler;
+        }
+        /**
+         * @see java.util.Iterator#hasNext()
+         */
+        @Override
+        public boolean hasNext() {
+            try {
+                return reader.hasNext();
+            } catch (Exception e) {
+                exceptionHandler.handle(e);
+                throw new RuntimeException(e);
+            }
+        }
+
+        /**
+         * @see java.util.Iterator#next()
+         */
+        @Override
+        public PlainIrcMessage next() {
+            try {
+                return reader.next();
+            } catch (Exception e) {
+                exceptionHandler.handle(e);
+                throw new RuntimeException(e);
+            }
         }
 
     }
@@ -148,10 +190,13 @@ public class IrcLogReader implements Closeable {
     }
 
     public boolean hasNext() throws IOException {
-        System.out.println("reading from " + getSource());
         int ch = in.read();
         in.unread(ch);
         return ch >= 0;
+    }
+
+    public Iterator<PlainIrcMessage> iterator(ExceptionHandler exceptionHandler) {
+        return new PlainIrcMessageIterator(this, exceptionHandler);
     }
 
     public PlainIrcMessage next() throws IrcLogReaderException, IOException {

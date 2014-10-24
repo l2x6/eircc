@@ -18,6 +18,8 @@ import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.NullProgressMonitor;
 import org.eclipse.core.runtime.SubProgressMonitor;
+import org.eclipse.jface.text.IDocument;
+import org.eclipse.jface.text.ISynchronizable;
 import org.eclipse.ui.part.FileEditorInput;
 import org.eclipse.ui.texteditor.IDocumentProvider;
 import org.l2x6.eircc.core.util.IrcUtils;
@@ -25,7 +27,7 @@ import org.l2x6.eircc.core.util.IrcUtils;
 /**
  * @author <a href="mailto:ppalaga@redhat.com">Peter Palaga</a>
  */
-public class IrcLogResource {
+public class IrcLogResource implements ISynchronizable {
 
     public static final String FILE_EXTENSION = ".irc.log";
 
@@ -63,6 +65,8 @@ public class IrcLogResource {
     }
 
     private final IrcChannelResource channelResource;
+
+    private IDocument document;
 
     private final FileEditorInput editorInput;
 
@@ -107,6 +111,7 @@ public class IrcLogResource {
     }
 
     public void discard() {
+        document = null;
         IDocumentProvider documentProvider = channelResource.getAccountResource().getRootResource()
                 .getDocumentProvider();
         documentProvider.disconnect(editorInput);
@@ -123,8 +128,29 @@ public class IrcLogResource {
         return channelResource;
     }
 
+    public IDocument getDocument() {
+        if (document == null) {
+            IDocumentProvider documentProvider = channelResource.getAccountResource().getRootResource()
+                    .getDocumentProvider();
+            this.document = documentProvider.getDocument(editorInput);
+        }
+        return document;
+    }
+
     public FileEditorInput getEditorInput() {
         return editorInput;
+    }
+
+    /**
+     * @see org.eclipse.jface.text.ISynchronizable#getLockObject()
+     */
+    @Override
+    public Object getLockObject() {
+        IDocument doc = getDocument();
+        if (doc instanceof ISynchronizable) {
+            return ((ISynchronizable) doc).getLockObject();
+        }
+        return this;
     }
 
     /**
@@ -145,6 +171,14 @@ public class IrcLogResource {
             throw new RuntimeException(e);
         }
         return channelResource.getLastLogResource() == this;
+    }
+
+    /**
+     * @see org.eclipse.jface.text.ISynchronizable#setLockObject(java.lang.Object)
+     */
+    @Override
+    public void setLockObject(Object lockObject) {
+        throw new UnsupportedOperationException();
     }
 
 }

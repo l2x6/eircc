@@ -13,14 +13,12 @@ import java.io.Reader;
 
 import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.IDocument;
-import org.eclipse.jface.text.ISynchronizable;
 
 /**
  * @author <a href="mailto:ppalaga@redhat.com">Peter Palaga</a>
  */
 public class DocumenReader extends Reader {
     private final IDocument document;
-    private final Object lock;
     private int offset = 0;
 
     /**
@@ -29,18 +27,6 @@ public class DocumenReader extends Reader {
     public DocumenReader(IDocument document) {
         super();
         this.document = document;
-
-        if (document instanceof ISynchronizable) {
-            Object l = ((ISynchronizable) document).getLockObject();
-            if (l == null) {
-                l = new Object();
-                ((ISynchronizable) document).setLockObject(l);
-            }
-            this.lock = l;
-        } else {
-            this.lock = new Object();
-        }
-
     }
 
     /**
@@ -55,21 +41,17 @@ public class DocumenReader extends Reader {
      */
     @Override
     public int read(char[] cbuf, int off, int len) throws IOException {
-        synchronized (lock) {
-            IrcUtils.assertUiThread();
-            try {
-                int count = 0;
-                while (count < len) {
-                    System.out.println("DocumenReader.read() docLen = " + document.getLength() + " offset = " + offset);
-                    char ch = document.getChar(offset++);
-                    System.out.println("DocumenReader.read() ch = " + ch);
-                    cbuf[off + count] = ch;
-                    count++;
-                }
-                return count;
-            } catch (BadLocationException e) {
-                return -1;
+        IrcUtils.assertUiThread();
+        try {
+            int count = 0;
+            while (count < len) {
+                char ch = document.getChar(offset++);
+                cbuf[off + count] = ch;
+                count++;
             }
+            return count;
+        } catch (BadLocationException e) {
+            return -1;
         }
     }
 
