@@ -24,6 +24,7 @@ import org.l2x6.eircc.core.model.IrcNick;
 import org.l2x6.eircc.core.model.IrcObject;
 import org.l2x6.eircc.core.model.IrcServer;
 import org.l2x6.eircc.core.model.IrcUser;
+import org.l2x6.eircc.core.model.IrcUserBase;
 import org.l2x6.eircc.core.model.PlainIrcChannel;
 import org.l2x6.eircc.core.model.resource.IrcResourceException;
 import org.l2x6.eircc.core.util.IrcUtils;
@@ -45,9 +46,9 @@ public class IrcController {
         super();
     }
 
-    public void changeNick(IrcServer server, String oldNick, String newNick, String username) {
+    public void changeNick(IrcServer server, IrcUserBase user, String newNick) {
         IrcUtils.assertUiThread();
-        server.changeNick(oldNick, newNick, username);
+        server.changeNick(user, newNick);
     }
 
     public void connect(IrcAccount account) throws IrcException {
@@ -119,9 +120,9 @@ public class IrcController {
         return result;
     }
 
-    public IrcUser getOrCreateUser(IrcServer server, String nick, String username) {
+    public IrcUser getOrCreateUser(IrcServer server, String nick, String username, String host) {
         IrcUtils.assertUiThread();
-        return server.getOrCreateUser(nick, username);
+        return server.getOrCreateUser(nick, username, host);
     }
 
     public Duration getPingInterval() {
@@ -278,9 +279,7 @@ public class IrcController {
             /* /me left */
             channel.setJoined(false);
         } else {
-            if (channel.isPresent(nick)) {
-                channel.removeNick(nick, msg);
-            }
+            channel.removeUser(nick, msg);
         }
     }
 

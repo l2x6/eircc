@@ -93,4 +93,14 @@ public class IrcToken implements CharSequence {
         return new StringBuilder(this).toString();
     }
 
+    public int indexOf(int start, char ch) {
+        for (int i = start; i < length; i++) {
+            char c = charAt(i);
+            if (c == ch) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
 }

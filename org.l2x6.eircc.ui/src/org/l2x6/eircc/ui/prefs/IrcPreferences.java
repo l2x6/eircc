@@ -11,9 +11,12 @@ package org.l2x6.eircc.ui.prefs;
 import java.text.MessageFormat;
 import java.time.Duration;
 import java.time.temporal.TemporalAmount;
+import java.util.Collection;
 import java.util.Map;
+import java.util.Set;
 import java.util.StringTokenizer;
 import java.util.TreeMap;
+import java.util.TreeSet;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
@@ -54,7 +57,7 @@ public class IrcPreferences implements IrcNotificationLevelProvider {
      */
     public enum PreferenceKey {
 
-        TRACKED_NICKS("tracked.nicks", ""); //$NON-NLS-1$
+        WATCHED_CHANNELS("watched.channels", ""), WATCHED_NICKS("watched.nicks", ""); //$NON-NLS-1$
 
         private final Object defaultValue;
         private final String key;
@@ -90,7 +93,7 @@ public class IrcPreferences implements IrcNotificationLevelProvider {
     private static final Duration DEFAULT_PING_INTERVAL = Duration.ofMinutes(1);
     private static final IrcPreferences INSTANCE = new IrcPreferences();
 
-    public static final char NICKS_DELIMITER = ' ';
+    public static final char WATCHED_OBJECT_DELIMITER = ' ';
 
     private static final IInputValidator PATTERN_VALIDATOR = new IInputValidator() {
         /**
@@ -121,19 +124,20 @@ public class IrcPreferences implements IrcNotificationLevelProvider {
 
     private final IrcDefaultMessageFormatter defaultFormatter = new IrcDefaultMessageFormatter(this);
 
-    private final ExtendedTextStyle messageTimeStyle;
-
-    private IrcSearchMessageFormatter searchFormatter = new IrcSearchMessageFormatter(this);
-    private final IrcSystemMessageFormatter systemFormatter = new IrcSystemMessageFormatter(this);
     private final IrcSystemMessageFormatter errorFormatter = new IrcSystemMessageFormatter(this);
 
+    private final ExtendedTextStyle messageTimeStyle;
+    private IrcSearchMessageFormatter searchFormatter = new IrcSearchMessageFormatter(this);
+    private final IrcSystemMessageFormatter systemFormatter = new IrcSystemMessageFormatter(this);
+
     private final ExtendedTextStyle systemMessageStyle;
-    private Map<String, Pattern> trackedNicks;
     private final IrcUserStyler[] userStylers;
-
     private final ExtendedTextStyle[] userStyles;
-
     private final ExtendedTextStyle[] userStylesNamingMe;
+
+    private Set<String> watchedChannels;
+
+    private Map<String, Pattern> watchedNicks;
 
     /**
      *
@@ -162,17 +166,28 @@ public class IrcPreferences implements IrcNotificationLevelProvider {
 
     }
 
-    public void addTrackedNickPattern(String nick) {
-        getTrackedNicks().put(nick, Pattern.compile(nick));
+    public void addWatchedChannel(String channel) {
+        getWatchedChannels().add(channel);
+        setCollection(PreferenceKey.WATCHED_CHANNELS, watchedChannels);
+    }
 
+    public void addWatchedNickPattern(String nick) {
+        getWatchedNicks().put(nick, Pattern.compile(nick));
+        setCollection(PreferenceKey.WATCHED_NICKS, watchedNicks.keySet());
+    }
+
+    /**
+     * @param items
+     */
+    private void setCollection(PreferenceKey preferenceKey, Collection<String> items) {
         StringBuilder sb = new StringBuilder();
-        for (String n : trackedNicks.keySet()) {
+        for (String n : items) {
             if (sb.length() > 0) {
-                sb.append(NICKS_DELIMITER);
+                sb.append(WATCHED_OBJECT_DELIMITER);
             }
             sb.append(n);
         }
-        setString(PreferenceKey.TRACKED_NICKS, sb.toString());
+        setString(preferenceKey, sb.toString());
     }
 
     public void dispose() {
@@ -243,6 +258,21 @@ public class IrcPreferences implements IrcNotificationLevelProvider {
         return messageTimeStyle;
     }
 
+    /**
+     * @param m
+     * @return
+     */
+    public IrcNotificationLevel getNotificationLevel(IrcMessage m) {
+        if (m.isMeNamed() && m.getLog().getNotificationLevel() == IrcNotificationLevel.ME_NAMED && shouldPlaySoundOnNamingMe()) {
+            return IrcNotificationLevel.ME_NAMED;
+        } else if (!m.isFromMe() && m.getSender() != null && shouldPlaySoundOnMessageFromNick(m.getSender().getNick())) {
+            return IrcNotificationLevel.UNREAD_MESSAGES_FROM_A_TRACKED_USER;
+        } else if (!m.isFromMe() && m.getUser() != null && shouldPlaySoundOnMessageInChannel(m.getLog().getChannel())) {
+            return IrcNotificationLevel.UNREAD_MESSAGES;
+        }
+        return IrcNotificationLevel.NO_NOTIFICATION;
+    }
+
     public Duration getPingInterval() {
         return DEFAULT_PING_INTERVAL;
     }
@@ -278,19 +308,6 @@ public class IrcPreferences implements IrcNotificationLevelProvider {
         return systemMessageStyle;
     }
 
-    private Map<String, Pattern> getTrackedNicks() {
-        if (trackedNicks == null) {
-            trackedNicks = new TreeMap<String, Pattern>();
-            String str = getString(PreferenceKey.TRACKED_NICKS);
-            StringTokenizer st = new StringTokenizer(str, "\n\t\r" + NICKS_DELIMITER);
-            while (st.hasMoreTokens()) {
-                String nick = st.nextToken();
-                trackedNicks.put(nick, Pattern.compile(nick));
-            }
-        }
-        return trackedNicks;
-    }
-
     public ExtendedTextStyle getUserStyle(int index, boolean namingMe) {
         if (index < 0) {
             return null;
@@ -304,10 +321,55 @@ public class IrcPreferences implements IrcNotificationLevelProvider {
         return userStylers[index];
     }
 
+    private Set<String> getWatchedChannels() {
+        if (watchedChannels == null) {
+            watchedChannels = new TreeSet<String>();
+            String str = getString(PreferenceKey.WATCHED_CHANNELS);
+            StringTokenizer st = new StringTokenizer(str, "\n\t\r" + WATCHED_OBJECT_DELIMITER);
+            while (st.hasMoreTokens()) {
+                String token = st.nextToken();
+                watchedChannels.add(token);
+            }
+        }
+        return watchedChannels;
+    }
+
+    private Map<String, Pattern> getWatchedNicks() {
+        if (watchedNicks == null) {
+            watchedNicks = new TreeMap<String, Pattern>();
+            String str = getString(PreferenceKey.WATCHED_NICKS);
+            StringTokenizer st = new StringTokenizer(str, "\n\t\r" + WATCHED_OBJECT_DELIMITER);
+            while (st.hasMoreTokens()) {
+                String nick = st.nextToken();
+                watchedNicks.put(nick, Pattern.compile(nick));
+            }
+        }
+        return watchedNicks;
+    }
+
     public void setString(PreferenceKey key, String value) {
         IPreferenceStore store = EirccUi.getDefault().getPreferenceStore();
         store.setValue(key.toString(), value);
         // InstanceScope.INSTANCE.getNode(EirccUi.PLUGIN_ID).put();
+    }
+
+    /**
+     * @param level
+     * @return
+     */
+    public boolean shouldPlaySoundForMessage(IrcMessage m) {
+        switch (m.getNotificationLevel()) {
+        case NO_NOTIFICATION:
+            return false;
+        case UNREAD_MESSAGES:
+            return shouldPlaySoundOnMessageInChannel(m.getLog().getChannel());
+        case UNREAD_MESSAGES_FROM_A_TRACKED_USER:
+            return shouldPlaySoundOnMessageFromNick(m.getNick());
+        case ME_NAMED:
+            return shouldTrayFlashOnNamingMe();
+        default:
+            return false;
+        }
     }
 
     /**
@@ -316,13 +378,21 @@ public class IrcPreferences implements IrcNotificationLevelProvider {
      */
     public boolean shouldPlaySoundOnMessageFromNick(String nick) {
         if (nick != null) {
-            for (Pattern pattern : getTrackedNicks().values()) {
+            for (Pattern pattern : getWatchedNicks().values()) {
                 if (pattern.matcher(nick).matches()) {
                     return true;
                 }
             }
         }
         return false;
+    }
+
+    /**
+     * @param channel
+     * @return
+     */
+    private boolean shouldPlaySoundOnMessageInChannel(AbstractIrcChannel channel) {
+        return getWatchedChannels().contains(channel.getName());
     }
 
     /**
@@ -356,45 +426,11 @@ public class IrcPreferences implements IrcNotificationLevelProvider {
     }
 
     /**
-     * @param m
+     * @param data
      * @return
      */
-    public IrcNotificationLevel getNotificationLevel(IrcMessage m) {
-        if (m.isMeNamed() && m.getLog().getNotificationLevel() == IrcNotificationLevel.ME_NAMED && shouldPlaySoundOnNamingMe()) {
-            return IrcNotificationLevel.ME_NAMED;
-        } else if (!m.isFromMe() && m.getUser() != null && shouldPlaySoundOnMessageFromNick(m.getUser().getNick())) {
-            return IrcNotificationLevel.UNREAD_MESSAGES_FROM_A_TRACKED_USER;
-        } else if (!m.isFromMe() && m.getUser() != null && shouldPlaySoundOnMessageInChannel(m.getLog().getChannel())) {
-            return IrcNotificationLevel.UNREAD_MESSAGES;
-        }
-        return IrcNotificationLevel.NO_NOTIFICATION;
-    }
-
-    /**
-     * @param channel
-     * @return
-     */
-    private boolean shouldPlaySoundOnMessageInChannel(AbstractIrcChannel channel) {
-        return true;
-    }
-
-    /**
-     * @param level
-     * @return
-     */
-    public boolean shouldPlaySoundForMessage(IrcMessage m) {
-        switch (m.getNotificationLevel()) {
-        case NO_NOTIFICATION:
-            return false;
-        case UNREAD_MESSAGES:
-            return shouldPlaySoundOnMessageInChannel(m.getLog().getChannel());
-        case UNREAD_MESSAGES_FROM_A_TRACKED_USER:
-            return shouldPlaySoundOnMessageFromNick(m.getNick());
-        case ME_NAMED:
-            return shouldTrayFlashOnNamingMe();
-        default:
-            return false;
-        }
+    public boolean isWatched(AbstractIrcChannel channel) {
+        return channel != null && getWatchedChannels().contains(channel.getName());
     }
 
 

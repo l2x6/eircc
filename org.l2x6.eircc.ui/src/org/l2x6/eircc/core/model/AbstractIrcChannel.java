@@ -56,7 +56,7 @@ public abstract class AbstractIrcChannel extends IrcObject implements Persistent
     private final Map<String, Integer> seenUsers = new HashMap<String, Integer>();
 
     /** Users by nick */
-    protected final Map<String, IrcChannelUser> users = new TreeMap<String, IrcChannelUser>();
+    private final Map<String, IrcChannelUser> users = new TreeMap<String, IrcChannelUser>();
 
     protected IrcChannelUser[] usersArray;
 
@@ -68,49 +68,48 @@ public abstract class AbstractIrcChannel extends IrcObject implements Persistent
         this.account = account;
         this.seenUsers.put(account.getAcceptedNick(), Colors.MY_INDEX);
     }
-
     /**
-     * @param result
+     * @param oldNick
+     * @param newUser
      */
-    public void addNick(IrcNick nick) {
-        if (seenUsers.get(nick) == null) {
-            seenUsers.put(nick.getCleanNick(), seenUsers.size());
-        }
-        addNickInternal(nick);
-        account.getModel().fire(new IrcModelEvent(EventType.CHANNEL_USER_JOINED, new IrcChannelUser(this, nick)));
+    public void changeNick(String oldNick, String newNick) {
+        Integer i = seenUsers.get(oldNick);
+        seenUsers.put(newNick, i != null ? i : Integer.valueOf(seenUsers.size()));
+        IrcChannelUser channelUser = users.remove(oldNick);
+        users.put(newNick, channelUser);
+        usersArray = null;
+        account.getModel().fire(new IrcModelEvent(EventType.CHANNEL_USERS_CHANGED, this));
     }
 
     /**
      * @param user
+     * @return
      */
-    void addNickInternal(IrcNick nick) {
-        // if (user.getServer() != account.getServer()) {
-        // throw new
-        // IllegalArgumentException("Cannot add user with parent distinct from this "
-        // + this.getClass().getSimpleName());
-        // }
-        // String nick = user.getNick();
-        // if (nicks.get(nick) != null) {
-        // throw new IllegalArgumentException("User with nick '" + nick +
-        // "' already available under server '"
-        // + account.getHost() + "' of the account '" + account.getLabel() +
-        // "'.");
-        // }
-        users.put(nick.getCleanNick(), createUser(nick));
+    IrcChannelUser addUserInternal(IrcUser user, IrcUserFlags flags) {
+        String nick = user.getNick();
+        if (seenUsers.get(nick) == null) {
+            seenUsers.put(nick, seenUsers.size());
+        }
+        IrcChannelUser channelUser = createUser(user, flags);
+        users.put(nick, channelUser);
         usersArray = null;
+        return channelUser;
+    }
+
+    public void addUser(IrcUser user, IrcUserFlags flags) {
+        IrcChannelUser channelUser = addUserInternal(user, flags);
+        account.getModel().fire(new IrcModelEvent(EventType.CHANNEL_USER_JOINED, channelUser));
     }
 
     /**
-     * @param users2
+     * @return
      */
-    public void addNicks(Collection<IrcNick> nicks) {
-        for (IrcNick nick : nicks) {
-            addNickInternal(nick);
-            if (seenUsers.get(nick) == null) {
-                seenUsers.put(nick.getCleanNick(), seenUsers.size());
-            }
-        }
-        account.getModel().fire(new IrcModelEvent(EventType.CHANNEL_USERS_CHANGED, this));
+    public IrcChannelUser createUser(IrcUser user, IrcUserFlags flags) {
+        return new IrcChannelUser(this, user, flags);
+    }
+
+    @Override
+    public void dispose() {
     }
 
     public IrcLog findLog(IrcLogResource logResource) {
@@ -119,29 +118,6 @@ public abstract class AbstractIrcChannel extends IrcObject implements Persistent
             return log;
         }
         return null;
-    }
-
-    /**
-     * @param oldNick
-     * @param newUser
-     */
-    public void changeNick(String oldNick, String newNick) {
-        Integer i = seenUsers.get(oldNick);
-        users.remove(oldNick);
-        addNickInternal(IrcNick.parse(newNick));
-        seenUsers.put(newNick, i != null ? i : Integer.valueOf(seenUsers.size()));
-        account.getModel().fire(new IrcModelEvent(EventType.CHANNEL_USERS_CHANGED, this));
-    }
-
-    /**
-     * @return
-     */
-    public IrcChannelUser createUser(IrcNick nick) {
-        return new IrcChannelUser(this, nick);
-    }
-
-    @Override
-    public void dispose() {
     }
 
     /**
@@ -184,10 +160,11 @@ public abstract class AbstractIrcChannel extends IrcObject implements Persistent
      * @param user
      * @return
      */
-    public int getUserIndex(String nick) {
-        if (nick.equals(getAccount().getAcceptedNick())) {
+    public int getUserIndex(IrcUser user) {
+        if (user == getAccount().getMe()) {
             return Colors.MY_INDEX;
         } else {
+            String nick = user.getNick();
             Integer result = seenUsers.get(nick);
             if (result == null) {
                 result = seenUsers.size();
@@ -249,7 +226,7 @@ public abstract class AbstractIrcChannel extends IrcObject implements Persistent
         return result;
     }
 
-    public void removeNick(String nick, String leftWithMessage) {
+    public void removeUser(String nick, String leftWithMessage) {
         IrcChannelUser removed = users.remove(nick);
         if (removed != null) {
             removed.setLeftWithMessage(leftWithMessage);
@@ -276,6 +253,18 @@ public abstract class AbstractIrcChannel extends IrcObject implements Persistent
     @Override
     public String toString() {
         return getName();
+    }
+
+    /**
+     * @param users
+     */
+    public void setUsers(IrcWhoUser[] users) {
+        IrcServer server = account.getServer();
+        for (IrcWhoUser u : users) {
+            IrcUser user = server.getOrCreateUser(u.getNick(), u.getUsername(), u.getHost());
+            addUserInternal(user, u.getFlags());
+        }
+        account.getModel().fire(new IrcModelEvent(EventType.CHANNEL_USERS_CHANGED, this));
     }
 
 }

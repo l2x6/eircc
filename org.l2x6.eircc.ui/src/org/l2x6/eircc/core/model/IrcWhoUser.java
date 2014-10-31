@@ -11,32 +11,29 @@ package org.l2x6.eircc.core.model;
 /**
  * @author <a href="mailto:ppalaga@redhat.com">Peter Palaga</a>
  */
-public class IrcNick {
-    public static IrcNick parse(String rawNick) {
-        IrcUserFlags flags = IrcUserFlags.fromNick(rawNick);
-        String cleanNick = rawNick.substring(flags.length());
-        return new IrcNick(cleanNick, flags);
-    }
+public class IrcWhoUser extends PlainIrcUser {
 
-    private final String cleanNick;
     private final IrcUserFlags flags;
+    private final String realName;
 
     /**
-     * @param cleanNick
-     * @param op
-     * @param voice
+     * @param nick
+     * @param username
+     * @param host
+     * @param flags
      */
-    public IrcNick(String cleanNick, IrcUserFlags flags) {
-        super();
-        this.cleanNick = cleanNick;
+    public IrcWhoUser(String nick, String username, String host, String realName, IrcUserFlags flags) {
+        super(nick, username, host);
+        this.realName = realName;
         this.flags = flags;
-    }
-
-    public String getCleanNick() {
-        return cleanNick;
     }
 
     public IrcUserFlags getFlags() {
         return flags;
     }
+
+    public String getRealName() {
+        return realName;
+    }
+
 }

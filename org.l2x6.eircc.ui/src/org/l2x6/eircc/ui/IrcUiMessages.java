@@ -81,7 +81,8 @@ public class IrcUiMessages extends NLS {
     public static String FileSearchQuery_singularPatternWithFileExt;
     public static String FileSearchQuery_time;
     public static String IrcAccountsView_serverChannelsLabel_text;
-    public static String IrcChannelOutlinePage_Notify;
+    public static String IrcChannelOutlinePage_watchThisUser;
+    public static String IrcChannelOutlinePage_watchThisChannel;
 
     public static String IrcChannelOutlinePage_Open_Private_Chat;
     public static String IrcChannelsSelector_delimiter;
@@ -154,6 +155,7 @@ public class IrcUiMessages extends NLS {
     public static String TextSearchVisitor_progress_updating_job;
     public static String TextSearchVisitor_scanning;
     public static String TextSearchVisitor_textsearch_task_label;
+    public static String IrcNotificationsPreferencePage_watchedChannels;
     static {
         NLS.initializeMessages(BUNDLE_NAME, IrcUiMessages.class);
     }

@@ -14,6 +14,7 @@ import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.ListIterator;
+import java.util.Properties;
 import java.util.StringTokenizer;
 import java.util.UUID;
 
@@ -28,7 +29,7 @@ import org.l2x6.eircc.core.util.TypedField;
 /**
  * @author <a href="mailto:ppalaga@redhat.com">Peter Palaga</a>
  */
-public class IrcUser extends IrcObject implements PersistentIrcObject {
+public class IrcUser extends IrcObject implements PersistentIrcObject, IrcUserBase {
 
     public enum IrcUserField implements TypedField {
         host, nick, previousNicksString, username;
@@ -89,24 +90,15 @@ public class IrcUser extends IrcObject implements PersistentIrcObject {
         load(userPropsFile);
     }
 
-    /**
-     * @param id
-     * @param nick
-     * @param username
-     * @param account
-     * @param realName
-     */
-    public IrcUser(IrcServer server, UUID id) {
+
+    public IrcUser(IrcServer server, UUID id, String nick, String username, String host) {
         super(server.getAccount().getModel(), server.getAccount().getAccountResource().getUsersFolder().getFullPath());
         this.server = server;
         this.id = id;
         this.previousNicks = new ArrayList<String>();
-    }
-
-    public IrcUser(IrcServer server, UUID id, String nick, String username) {
-        this(server, id);
         this.username = username;
         this.nick = nick;
+        this.host = host;
     }
 
     /**
@@ -240,6 +232,7 @@ public class IrcUser extends IrcObject implements PersistentIrcObject {
     public void setUsername(String username) {
         this.username = username;
     }
+
 
     @Override
     public String toString() {

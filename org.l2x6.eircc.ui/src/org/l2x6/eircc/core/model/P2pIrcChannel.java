@@ -30,10 +30,10 @@ public class P2pIrcChannel extends AbstractIrcChannel {
         super(p2pUser.getServer().getAccount());
         this.p2pUser = p2pUser;
         this.kept = false;
-        addNickInternal(new IrcNick(p2pUser.getNick(), false, false));
+        addUserInternal(p2pUser, IrcUserFlags.EMPTY);
         IrcUser me = account.getMe();
         if (me != null) {
-            addNickInternal(new IrcNick(me.getNick(), false, false));
+            addUserInternal(me, IrcUserFlags.EMPTY);
         }
         this.channelResource = account.getAccountResource().getOrCreateChannelResource(getName());
         IrcLogResource logResource = channelResource.getActiveLogResource();

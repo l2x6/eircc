@@ -61,7 +61,7 @@ public class IrcSystemMessagesGenerator implements IrcModelEventListener {
     private void channelUserJoined(IrcChannelUser user) {
         IrcLog log = user.getChannel().getLog();
         if (log != null) {
-            String text = MessageFormat.format(IrcUiMessages.Message_x_joined, user.getCleanNick());
+            String text = MessageFormat.format(IrcUiMessages.Message_x_joined, user.getUser().getNick());
             log.appendSystemMessage(text);
         }
     }
@@ -75,9 +75,9 @@ public class IrcSystemMessagesGenerator implements IrcModelEventListener {
             String msg = user.getLeftWithMessage();
             String text;
             if (msg != null && msg.length() > 0) {
-                text = MessageFormat.format(IrcUiMessages.Message_x_left_with_message, user.getCleanNick(), msg);
+                text = MessageFormat.format(IrcUiMessages.Message_x_left_with_message, user.getUser().getNick(), msg);
             } else {
-                text = MessageFormat.format(IrcUiMessages.Message_x_left, user.getCleanNick());
+                text = MessageFormat.format(IrcUiMessages.Message_x_left, user.getUser().getNick());
             }
             log.appendSystemMessage(text);
         }
@@ -125,7 +125,7 @@ public class IrcSystemMessagesGenerator implements IrcModelEventListener {
             text = MessageFormat.format(IrcUiMessages.Message_x_is_known_as_y, oldNick, user.getNick());
         }
         for (AbstractIrcChannel channel : account.getChannels()) {
-            if (channel.isJoined() && channel.isPresent(oldNick)) {
+            if (channel.isJoined() && channel.isPresent(user.getPreviousNick())) {
                 channel.changeNick(oldNick, user.getNick());
                 IrcLog log = channel.getLog();
                 log.appendSystemMessage(text);

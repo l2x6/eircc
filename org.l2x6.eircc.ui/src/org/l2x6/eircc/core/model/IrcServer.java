@@ -25,7 +25,7 @@ public class IrcServer extends IrcObject {
     private final IrcAccount account;
     private final SortedMap<String, PlainIrcChannel> channels = new TreeMap<String, PlainIrcChannel>();
     private PlainIrcChannel[] channelsArray;
-    /** Users by nick */
+    /** Users by id */
     private final Map<UUID, IrcUser> users = new TreeMap<UUID, IrcUser>();
 
     /**
@@ -80,12 +80,12 @@ public class IrcServer extends IrcObject {
      * @param newNick
      * @param username2
      */
-    public void changeNick(String oldNick, String newNick, String username) {
-        IrcUser user = findUser(oldNick);
+    public void changeNick(IrcUserBase plainUser, String newNick) {
+        IrcUser user = findUser(plainUser.getNick());
         if (user != null) {
             user.setNick(newNick);
         } else {
-            user = createUser(newNick, username);
+            user = createUser(newNick, plainUser.getUsername(), plainUser.getHost());
             addUser(user);
         }
     }
@@ -101,11 +101,12 @@ public class IrcServer extends IrcObject {
     /**
      * @param nick
      * @param username
+     * @param host
      * @param realName
      * @return
      */
-    public IrcUser createUser(String nick, String username) {
-        return new IrcUser(this, UUID.randomUUID(), nick, username);
+    public IrcUser createUser(String nick, String username, String host) {
+        return new IrcUser(this, UUID.randomUUID(), nick, username, host);
     }
 
     /**
@@ -126,8 +127,6 @@ public class IrcServer extends IrcObject {
             if (user.getNick().equals(nick)) {
                 return user;
             }
-            // return users.values().stream().findFirst().filter(user ->
-            // user.getNick().equals(nick)).orElse(null);
         }
         return null;
     }
@@ -151,12 +150,13 @@ public class IrcServer extends IrcObject {
     /**
      * @param nick
      * @param username
+     * @param host
      * @return
      */
-    public IrcUser getOrCreateUser(String nick, String username) {
+    public IrcUser getOrCreateUser(String nick, String username, String host) {
         IrcUser result = findUser(nick);
         if (result == null) {
-            result = createUser(nick, username);
+            result = createUser(nick, username, host);
             addUser(result);
         }
         return result;
@@ -184,8 +184,9 @@ public class IrcServer extends IrcObject {
     }
 
     public void removeUser(String nick) {
-        IrcUser removed = users.remove(nick);
+        IrcUser removed = findUser(nick);
         if (removed != null) {
+            users.remove(removed.getId());
             account.getModel().fire(new IrcModelEvent(EventType.USER_REMOVED, removed));
             removed.dispose();
         }

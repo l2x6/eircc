@@ -25,7 +25,7 @@ import org.l2x6.eircc.ui.prefs.IrcPreferences.PreferenceKey;
  * @author <a href="mailto:ppalaga@redhat.com">Peter Palaga</a>
  */
 public class IrcNotificationsPreferencePage extends FieldEditorPreferencePage implements IWorkbenchPreferencePage {
-    private final class NicksEditor extends ListEditor {
+    private final class NotificationRegexEditor extends ListEditor {
 
         /**
          * Creates a path field editor.
@@ -39,7 +39,7 @@ public class IrcNotificationsPreferencePage extends FieldEditorPreferencePage im
          * @param parent
          *            the parent of the field editor's control
          */
-        public NicksEditor(String name, String labelText, Composite parent) {
+        public NotificationRegexEditor(String name, String labelText, Composite parent) {
             init(name, labelText);
             createControl(parent);
         }
@@ -55,7 +55,7 @@ public class IrcNotificationsPreferencePage extends FieldEditorPreferencePage im
 
             for (int i = 0; i < items.length; i++) {
                 path.append(items[i]);
-                path.append(IrcPreferences.NICKS_DELIMITER);
+                path.append(IrcPreferences.WATCHED_OBJECT_DELIMITER);
             }
             return path.toString();
         }
@@ -74,7 +74,7 @@ public class IrcNotificationsPreferencePage extends FieldEditorPreferencePage im
          */
         @Override
         protected String[] parseString(String stringList) {
-            StringTokenizer st = new StringTokenizer(stringList, "" + IrcPreferences.NICKS_DELIMITER + "\n\t\r");
+            StringTokenizer st = new StringTokenizer(stringList, "" + IrcPreferences.WATCHED_OBJECT_DELIMITER + "\n\t\r");
             Set<String> v = new TreeSet<String>();
             while (st.hasMoreTokens()) {
                 v.add(st.nextToken());
@@ -83,7 +83,8 @@ public class IrcNotificationsPreferencePage extends FieldEditorPreferencePage im
         }
     }
 
-    private NicksEditor nicksEditor;
+    private NotificationRegexEditor nicksEditor;
+    private NotificationRegexEditor channelsEditor;
 
     /**
      *
@@ -98,9 +99,12 @@ public class IrcNotificationsPreferencePage extends FieldEditorPreferencePage im
      */
     @Override
     protected void createFieldEditors() {
-        nicksEditor = new NicksEditor(PreferenceKey.TRACKED_NICKS.toString(),
+        nicksEditor = new NotificationRegexEditor(PreferenceKey.WATCHED_NICKS.toString(),
                 IrcUiMessages.IrcNotificationsPreferencePage_senderBasedNotification, getFieldEditorParent());
         addField(nicksEditor);
+        channelsEditor = new NotificationRegexEditor(PreferenceKey.WATCHED_CHANNELS.toString(),
+                IrcUiMessages.IrcNotificationsPreferencePage_watchedChannels, getFieldEditorParent());
+        addField(channelsEditor);
     }
 
     /**

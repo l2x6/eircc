@@ -118,4 +118,5 @@ public class IrcChannel extends AbstractIrcChannel {
     public boolean isP2p() {
         return false;
     }
+
 }

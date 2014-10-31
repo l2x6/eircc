@@ -15,10 +15,15 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.io.UnsupportedEncodingException;
+import java.time.OffsetDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.Iterator;
 
 import org.eclipse.jface.text.IDocument;
+import org.l2x6.eircc.core.model.PlainIrcUser;
 import org.l2x6.eircc.core.model.PlainIrcMessage;
+import org.l2x6.eircc.core.model.PlainIrcMessage.IrcMessageType;
 
 /**
  * @author <a href="mailto:ppalaga@redhat.com">Peter Palaga</a>
@@ -140,6 +145,11 @@ public class IrcLogReader implements Closeable {
     private final boolean isP2pChannel;
 
     private final String source;
+    public static final char FIELD_DELIMITER = ' ';
+    public static final char MULTILINE_MARKER = ' ';
+    public static final char RECORD_DELIMITER = '\n';
+    /**  */
+    public static final String SENDER_TEXT_DELIMITER = ": ";
 
     public IrcLogReader(IDocument document, String source, boolean isP2pChannel) throws UnsupportedEncodingException,
             FileNotFoundException {
@@ -203,7 +213,38 @@ public class IrcLogReader implements Closeable {
         if (!hasNext()) {
             throw new IllegalStateException("No more IrcMessages to return.");
         } else {
-            return new PlainIrcMessage(this, isP2pChannel);
+            try {
+
+                int recordOffset = this.getCharCount();
+                int lineIndex = this.getLineIndex();
+                String timeString = this.readToken(FIELD_DELIMITER, MULTILINE_MARKER);
+                OffsetDateTime arrivedAt = OffsetDateTime.parse(timeString, DateTimeFormatter.ISO_ZONED_DATE_TIME);
+                String senderString = this.readToken(FIELD_DELIMITER, MULTILINE_MARKER);
+                PlainIrcUser sender = PlainIrcUser.parse(senderString);
+                IrcLogChunk txtChunk = this.readChunk(RECORD_DELIMITER, MULTILINE_MARKER);
+
+                String tail = txtChunk.tail(FIELD_DELIMITER);
+                IrcMessageType type = IrcMessageType.fastValueOf(tail);
+                if (type != null) {
+                    /* there was a type stored explicitly in the file */
+                    tail = txtChunk.tail(FIELD_DELIMITER);
+                } else {
+                    /* there was no explicit type stored in the file.
+                    * nick == null is a legacy way of finding out if this is a system message */
+                    type = senderString == null ? IrcMessageType.SYSTEM : IrcMessageType.CHAT;
+                }
+
+                String myNick = tail;
+                String index = txtChunk.tail(FIELD_DELIMITER);
+                int userColorIndex = Integer.parseInt(index);
+                String text = txtChunk.rest();
+
+
+                return new PlainIrcMessage(recordOffset, lineIndex, arrivedAt, sender, text, userColorIndex, myNick, isP2pChannel, type);
+            } catch (DateTimeParseException e) {
+                throw new IrcLogReaderException("Could not parse " + source, e);
+            }
+
         }
     }
 

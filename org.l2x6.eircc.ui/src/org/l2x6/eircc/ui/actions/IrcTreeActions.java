@@ -22,10 +22,10 @@ import org.l2x6.eircc.core.IrcController;
 import org.l2x6.eircc.core.IrcException;
 import org.l2x6.eircc.core.model.AbstractIrcChannel;
 import org.l2x6.eircc.core.model.IrcAccount;
-import org.l2x6.eircc.core.model.IrcAccount.IrcAccountState;
 import org.l2x6.eircc.core.model.IrcChannelUser;
 import org.l2x6.eircc.core.model.IrcUser;
 import org.l2x6.eircc.core.model.PlainIrcChannel;
+import org.l2x6.eircc.core.model.IrcAccount.IrcAccountState;
 import org.l2x6.eircc.core.model.resource.IrcResourceException;
 import org.l2x6.eircc.core.util.NickComparator;
 import org.l2x6.eircc.ui.EirccUi;
@@ -125,38 +125,12 @@ public class IrcTreeActions<E> extends Action implements Listener, IrcTreeAction
      * @param tree2
      * @return
      */
-    public static IrcTreeActions<?> createNotifyAction(Tree tree) {
-        Predicate<? super TreeItem> predicate = treeItem -> treeItem.getData() instanceof IrcChannelUser;
-        Consumer<IrcChannelUser> itemAction = user -> {
-            try {
-                if (user != null) {
-                    String patternProposal = NickComparator.getBaseNick(user.getCleanNick()) + ".*";
-                    IrcPreferences prefs = IrcPreferences.getInstance();
-                    String pattern = prefs.showAddNickPatternDialog(patternProposal);
-                    if (pattern != null) {
-                        prefs.addTrackedNickPattern(pattern);
-                    }
-                }
-            } catch (Exception e) {
-                EirccUi.log(e);
-            }
-        };
-        return new IrcTreeActions<IrcChannelUser>(tree, IrcUiMessages.IrcChannelOutlinePage_Notify, null, predicate,
-                itemAction);
-    }
-
-    /**
-     * @param tree2
-     * @return
-     */
     public static IrcTreeActions<?> createOpenPrivateChatAction(Tree tree) {
         Predicate<? super TreeItem> predicate = treeItem -> treeItem.getData() instanceof IrcChannelUser;
         Consumer<IrcChannelUser> itemAction = user -> {
             try {
                 IrcController controller = EirccUi.getController();
-                IrcUser p2pUser = controller.getOrCreateUser(user.getChannel().getAccount().getServer(),
-                        user.getCleanNick(), null);
-                AbstractIrcChannel ch = controller.getOrCreateP2pChannel(p2pUser);
+                AbstractIrcChannel ch = controller.getOrCreateP2pChannel(user.getUser());
                 if (!ch.isJoined()) {
                     /* this should both join and open the editor */
                     EirccUi.getController().joinChannel(ch);
@@ -169,6 +143,48 @@ public class IrcTreeActions<E> extends Action implements Listener, IrcTreeAction
         };
         return new IrcTreeActions<IrcChannelUser>(tree, IrcUiMessages.IrcChannelOutlinePage_Open_Private_Chat,
                 ImageKey.JOIN_CHANNEL, predicate, itemAction);
+    }
+
+    public static IrcTreeActions<?> createWatchChannelAction(Tree tree) {
+        Predicate<? super TreeItem> predicate =
+                treeItem -> treeItem.getData() instanceof AbstractIrcChannel
+                && !IrcPreferences.getInstance().isWatched((AbstractIrcChannel) treeItem.getData());
+        Consumer<AbstractIrcChannel> itemAction = channel -> {
+            try {
+                if (channel != null) {
+                    IrcPreferences prefs = IrcPreferences.getInstance();
+                    prefs.addWatchedChannel(channel.getName());
+                }
+            } catch (Exception e) {
+                EirccUi.log(e);
+            }
+        };
+        return new IrcTreeActions<AbstractIrcChannel>(tree, IrcUiMessages.IrcChannelOutlinePage_watchThisChannel, null,
+                predicate, itemAction);
+    }
+
+    /**
+     * @param tree2
+     * @return
+     */
+    public static IrcTreeActions<?> createWatchUserAction(Tree tree) {
+        Predicate<? super TreeItem> predicate = treeItem -> treeItem.getData() instanceof IrcChannelUser;
+        Consumer<IrcChannelUser> itemAction = user -> {
+            try {
+                if (user != null) {
+                    String patternProposal = user.getUser().getUsername();
+                    IrcPreferences prefs = IrcPreferences.getInstance();
+                    String pattern = prefs.showAddNickPatternDialog(patternProposal);
+                    if (pattern != null) {
+                        prefs.addWatchedNickPattern(pattern);
+                    }
+                }
+            } catch (Exception e) {
+                EirccUi.log(e);
+            }
+        };
+        return new IrcTreeActions<IrcChannelUser>(tree, IrcUiMessages.IrcChannelOutlinePage_watchThisUser, null,
+                predicate, itemAction);
     }
 
     protected final Predicate<? super TreeItem> enabledPredicate;

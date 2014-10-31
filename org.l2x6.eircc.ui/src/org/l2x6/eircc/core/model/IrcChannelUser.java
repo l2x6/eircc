@@ -14,17 +14,19 @@ package org.l2x6.eircc.core.model;
 public class IrcChannelUser extends IrcObject {
 
     private final AbstractIrcChannel channel;
+    private final IrcUserFlags flags;
     private String leftWithMessage;
-    private final IrcNick nick;
+    private final IrcUser user;
 
     /**
      * @param channel
      * @param nick
      */
-    public IrcChannelUser(AbstractIrcChannel channel, IrcNick nick) {
+    public IrcChannelUser(AbstractIrcChannel channel, IrcUser user, IrcUserFlags flags) {
         super(channel.getModel(), channel.getParentFolderPath());
         this.channel = channel;
-        this.nick = nick;
+        this.user = user;
+        this.flags = flags;
     }
 
     /**
@@ -38,20 +40,18 @@ public class IrcChannelUser extends IrcObject {
         return channel;
     }
 
-    public String getCleanNick() {
-        return nick.getCleanNick();
+
+    public IrcUserFlags getFlags() {
+        return flags;
     }
+
 
     public String getLeftWithMessage() {
         return leftWithMessage;
     }
 
-    public IrcNick getNick() {
-        return nick;
-    }
-
-    public boolean isOp() {
-        return nick.isOp();
+    public IrcUser getUser() {
+        return user;
     }
 
     public void setLeftWithMessage(String leftWithMessage) {
@@ -60,7 +60,7 @@ public class IrcChannelUser extends IrcObject {
 
     @Override
     public String toString() {
-        return getCleanNick();
+        return user.getNick();
     }
 
 }

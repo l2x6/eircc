@@ -8,7 +8,7 @@
 
 package org.l2x6.eircc.ui.editor;
 
-import org.l2x6.eircc.core.model.IrcUser;
+import org.l2x6.eircc.core.model.PlainIrcUser;
 import org.l2x6.eircc.core.model.PlainIrcMessage;
 import org.l2x6.eircc.ui.misc.StyledWrapper;
 import org.l2x6.eircc.ui.prefs.IrcPreferences;
@@ -25,7 +25,7 @@ public class IrcOwnMessageFormatter extends IrcDefaultMessageFormatter {
         super(preferences);
     }
 
-    protected void appendUser(StyledWrapper target, PlainIrcMessage message, IrcUser user, String suffix) {
+    protected void appendUser(StyledWrapper target, PlainIrcMessage message, PlainIrcUser user, String suffix) {
         String nickToken = user.getNick() + suffix;
         target.append(nickToken, preferences.getUserStyle(0, true));
     }

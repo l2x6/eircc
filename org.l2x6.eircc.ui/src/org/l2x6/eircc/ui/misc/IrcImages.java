@@ -619,7 +619,7 @@ public class IrcImages {
         ImageKey bottomLeftOverlay = null;
         ImageKey bottomRightOverlay = null;
         ImageKey underlay = null;
-        if (user != null && user.isOp()) {
+        if (user != null && user.getFlags().isOp()) {
             bottomRightOverlay = ImageKey.ADMIN_OVERLAY;
             hasOverlays = true;
         }

@@ -87,8 +87,8 @@ public class IrcConsole implements TrafficLoggerFactory {
                              * as possible
                              */
                             view = (IConsoleView) page.showView(IConsoleConstants.ID_CONSOLE_VIEW);
+                            view.display(console);
                         }
-                        view.display(console);
                     } catch (PartInitException e) {
                         EirccUi.log(e);
                     }

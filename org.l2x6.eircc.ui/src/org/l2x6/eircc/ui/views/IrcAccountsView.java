@@ -126,6 +126,7 @@ public class IrcAccountsView extends ViewPart implements IrcModelEventListener {
             }
         }
     };
+    private IrcTreeActions<?> watchChannelAction;
 
     @Override
     public void createPartControl(Composite container) {
@@ -187,6 +188,7 @@ public class IrcAccountsView extends ViewPart implements IrcModelEventListener {
         joinAccountChannelAction = IrcTreeActions.createJoinAccountChannelAction(accountsTree);
         promptChannelAndJoinAction = new PromptAndJoinChannelAction(accountsTree);
         leaveAccountChannelAction = IrcTreeActions.createLeaveChannelAction(accountsTree);
+        watchChannelAction = IrcTreeActions.createWatchChannelAction(accountsTree);
 
         IViewSite site = getViewSite();
         IToolBarManager accountsTbm = site.getActionBars().getToolBarManager();
@@ -208,6 +210,7 @@ public class IrcAccountsView extends ViewPart implements IrcModelEventListener {
         accountsMenuManager.add(joinAccountChannelAction);
         accountsMenuManager.add(promptChannelAndJoinAction);
         accountsMenuManager.add(leaveAccountChannelAction);
+        accountsMenuManager.add(watchChannelAction);
         accountsTree.setMenu(accountsMenu);
         site.registerContextMenu(accountsMenuManager, accountsTreeViewer);
 
@@ -219,7 +222,7 @@ public class IrcAccountsView extends ViewPart implements IrcModelEventListener {
         joinServerChannelAction = IrcTreeActions.createJoinServerChannelAction(serverChannelsTree);
         treeActions = new IrcTreeAction[] { listChannelsAction, connectAccountAction, disconnectAccountAction,
                 joinAccountChannelAction, promptChannelAndJoinAction, leaveAccountChannelAction,
-                joinServerChannelAction };
+                joinServerChannelAction, watchChannelAction };
 
         ToolBarManager serverChannelsTbm = new ToolBarManager(serverChannelsToolbar);
         serverChannelsTbm.add(new Separator(ContextMenuConstants.GROUP_IRC_SERVER_CHANNELS));
@@ -410,7 +413,6 @@ public class IrcAccountsView extends ViewPart implements IrcModelEventListener {
         case SERVER_CHANNEL_REMOVED:
             serverChannelsTreeViewer.refresh();
             break;
-        case CHANNEL_USERS_CHANGED:
         case USER_ADDED:
         case USER_REMOVED:
             /* ignore */

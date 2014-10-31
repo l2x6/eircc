@@ -119,7 +119,7 @@ public class IrcChannelOutlinePage extends ContentOutlinePage implements IDouble
             if (element instanceof IrcChannelUser) {
                 AbstractIrcChannel channel = editor.getChannel();
                 if (channel != null) {
-                    int index = channel.getUserIndex(((IrcChannelUser) element).getCleanNick());
+                    int index = channel.getUserIndex(((IrcChannelUser) element).getUser());
                     return new StyledString(super.getText(element), IrcPreferences.getInstance().getUserStyler(index));
                 }
             }
@@ -157,7 +157,7 @@ public class IrcChannelOutlinePage extends ContentOutlinePage implements IDouble
 
         Tree tree = viewer.getTree();
         openPrivateChatAction = IrcTreeActions.createOpenPrivateChatAction(tree);
-        notifyAction = IrcTreeActions.createNotifyAction(tree);
+        notifyAction = IrcTreeActions.createWatchUserAction(tree);
         MenuManager accountsMenuManager = new MenuManager("#PopupMenu");
         Menu accountsMenu = accountsMenuManager.createContextMenu(tree);
         accountsMenuManager.add(openPrivateChatAction);
@@ -191,6 +191,7 @@ public class IrcChannelOutlinePage extends ContentOutlinePage implements IDouble
     @Override
     public void handle(IrcModelEvent e) {
         switch (e.getEventType()) {
+        case NICK_CHANGED:
         case CHANNEL_USERS_CHANGED:
         case CHANNEL_USER_JOINED:
         case CHANNEL_USER_LEFT:

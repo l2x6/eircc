@@ -15,7 +15,9 @@ import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.StringTokenizer;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -33,13 +35,15 @@ import org.l2x6.eircc.core.IrcException;
 import org.l2x6.eircc.core.model.AbstractIrcChannel;
 import org.l2x6.eircc.core.model.IrcAccount;
 import org.l2x6.eircc.core.model.IrcAccount.IrcAccountState;
+import org.l2x6.eircc.core.model.IrcChannel;
 import org.l2x6.eircc.core.model.IrcLog;
 import org.l2x6.eircc.core.model.IrcMessage;
-import org.l2x6.eircc.core.model.IrcNick;
-import org.l2x6.eircc.core.model.IrcServer;
 import org.l2x6.eircc.core.model.IrcUser;
+import org.l2x6.eircc.core.model.IrcUserFlags;
+import org.l2x6.eircc.core.model.IrcWhoUser;
 import org.l2x6.eircc.core.model.PlainIrcChannel;
 import org.l2x6.eircc.core.model.PlainIrcMessage.IrcMessageType;
+import org.l2x6.eircc.core.model.PlainIrcUser;
 import org.l2x6.eircc.core.model.resource.IrcResourceException;
 import org.l2x6.eircc.core.util.IrcUtils;
 import org.l2x6.eircc.ui.EirccUi;
@@ -141,6 +145,7 @@ public class IrcClient {
     private class UiListener implements IRCEventListener {
 
         private final List<PlainIrcChannel> channelBuffer = new ArrayList<PlainIrcChannel>(LIST_BUFFER_SIZE);
+        private final Map<String, List<IrcWhoUser>> whoBuffers = new HashMap<String, List<IrcWhoUser>>();
 
         /**
          *
@@ -154,6 +159,25 @@ public class IrcClient {
                     account.getServer().addChannels(channels);
                 }
             });
+        }
+
+        /**
+         *
+         */
+        private void flushWhoBuffer(final String channelName, final List<IrcWhoUser> whoBuffer) {
+            if (whoBuffer != null && !whoBuffer.isEmpty()) {
+                final IrcWhoUser[] users = whoBuffer.toArray(new IrcWhoUser[whoBuffer.size()]);
+                whoBuffer.clear();
+                Display.getDefault().asyncExec(new Runnable() {
+                    @Override
+                    public void run() {
+                        IrcChannel channel = account.findChannel(channelName);
+                        if (channel != null) {
+                            channel.setUsers(users);
+                        }
+                    }
+                });
+            }
         }
 
         /**
@@ -186,49 +210,104 @@ public class IrcClient {
          * @param msg
          */
         private void handleNamReply(int num, String channelSpec, final String msg) {
-            int lastSpace = channelSpec.lastIndexOf(' ');
-            String chName;
-            if (lastSpace >= 0) {
-                chName = channelSpec.substring(lastSpace + 1);
-            } else {
-                chName = channelSpec;
-            }
-            switch (chName.charAt(0)) {
-            case '=':
-            case '*':
-            case '@':
-                chName = chName.substring(1);
-                break;
-            default:
-                break;
-            }
-            final String channelName = chName;
-            Display.getDefault().asyncExec(new Runnable() {
-                @Override
-                public void run() {
-                    try {
-                        AbstractIrcChannel channel = controller.getOrCreateAccountChannel(account, channelName);
-                        IrcServer server = account.getServer();
-                        StringTokenizer st = new StringTokenizer(msg, " ");
-                        List<IrcNick> unseenNicks = new ArrayList<IrcNick>();
-                        List<IrcNick> allNicks = new ArrayList<IrcNick>();
-                        while (st.hasMoreTokens()) {
-                            IrcNick nick = IrcNick.parse(st.nextToken());
-                            allNicks.add(nick);
-                            IrcUser ircUser = server.findUser(nick.getCleanNick());
-                            if (ircUser == null) {
-                                unseenNicks.add(nick);
+            // int lastSpace = channelSpec.lastIndexOf(' ');
+            // String chName;
+            // if (lastSpace >= 0) {
+            // chName = channelSpec.substring(lastSpace + 1);
+            // } else {
+            // chName = channelSpec;
+            // }
+            // switch (chName.charAt(0)) {
+            // case '=':
+            // case '*':
+            // case '@':
+            // chName = chName.substring(1);
+            // break;
+            // default:
+            // break;
+            // }
+            // final String channelName = chName;
+            // Display.getDefault().asyncExec(new Runnable() {
+            // @Override
+            // public void run() {
+            // try {
+            // AbstractIrcChannel channel =
+            // controller.getOrCreateAccountChannel(account, channelName);
+            // IrcServer server = account.getServer();
+            // StringTokenizer st = new StringTokenizer(msg, " ");
+            // List<IrcNick> unseenNicks = new ArrayList<IrcNick>();
+            // List<IrcNick> allNicks = new ArrayList<IrcNick>();
+            // while (st.hasMoreTokens()) {
+            // IrcNick nick = IrcNick.parse(st.nextToken());
+            // allNicks.add(nick);
+            // IrcUser ircUser = server.findUser(nick.getCleanNick());
+            // if (ircUser == null) {
+            // unseenNicks.add(nick);
+            // }
+            // }
+            // channel.addNicks(allNicks);
+            // if (!unseenNicks.isEmpty()) {
+            // controller.resolveNicks(server, unseenNicks);
+            // }
+            // } catch (IOException | IrcResourceException e) {
+            // EirccUi.log(e);
+            // }
+            // }
+            // });
+        }
+
+        /**
+         * @param num
+         * @param value
+         * @param msg
+         */
+        private void handleWhoReply(int num, String middle, String tail) {
+
+            StringTokenizer st = new StringTokenizer(middle, " ");
+            if (st.hasMoreTokens()) {
+                @SuppressWarnings("unused")
+                String myNick = st.nextToken();
+                if (st.hasMoreTokens()) {
+                    String channelName = st.nextToken();
+                    List<IrcWhoUser> whoBuffer = whoBuffers.get(channelName);
+                    if (whoBuffer == null) {
+                        whoBuffer = new ArrayList<IrcWhoUser>();
+                        whoBuffers.put(channelName, whoBuffer);
+                    }
+
+                    if (st.hasMoreTokens()) {
+                        String username = st.nextToken();
+                        if (st.hasMoreTokens()) {
+                            String host = st.nextToken();
+                            if (st.hasMoreTokens()) {
+                                @SuppressWarnings("unused")
+                                String server = st.nextToken();
+                                if (st.hasMoreTokens()) {
+                                    String nick = st.nextToken();
+                                    if (st.hasMoreTokens()) {
+                                        String flags = st.nextToken();
+
+                                        int spacePos = tail.indexOf(' ');
+                                        if (spacePos >= 0) {
+                                            String realName = tail.substring(spacePos + 1);
+                                            IrcWhoUser u = new IrcWhoUser(nick, username, host, realName,
+                                                    new IrcUserFlags(flags));
+                                            whoBuffer.add(u);
+                                        }
+                                    }
+                                }
                             }
                         }
-                        channel.addNicks(allNicks);
-                        if (!unseenNicks.isEmpty()) {
-                            controller.resolveNicks(server, unseenNicks);
+
+                        if (whoBuffer.size() >= LIST_BUFFER_SIZE) {
+                            flushWhoBuffer(channelName, whoBuffer);
                         }
-                    } catch (IOException | IrcResourceException e) {
-                        EirccUi.log(e);
                     }
+
                 }
-            });
+
+            }
+
         }
 
         /**
@@ -298,8 +377,11 @@ public class IrcClient {
                             channel.setJoined(true);
                         } else {
                             /* make sure the user info is stored in server */
-                            controller.getOrCreateUser(account.getServer(), nick, user.getUsername());
-                            channel.addNick(IrcNick.parse(nick));
+                            IrcUser u = controller.getOrCreateUser(account.getServer(), nick, user.getUsername(),
+                                    user.getHost());
+                            // TODO issue WHO or similar to figure out the real
+                            // flags
+                            channel.addUser(u, IrcUserFlags.EMPTY);
                         }
                     } catch (IrcResourceException e) {
                         EirccUi.log(e);
@@ -346,7 +428,8 @@ public class IrcClient {
             Display.getDefault().asyncExec(new Runnable() {
                 @Override
                 public void run() {
-                    controller.changeNick(account.getServer(), user.getNick(), newNick, user.getUsername());
+                    PlainIrcUser plainUser = new PlainIrcUser(user.getNick(), user.getUsername(), user.getHost());
+                    controller.changeNick(account.getServer(), plainUser, newNick);
                 }
             });
         }
@@ -409,7 +492,7 @@ public class IrcClient {
                         }
                         final boolean isP2p = target.equals(account.getAcceptedNick());
                         IrcUser ircUser = controller.getOrCreateUser(account.getServer(), user.getNick(),
-                                user.getUsername());
+                                user.getUsername(), user.getHost());
                         AbstractIrcChannel channel;
                         if (!isP2p) {
                             channel = controller.getOrCreateAccountChannel(account, target);
@@ -418,7 +501,8 @@ public class IrcClient {
                         }
                         channel.setJoined(true);
                         IrcLog log = channel.getLog();
-                        IrcMessage message = new IrcMessage(log, OffsetDateTime.now(), ircUser, useMsg, channel.isP2p(), IrcMessageType.CHAT);
+                        IrcMessage message = new IrcMessage(log, OffsetDateTime.now(), ircUser, useMsg,
+                                channel.isP2p(), IrcMessageType.CHAT);
                         log.appendMessage(message);
                     } catch (IrcResourceException e) {
                         EirccUi.log(e);
@@ -450,7 +534,7 @@ public class IrcClient {
                 @Override
                 public void run() {
                     IrcUser me = controller.getOrCreateUser(account.getServer(), connection.getNick(),
-                            account.getUsername());
+                            account.getUsername(), "localhost");
                     account.setMe(me);
                     account.setState(IrcAccountState.ONLINE);
                 }
@@ -483,6 +567,15 @@ public class IrcClient {
                         break;
                     case RPL_ENDOFNAMES:
                         /* ignore */
+                        break;
+                    case RPL_WHOREPLY:
+                        handleWhoReply(num, value, msg);
+                        break;
+                    case RPL_ENDOFWHO:
+                        StringTokenizer st = new StringTokenizer(value, " ");
+                        st.nextToken();
+                        String channelName = st.nextToken();
+                        flushWhoBuffer(channelName, whoBuffers.get(channelName));
                         break;
                     default:
                         break;
@@ -607,8 +700,8 @@ public class IrcClient {
             try {
                 connection.connect();
             } catch (IOException e) {
-                controller.handle(new IrcException("Could not connect to '" + account.getLabel() + "': " + e.getMessage(), e,
-                        account));
+                controller.handle(new IrcException("Could not connect to '" + account.getLabel() + "': "
+                        + e.getMessage(), e, account));
             }
         } else {
             throw new IllegalStateException("Must be connected");
@@ -640,7 +733,11 @@ public class IrcClient {
             public void run() {
                 try {
                     ensureConnected();
-                    connection.doJoin(channel.getName());
+                    String channelName = channel.getName();
+                    connection.doJoin(channelName);
+                    if (channel instanceof IrcChannel) {
+                        connection.doWho(channelName);
+                    }
                 } catch (final IrcException e) {
                     notifyUi(e);
                 }
@@ -809,6 +906,23 @@ public class IrcClient {
         IrcUtils.assertUiThread();
         Future<?> future = executor.submit(task);
         timeoutChecker.submit(new TimeoutCheckTask(future));
+    }
+
+    public void who(final String channelName) throws IrcException {
+        if (channelName != null) {
+            IrcUtils.assertUiThread();
+            submit(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        ensureConnected();
+                        connection.doWho(channelName);
+                    } catch (IrcException e) {
+                        notifyUi(e);
+                    }
+                }
+            });
+        }
     }
 
     public void whois(Collection<String> nicks) throws IrcException {

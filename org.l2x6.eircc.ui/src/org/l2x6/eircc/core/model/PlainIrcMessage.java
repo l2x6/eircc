@@ -11,7 +11,6 @@ package org.l2x6.eircc.core.model;
 import java.io.IOException;
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeParseException;
 import java.time.temporal.ChronoUnit;
 import java.util.Collections;
 import java.util.HashMap;
@@ -20,8 +19,6 @@ import java.util.Map;
 import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.IDocument;
 import org.l2x6.eircc.core.util.IrcLogReader;
-import org.l2x6.eircc.core.util.IrcLogReader.IrcLogChunk;
-import org.l2x6.eircc.core.util.IrcLogReader.IrcLogReaderException;
 import org.l2x6.eircc.core.util.IrcToken;
 import org.l2x6.eircc.core.util.IrcTokenizer;
 import org.l2x6.eircc.ui.misc.Colors;
@@ -56,11 +53,6 @@ public class PlainIrcMessage {
         }
     };
 
-    protected static final char FIELD_DELIMITER = ' ';
-    protected static final char MULTILINE_MARKER = ' ';
-    protected static final char RECORD_DELIMITER = '\n';
-    /**  */
-    public static final String SENDER_TEXT_DELIMITER = ": ";
     protected final OffsetDateTime arrivedAt;
     private final boolean isP2pChannel;
     /**
@@ -75,12 +67,13 @@ public class PlainIrcMessage {
     protected final int lineIndex;
     private boolean meNamed;
     private final String myNick;
-    private final String nick;
     /** Character length of this message within the IRC log file */
     protected final int recordLenght;
     /** This message starts at this character offset in the IRC log file */
     protected final int recordOffset;
+    private final IrcUserBase sender;
     private String string;
+
     protected final String text;
     protected final int textOffset;
     private boolean tokenized = false;
@@ -97,13 +90,13 @@ public class PlainIrcMessage {
      * @param recordOffset
      * @param type
      */
-    public PlainIrcMessage(int recordOffset, int lineIndex, OffsetDateTime arrivedAt, String nick, String text,
+    public PlainIrcMessage(int recordOffset, int lineIndex, OffsetDateTime arrivedAt, IrcUserBase sender, String text,
             int userColorIndex, String myNick, boolean isP2pChannel, IrcMessageType type) {
         super();
         this.recordOffset = recordOffset;
         this.lineIndex = lineIndex;
         this.arrivedAt = arrivedAt.truncatedTo(ChronoUnit.SECONDS);
-        this.nick = nick;
+        this.sender = sender;
         this.text = text;
         this.userColorIndex = userColorIndex;
         this.myNick = myNick;
@@ -114,46 +107,20 @@ public class PlainIrcMessage {
         this.recordLenght = computeRecordLength();
     }
 
-    /**
-     * @param in
-     * @param myNick
-     * @throws IOException
-     */
-    public PlainIrcMessage(IrcLogReader in, boolean isP2pChannel) throws IrcLogReaderException, IOException {
-        this.recordOffset = in.getCharCount();
-        this.lineIndex = in.getLineIndex();
-        String timeString = in.readToken(FIELD_DELIMITER, MULTILINE_MARKER);
-        try {
-            this.arrivedAt = OffsetDateTime.parse(timeString, DateTimeFormatter.ISO_ZONED_DATE_TIME);
-        } catch (DateTimeParseException e) {
-            throw new IrcLogReaderException("Could not parse " + in.getSource(), e);
+    public void append(Appendable out) throws IOException {
+        out.append(arrivedAt.format(DateTimeFormatter.ISO_ZONED_DATE_TIME));
+        out.append(IrcLogReader.FIELD_DELIMITER);
+        if (sender != null) {
+            sender.append(out);
         }
-        String nick = in.readToken(FIELD_DELIMITER, MULTILINE_MARKER);
-        this.nick = nick == null || nick.isEmpty() ? null : nick;
-        IrcLogChunk txtChunk = in.readChunk(RECORD_DELIMITER, MULTILINE_MARKER);
-
-        String tail = txtChunk.tail(FIELD_DELIMITER);
-        IrcMessageType type = IrcMessageType.fastValueOf(tail);
-        if (type != null) {
-            /* there was a type stored explicitly in the file */
-            tail = txtChunk.tail(FIELD_DELIMITER);
-        } else {
-            /* there was no explicit type stored in the file.
-            * nick == null is a legacy way of finding out if this is a system message */
-            type = nick == null ? IrcMessageType.SYSTEM : IrcMessageType.CHAT;
-        }
-        this.type = type;
-
-        this.myNick = tail;
-        String index = txtChunk.tail(FIELD_DELIMITER);
-        this.userColorIndex = Integer.parseInt(index);
-        this.text = txtChunk.rest();
-
-        this.textOffset = computeTextOffset();
-        this.recordLenght = computeRecordLength();
-        this.lineCount = countLines();
-        this.isP2pChannel = isP2pChannel;
-
+        out.append(IrcLogReader.FIELD_DELIMITER);
+        IrcLogReader.append(text, out, IrcLogReader.FIELD_DELIMITER);
+        out.append(String.valueOf(userColorIndex));
+        out.append(IrcLogReader.FIELD_DELIMITER);
+        out.append(myNick);
+        out.append(IrcLogReader.FIELD_DELIMITER);
+        out.append(type.name());
+        out.append(IrcLogReader.RECORD_DELIMITER);
     }
 
     /**
@@ -165,7 +132,7 @@ public class PlainIrcMessage {
     }
 
     private int computeTextOffset() {
-        return 25 + 1 + (nick == null ? 0 : nick.length()) + 1;
+        return 25 + 1 + (sender == null ? 0 : sender.length()) + 1;
     }
 
     /**
@@ -200,7 +167,7 @@ public class PlainIrcMessage {
     }
 
     public String getNick() {
-        return nick;
+        return sender != null ? sender.getNick() : null;
     }
 
     public int getRecordLenght() {
@@ -209,6 +176,10 @@ public class PlainIrcMessage {
 
     public int getRecordOffset() {
         return recordOffset;
+    }
+
+    public IrcUserBase getSender() {
+        return sender;
     }
 
     public String getText() {
@@ -256,7 +227,7 @@ public class PlainIrcMessage {
     }
 
     public IrcMessage toIrcMessage(IrcLog log) {
-        IrcUser u = nick == null ? null : log.getChannel().getAccount().getServer().getOrCreateUser(nick, nick);
+        IrcUser u = sender == null ? null : log.getChannel().getAccount().getServer().getOrCreateUser(sender.getNick(), sender.getUsername(), sender.getHost());
         return new IrcMessage(log, arrivedAt, u, text, myNick, isP2pChannel, type);
     }
 
@@ -278,11 +249,16 @@ public class PlainIrcMessage {
     @Override
     public String toString() {
         if (string == null) {
-            StringBuilder sb = new StringBuilder().append(arrivedAt.toString()).append(' ');
-            if (nick != null) {
-                sb.append(nick).append(SENDER_TEXT_DELIMITER);
+            StringBuilder sb = new StringBuilder();
+            try {
+                append(sb);
+            } catch (IOException e) {
+                /*
+                 * Should not happen as StringBuilder.append() never throws
+                 * IOException
+                 */
+                throw new RuntimeException();
             }
-            sb.append(text);
             this.string = sb.toString();
         }
         return string;
@@ -291,20 +267,7 @@ public class PlainIrcMessage {
     public void write(IDocument document) {
         try {
             StringBuilder out = new StringBuilder();
-            out.append(arrivedAt.format(DateTimeFormatter.ISO_ZONED_DATE_TIME));
-            out.append(FIELD_DELIMITER);
-            if (nick != null) {
-                out.append(nick);
-            }
-            out.append(FIELD_DELIMITER);
-            IrcLogReader.append(text, out, FIELD_DELIMITER);
-            out.append(String.valueOf(userColorIndex));
-            out.append(FIELD_DELIMITER);
-            out.append(myNick);
-            out.append(FIELD_DELIMITER);
-            out.append(type.name());
-            out.append(RECORD_DELIMITER);
-
+            append(out);
             document.replace(document.getLength(), 0, out.toString());
         } catch (IOException e) {
             /*

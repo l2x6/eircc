@@ -34,8 +34,8 @@ public class IrcMessage extends PlainIrcMessage {
 
     public IrcMessage(IrcLog log, OffsetDateTime arrivedAt, IrcUser user, String text, String myNick,
             boolean isP2pChannel, IrcMessageType type) {
-        super(log.getCharLength(), log.getLineIndex(), arrivedAt, user == null ? null : user.getNick(), text,
-                user != null ? log.getChannel().getUserIndex(user.getNick()) : Colors.INVALID_INDEX, myNick,
+        super(log.getCharLength(), log.getLineIndex(), arrivedAt, user, text,
+                user != null ? log.getChannel().getUserIndex(user) : Colors.INVALID_INDEX, myNick,
                 isP2pChannel, type);
         this.log = log;
         this.user = user;
