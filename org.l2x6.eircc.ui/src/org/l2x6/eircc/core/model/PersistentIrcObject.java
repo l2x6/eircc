@@ -41,7 +41,7 @@ public interface PersistentIrcObject {
     IPath getPath();
 
     default void load(IFile propsFile) throws IOException, CoreException {
-        propsFile.refreshLocal(IResource.DEPTH_ZERO, null);
+        //propsFile.refreshLocal(IResource.DEPTH_ZERO, null);
         try (Reader reader = new InputStreamReader(propsFile.getContents(), "utf-8")) {
             Properties props = new Properties();
             props.load(reader);

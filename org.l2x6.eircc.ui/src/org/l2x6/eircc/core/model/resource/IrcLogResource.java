@@ -100,7 +100,7 @@ public class IrcLogResource implements ISynchronizable {
                 IProgressMonitor monitor = new NullProgressMonitor();
                 IrcUtils.mkdirs(logFile.getParent(), monitor);
                 logFile.create(new ByteArrayInputStream(new byte[0]), true, monitor);
-                logFile.refreshLocal(IResource.DEPTH_ONE, new SubProgressMonitor(monitor, 1));
+                //logFile.refreshLocal(IResource.DEPTH_ONE, new SubProgressMonitor(monitor, 1));
             }
             IDocumentProvider documentProvider = channelResource.getAccountResource().getRootResource()
                     .getDocumentProvider();

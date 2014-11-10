@@ -229,7 +229,7 @@ public class IrcChannelResource {
      */
     public void refresh() throws IrcResourceException {
         try {
-            logsFolder.refreshLocal(IResource.DEPTH_INFINITE, new NullProgressMonitor());
+            //logsFolder.refreshLocal(IResource.DEPTH_INFINITE, new NullProgressMonitor());
 
             for (Iterator<IrcLogResource> it = logResources.values().iterator(); it.hasNext();) {
                 IrcLogResource log = it.next();
