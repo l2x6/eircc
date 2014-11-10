@@ -156,6 +156,7 @@ public class EirccUi extends AbstractUIPlugin implements IrcModelEventListener {
                     IrcController controller = EirccUi.getController();
                     for (AbstractIrcChannel ch : account.getChannels()) {
                         if (ch.isAutoJoin() && !ch.isJoined()) {
+                            System.out.println("About to join "+ ch.getName());
                             controller.joinChannel(ch);
                         }
                     }
@@ -168,6 +169,7 @@ public class EirccUi extends AbstractUIPlugin implements IrcModelEventListener {
             try {
                 AbstractIrcChannel ch = (AbstractIrcChannel) e.getModelObject();
                 if (ch.isJoined()) {
+                    System.out.println("About to open editor for "+ ch.getName());
                     openEditor(ch);
                 }
             } catch (Exception e1) {
@@ -312,6 +314,7 @@ public class EirccUi extends AbstractUIPlugin implements IrcModelEventListener {
         for (IrcAccount account : model.getAccounts()) {
             if (account.isAutoConnect()) {
                 try {
+                    System.out.println("About to connect "+ account.getName());
                     controller.connect(account);
                 } catch (Exception e) {
                     EirccUi.log(e);

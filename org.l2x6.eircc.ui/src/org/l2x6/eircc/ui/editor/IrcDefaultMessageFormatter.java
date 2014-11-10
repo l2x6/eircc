@@ -135,8 +135,9 @@ public class IrcDefaultMessageFormatter {
         // append(target, user.getNick() + suffix,
         // preferences.getMessageTimeStyle());
 
-        if (message.getNick() != null) {
-            String nickToken = message.getNick() + suffix;
+        String nick = message.getNick();
+        if (nick != null) {
+            String nickToken = nick + suffix;
             int index = message.getUserColorIndex();
             target.append(nickToken, preferences.getUserStyle(index, message.isMeNamed()));
         }

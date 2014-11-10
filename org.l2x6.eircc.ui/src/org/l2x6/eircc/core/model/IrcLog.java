@@ -202,6 +202,7 @@ public class IrcLog extends IrcObject implements Iterable<IrcMessage> {
         synchronized (lock) {
             loading = true;
             IFileEditorInput editorInput = logResource.getEditorInput();
+            System.out.println("loading "+ editorInput.getFile());
             IrcLogReader reader = null;
             try {
                 IDocument document = logResource.getDocument();

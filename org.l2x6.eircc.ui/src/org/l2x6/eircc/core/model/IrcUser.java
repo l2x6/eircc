@@ -14,7 +14,6 @@ import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.ListIterator;
-import java.util.Properties;
 import java.util.StringTokenizer;
 import java.util.UUID;
 

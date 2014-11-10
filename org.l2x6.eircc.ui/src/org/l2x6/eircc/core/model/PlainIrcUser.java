@@ -23,7 +23,7 @@ public class PlainIrcUser implements IrcUserBase {
             return null;
         }
 
-        int nickEnd = input.indexOf(0, '!');
+        int nickEnd = input.indexOf('!');
         if (nickEnd < 0) {
             /* For backwards compatibility reasons */
             return new PlainIrcUser(input, input, "unknown");
@@ -31,14 +31,14 @@ public class PlainIrcUser implements IrcUserBase {
 
         String nick = input.subSequence(0, nickEnd).toString();
 
-        int usernameEnd = input.indexOf(nickEnd+1, '@');
+        int usernameEnd = input.indexOf('@', nickEnd+1);
         if (usernameEnd < 0) {
             throw new IrcLogReaderException("Could not parse '+ input +'");
         }
         String username = input.subSequence(nickEnd+ 1, usernameEnd).toString();
         String host = input.subSequence(usernameEnd + 1, input.length()).toString();
 
-        return new PlainIrcUser(host, nick, username);
+        return new PlainIrcUser(nick, username, host);
     }
     private final String host;
     private final String nick;
