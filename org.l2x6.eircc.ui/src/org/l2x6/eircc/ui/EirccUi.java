@@ -171,6 +171,7 @@ public class EirccUi extends AbstractUIPlugin implements IrcModelEventListener {
                 if (ch.isJoined()) {
                     System.out.println("About to open editor for "+ ch.getName());
                     openEditor(ch);
+                    System.out.println("Opened editor for "+ ch.getName());
                 }
             } catch (Exception e1) {
                 log(e1);

@@ -263,7 +263,7 @@ public class IrcPreferences implements IrcNotificationLevelProvider {
      * @return
      */
     public IrcNotificationLevel getNotificationLevel(IrcMessage m) {
-        if (m.isMeNamed() && m.getLog().getNotificationLevel() == IrcNotificationLevel.ME_NAMED && shouldPlaySoundOnNamingMe()) {
+        if (m.isMeNamed() && shouldPlaySoundOnNamingMe()) {
             return IrcNotificationLevel.ME_NAMED;
         } else if (!m.isFromMe() && m.getSender() != null && shouldPlaySoundOnMessageFromNick(m.getSender().getNick())) {
             return IrcNotificationLevel.UNREAD_MESSAGES_FROM_A_TRACKED_USER;

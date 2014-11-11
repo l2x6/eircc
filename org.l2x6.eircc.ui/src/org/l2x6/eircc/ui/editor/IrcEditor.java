@@ -57,8 +57,12 @@ import org.l2x6.eircc.core.util.IrcLogReader.IrcLogReaderException;
 import org.l2x6.eircc.core.util.IrcUtils;
 import org.l2x6.eircc.ui.EirccUi;
 import org.l2x6.eircc.ui.IrcUiMessages;
+import org.l2x6.eircc.ui.editor.IrcDefaultMessageFormatter.TimeStyle;
 import org.l2x6.eircc.ui.misc.IrcImages;
+import org.l2x6.eircc.ui.misc.StyledWrapper;
 import org.l2x6.eircc.ui.misc.IrcImages.ImageKey;
+import org.l2x6.eircc.ui.misc.StyledWrapper.StylesCollector;
+import org.l2x6.eircc.ui.misc.StyledWrapper.TextViewerWrapper;
 import org.l2x6.eircc.ui.prefs.IrcPreferences;
 import org.l2x6.eircc.ui.search.IrcMatch;
 import org.l2x6.eircc.ui.views.IrcLabelProvider;
@@ -348,7 +352,7 @@ public class IrcEditor extends AbstractIrcEditor implements IrcModelEventListene
         case NEW_MESSAGE:
             IrcMessage m = (IrcMessage) e.getModelObject();
             if (m.getLog().getChannel() == getChannel()) {
-                logViewer.appendMessage(m);
+                appendMessage(new TextViewerWrapper(logViewer), m);
                 logViewer.scrollToBottom();
                 updateReadMessages();
             }
@@ -435,10 +439,12 @@ public class IrcEditor extends AbstractIrcEditor implements IrcModelEventListene
             IrcLog log = ch.findLog(logResource);
             if (log != null) {
                 Iterator<? extends PlainIrcMessage> it = log.iterator();
+                StylesCollector collector = new StylesCollector(logViewer);
                 while (it.hasNext()) {
                     PlainIrcMessage m = it.next();
-                    appenMessage(m);
+                    appendMessage(collector, m);
                 }
+                collector.apply();
                 logResources.add(logResource);
                 return;
             }
@@ -448,17 +454,19 @@ public class IrcEditor extends AbstractIrcEditor implements IrcModelEventListene
         Object lock = logResource.getLockObject();
         synchronized (lock) {
             IrcLogReader reader = null;
+            StylesCollector collector = new StylesCollector(logViewer);
             try {
                 IDocument document = logResource.getDocument();
                 reader = new IrcLogReader(document, logResource.getLogFile().toString(), logResource.getChannelResource()
                         .isP2p());
                 while (reader.hasNext()) {
                     PlainIrcMessage m = reader.next();
-                    appenMessage(m);
+                    appendMessage(collector, m);
                 }
             } catch (IrcLogReaderException e) {
                 EirccUi.log(e);
             } finally {
+                collector.apply();
                 if (reader != null) {
                     reader.close();
                 }
@@ -470,8 +478,10 @@ public class IrcEditor extends AbstractIrcEditor implements IrcModelEventListene
     /**
      * @param m
      */
-    private void appenMessage(PlainIrcMessage m) {
-        logViewer.appendMessage(m);
+    private void appendMessage(StyledWrapper wrapper, PlainIrcMessage m) {
+        IrcPreferences prefs = IrcPreferences.getInstance();
+        IrcDefaultMessageFormatter formatter = prefs.getFormatter(m);
+        formatter.format(wrapper, m, TimeStyle.TIME);
         lastMessageTime = m.getArrivedAt();
     }
 

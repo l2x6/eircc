@@ -8,6 +8,9 @@
 
 package org.l2x6.eircc.ui.misc;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.IDocument;
 import org.eclipse.jface.text.TextViewer;
@@ -62,6 +65,67 @@ public interface StyledWrapper {
         }
     }
 
+    public static class StylesCollector implements StyledWrapper {
+        private final TextViewer target;
+        private final int intialLength;
+        private final StringBuilder buffer;
+        private final List<StyleRange> ranges;
+
+        /**
+         * @param target
+         */
+        public StylesCollector(TextViewer target) {
+            super();
+            this.target = target;
+            IDocument doc = target.getDocument();
+            this.intialLength = doc != null ? doc.getLength() : 0;
+            this.buffer = new StringBuilder();
+            this.ranges = new ArrayList<StyleRange>();
+        }
+
+        /**
+         * @see org.l2x6.eircc.ui.misc.StyledWrapper#append(java.lang.String)
+         */
+        @Override
+        public int append(String token) {
+            int offset = getLength();
+            buffer.append(token);
+            return offset;
+        }
+
+        /**
+         * @see org.l2x6.eircc.ui.misc.StyledWrapper#append(java.lang.String,
+         *      org.l2x6.eircc.ui.misc.ExtendedTextStyle)
+         */
+        @Override
+        public void append(String token, ExtendedTextStyle style) {
+            if (token != null && token.length() > 0) {
+                int offset = append(token);
+                StyleRange range = style.createRange(offset, token.length());
+                ranges.add(range);
+            }
+        }
+
+        /**
+         * @see org.l2x6.eircc.ui.misc.StyledWrapper#getLength()
+         */
+        @Override
+        public int getLength() {
+            return intialLength + buffer.length();
+        }
+
+        public void apply() {
+            IDocument doc = target.getDocument();
+            int offset = doc.getLength();
+            try {
+                doc.replace(offset, 0, buffer.toString());
+            } catch (BadLocationException e) {
+                throw new RuntimeException(e);
+            }
+            StyleRange[] styles = ranges.toArray(new StyleRange[ranges.size()]);
+            target.getTextWidget().replaceStyleRanges(offset, buffer.length(), styles);
+        }
+    }
     public static class TextViewerWrapper implements StyledWrapper {
         private final TextViewer target;
 

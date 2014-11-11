@@ -155,7 +155,7 @@ public class IrcDefaultMessageFormatter {
         return result;
     }
 
-    protected void format(StyledWrapper wrapper, PlainIrcMessage message, TimeStyle timeStyle) {
+    public void format(StyledWrapper wrapper, PlainIrcMessage message, TimeStyle timeStyle) {
         ensureInitialNewline(wrapper, message);
         appendTime(wrapper, message, timeStyle);
 
