@@ -434,6 +434,8 @@ public class IrcEditor extends AbstractIrcEditor implements IrcModelEventListene
             logViewer.addHorizontalLine();
         }
 
+        System.out.println("loading "+ logResource.getLogFile() + " in "+ getEditorInput());
+
         AbstractIrcChannel ch = getChannel();
         if (ch != null) {
             IrcLog log = ch.findLog(logResource);

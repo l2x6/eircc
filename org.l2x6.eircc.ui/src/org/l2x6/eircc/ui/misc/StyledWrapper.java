@@ -70,6 +70,7 @@ public interface StyledWrapper {
         private final int intialLength;
         private final StringBuilder buffer;
         private final List<StyleRange> ranges;
+        private long timer = System.currentTimeMillis();
 
         /**
          * @param target
@@ -117,13 +118,19 @@ public interface StyledWrapper {
         public void apply() {
             IDocument doc = target.getDocument();
             int offset = doc.getLength();
+            System.out.println("reading "+ (System.currentTimeMillis() - timer));
+            timer = System.currentTimeMillis();
             try {
                 doc.replace(offset, 0, buffer.toString());
             } catch (BadLocationException e) {
                 throw new RuntimeException(e);
             }
+            System.out.println("text "+ (System.currentTimeMillis() - timer));
+            timer = System.currentTimeMillis();
             StyleRange[] styles = ranges.toArray(new StyleRange[ranges.size()]);
             target.getTextWidget().replaceStyleRanges(offset, buffer.length(), styles);
+            System.out.println("ranges "+ (System.currentTimeMillis() - timer));
+            timer = System.currentTimeMillis();
         }
     }
     public static class TextViewerWrapper implements StyledWrapper {
