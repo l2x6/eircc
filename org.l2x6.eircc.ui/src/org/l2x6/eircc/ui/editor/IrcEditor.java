@@ -21,11 +21,13 @@ import java.util.SortedMap;
 
 import org.eclipse.core.resources.IFile;
 import org.eclipse.core.runtime.CoreException;
+import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.Document;
 import org.eclipse.jface.text.IDocument;
 import org.eclipse.jface.text.TextViewer;
+import org.eclipse.jface.text.TextViewerUndoManager;
 import org.eclipse.jface.text.contentassist.ContentAssistant;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.SashForm;
@@ -59,8 +61,8 @@ import org.l2x6.eircc.ui.EirccUi;
 import org.l2x6.eircc.ui.IrcUiMessages;
 import org.l2x6.eircc.ui.editor.IrcDefaultMessageFormatter.TimeStyle;
 import org.l2x6.eircc.ui.misc.IrcImages;
-import org.l2x6.eircc.ui.misc.StyledWrapper;
 import org.l2x6.eircc.ui.misc.IrcImages.ImageKey;
+import org.l2x6.eircc.ui.misc.StyledWrapper;
 import org.l2x6.eircc.ui.misc.StyledWrapper.StylesCollector;
 import org.l2x6.eircc.ui.misc.StyledWrapper.TextViewerWrapper;
 import org.l2x6.eircc.ui.prefs.IrcPreferences;
@@ -71,6 +73,26 @@ import org.l2x6.eircc.ui.views.IrcLabelProvider;
  * @author <a href="mailto:ppalaga@redhat.com">Peter Palaga</a>
  */
 public class IrcEditor extends AbstractIrcEditor implements IrcModelEventListener {
+
+    private static class IrcLogEntry {
+        /**
+         * @param logResource
+         * @param start
+         */
+        public IrcLogEntry(IrcLogResource logResource, int lineIndex) {
+            super();
+            this.logResource = logResource;
+            this.lineIndex = lineIndex;
+        }
+        private final IrcLogResource logResource;
+        public IrcLogResource getLogResource() {
+            return logResource;
+        }
+        public int getLineIndex() {
+            return lineIndex;
+        }
+        private final int lineIndex;
+    }
 
     public static final String ID = "org.l2x6.eircc.ui.editor.IrcEditor";
     private static final DateTimeFormatter TITLE_DATE_FORMATTER = new DateTimeFormatterBuilder()
@@ -116,7 +138,7 @@ public class IrcEditor extends AbstractIrcEditor implements IrcModelEventListene
         }
     };
     private OffsetDateTime lastMessageTime;
-    private List<IrcLogResource> logResources = new ArrayList<IrcLogResource>();
+    private List<IrcLogEntry> logResources = new ArrayList<IrcLogEntry>();
     private IrcChannelOutlinePage outlinePage;
     private IPartListener2 readMessagesUpdater = new IPartListener2() {
 
@@ -300,7 +322,7 @@ public class IrcEditor extends AbstractIrcEditor implements IrcModelEventListene
         if (logResources.isEmpty()) {
             return null;
         } else {
-            return logResources.get(0);
+            return logResources.get(0).getLogResource();
         }
     }
 
@@ -308,7 +330,7 @@ public class IrcEditor extends AbstractIrcEditor implements IrcModelEventListene
         if (logResources.isEmpty()) {
             return null;
         } else {
-            return logResources.get(logResources.size() - 1);
+            return logResources.get(logResources.size() - 1).getLogResource();
         }
     }
 
@@ -377,7 +399,7 @@ public class IrcEditor extends AbstractIrcEditor implements IrcModelEventListene
             try {
                 IrcLogResource logResource = model.getRootResource().getLogResource(logFile);
                 lastMessageTime = logResource.getTime();
-                logResources.add(logResource);
+                addLogResource(logResource);
                 updateMode();
                 if (isHistoryViewer()) {
                     EirccUi.getDefault().getModel().removeModelEventListener(this);
@@ -424,6 +446,25 @@ public class IrcEditor extends AbstractIrcEditor implements IrcModelEventListene
         return false;
     }
 
+    private void addLogResource(IrcLogResource logResource) {
+        int lineIndex = 0;
+        if (!logResources.isEmpty()) {
+
+            if (logViewer != null) {
+                IDocument doc = logViewer.getDocument();
+                if (doc != null) {
+                    try {
+                        lineIndex = doc.getLineOfOffset(doc.getLength());
+                    } catch (BadLocationException e) {
+                        throw new RuntimeException(e);
+                    }
+                }
+            }
+        }
+        IrcLogEntry entry = new IrcLogEntry(logResource, lineIndex);
+        logResources.add(entry);
+    }
+
     /**
      * @param logResource
      * @throws CoreException
@@ -447,7 +488,7 @@ public class IrcEditor extends AbstractIrcEditor implements IrcModelEventListene
                     appendMessage(collector, m);
                 }
                 collector.apply();
-                logResources.add(logResource);
+                addLogResource(logResource);
                 return;
             }
         }
@@ -474,7 +515,7 @@ public class IrcEditor extends AbstractIrcEditor implements IrcModelEventListene
                 }
             }
         }
-        logResources.add(logResource);
+        addLogResource(logResource);
     }
 
     /**
@@ -489,10 +530,10 @@ public class IrcEditor extends AbstractIrcEditor implements IrcModelEventListene
 
     private void reload() throws IOException, CoreException {
         logViewer.clear();
-        List<IrcLogResource> logResourcesCopy = new ArrayList<IrcLogResource>(logResources);
+        List<IrcLogEntry> logResourcesCopy = new ArrayList<IrcLogEntry>(logResources);
         logResources.clear();
-        for (IrcLogResource ircLogResource : logResourcesCopy) {
-            load(ircLogResource);
+        for (IrcLogEntry ircLogResource : logResourcesCopy) {
+            load(ircLogResource.getLogResource());
         }
 
         updateTitle();
@@ -503,16 +544,27 @@ public class IrcEditor extends AbstractIrcEditor implements IrcModelEventListene
      * @throws BadLocationException
      */
     public void reveal(IrcMatch ircMatch) throws BadLocationException {
+        IrcLogEntry entry = findEntry(ircMatch.getFile());
         PlainIrcMessage message = ircMatch.getMessageMatches().getMessage();
-        reveal(message, ircMatch.getOffsetInMessageText(), ircMatch.getLength());
+        reveal(entry, message, ircMatch.getOffsetInMessageText(), ircMatch.getLength());
     }
 
-    public void reveal(PlainIrcMessage message) throws BadLocationException {
-        reveal(message, 0, message.getText().length());
+    private IrcLogEntry findEntry(IFile logFile) {
+        for (IrcLogEntry entry : logResources) {
+            if (logFile.equals(entry.getLogResource().getLogFile())) {
+                return entry;
+            }
+        }
+        return null;
     }
 
-    public void reveal(PlainIrcMessage message, int offsetInMessageText, int length) throws BadLocationException {
-        int lineOffset = logViewer.getDocument().getLineOffset(message.getLineIndex());
+    public void reveal(IrcMessage message) throws BadLocationException {
+        IrcLogEntry entry = findEntry(message.getLog().getLogResource().getLogFile());
+        reveal(entry, message, 0, message.getText().length());
+    }
+
+    private void reveal(IrcLogEntry entry, PlainIrcMessage message, int offsetInMessageText, int length) throws BadLocationException {
+        int lineOffset = logViewer.getDocument().getLineOffset(entry.getLineIndex() + message.getLineIndex());
         String nick = message.getNick();
         int nickLength = nick != null ? nick.length() + 2 : 0;
         int relativeTextOfset = IrcDefaultMessageFormatter.TimeStyle.TIME.getCharacterLength() + 1 + nickLength
