@@ -80,7 +80,7 @@ public class IrcUtils {
      * command name followed in {@link IRCCommand}.
      *
      * @param message
-     * @return the {@link IRCCommand} or {@code null}
+     * @return a command string without the initial {@code '/'} or {@code null}
      */
     public static String getInitialCommand(String message) {
         if (message.length() > 2 && message.charAt(0) == IrcConstants.COMMAND_MARKER) {
@@ -92,7 +92,7 @@ public class IrcUtils {
     }
 
     /**
-     * Call only after {@link #getInitialCommand(String)}.
+     * Call only after you have ensured that {@link #getInitialCommand(String)} returns a valid command.
      *
      * @param message
      * @return
@@ -107,7 +107,7 @@ public class IrcUtils {
             /* no idea how */
             return null;
         } else {
-            /* hopefully unix-like */
+            /* hopefully a unix-like OS */
             String result = exec("/bin/sh", "-c", "getent passwd $(whoami) | cut -d ':' -f 5 | cut -d ',' -f 1");
             return result == null ? null : result.trim();
         }
@@ -151,7 +151,10 @@ public class IrcUtils {
     }
 
     /**
-     * @return
+     * Returns a message in a format suitable for presenting in a chat log. If
+     * ctcpCommand is {@code null} returns {@code msg}.
+     *
+     * @return a formatted message
      */
     public static String formatCtcpMessage(String nick, CTCPCommand ctcpCommand, String msg) {
         if (ctcpCommand == null) {
