@@ -21,18 +21,11 @@ import java.util.SortedMap;
 
 import org.eclipse.core.resources.IFile;
 import org.eclipse.core.runtime.CoreException;
-import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.jface.text.BadLocationException;
-import org.eclipse.jface.text.Document;
 import org.eclipse.jface.text.IDocument;
-import org.eclipse.jface.text.TextViewer;
-import org.eclipse.jface.text.TextViewerUndoManager;
-import org.eclipse.jface.text.contentassist.ContentAssistant;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.SashForm;
-import org.eclipse.swt.custom.VerifyKeyListener;
-import org.eclipse.swt.events.VerifyEvent;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.ui.IEditorInput;
@@ -42,7 +35,6 @@ import org.eclipse.ui.IPartListener2;
 import org.eclipse.ui.IWorkbenchPartReference;
 import org.eclipse.ui.PartInitException;
 import org.eclipse.ui.views.contentoutline.IContentOutlinePage;
-import org.l2x6.eircc.core.IrcException;
 import org.l2x6.eircc.core.model.AbstractIrcChannel;
 import org.l2x6.eircc.core.model.IrcLog;
 import org.l2x6.eircc.core.model.IrcMessage;
@@ -101,42 +93,10 @@ public class IrcEditor extends AbstractIrcEditor implements IrcModelEventListene
     private SashForm accountsDetailsSplitter;
     private AbstractIrcChannel channel;
 
-    private ContentAssistant contentAssistant;
 
     private boolean historyViewer = true;
-    private TextViewer inputViewer;
-    private VerifyKeyListener inputWidgetListenet = new VerifyKeyListener() {
+    private IrcInputField inputViewer;
 
-        @Override
-        public void verifyKey(VerifyEvent e) {
-            switch (e.keyCode) {
-            case SWT.CR:
-            case SWT.LF:
-            case SWT.KEYPAD_CR:
-                if (e.stateMask == 0) {
-                    try {
-                        sendMessage();
-                        e.doit = false;
-                    } catch (Exception e1) {
-                        EirccUi.log(e1);
-                    }
-                }
-                break;
-            case SWT.SPACE:
-                if ((e.stateMask & SWT.CTRL) == SWT.CTRL) {
-                    try {
-                        contentAssistant.showPossibleCompletions();
-                    } catch (Exception e1) {
-                        EirccUi.log(e1);
-                    }
-                }
-                break;
-            default:
-                break;
-            }
-
-        }
-    };
     private OffsetDateTime lastMessageTime;
     private List<IrcLogEntry> logResources = new ArrayList<IrcLogEntry>();
     private IrcChannelOutlinePage outlinePage;
@@ -235,17 +195,7 @@ public class IrcEditor extends AbstractIrcEditor implements IrcModelEventListene
 
             super.createPartControl(accountsDetailsSplitter);
 
-            inputViewer = new TextViewer(accountsDetailsSplitter, SWT.MULTI | SWT.WRAP | SWT.H_SCROLL | SWT.V_SCROLL);
-            inputViewer.setDocument(new Document());
-            inputViewer.appendVerifyKeyListener(inputWidgetListenet);
-
-            contentAssistant = new ContentAssistant();
-            contentAssistant.setContentAssistProcessor(new IrcContentAssistProcessor(this),
-                    IDocument.DEFAULT_CONTENT_TYPE);
-            IrcPreferences prefs = IrcPreferences.getInstance();
-            contentAssistant.enablePrefixCompletion(prefs.getEditorAutoPrefixCompletion());
-            contentAssistant.enableAutoInsert(prefs.getEditorAutoInsert());
-            contentAssistant.install(inputViewer);
+            inputViewer = new IrcInputField(accountsDetailsSplitter, this);
 
             adjustUi();
             reload();
@@ -608,36 +558,14 @@ public class IrcEditor extends AbstractIrcEditor implements IrcModelEventListene
         }
     }
 
-    private void sendMessage() throws IrcException {
-        String text = inputViewer.getDocument().get();
-        if (text.length() > 0) {
-            /* remove the trailing whitespace */
-            int end = text.length() - 1;
-            for (; end >= 0; end--) {
-                if (!Character.isWhitespace(text.charAt(end))) {
-                    break;
-                }
-            }
-            end++;
-
-            if (end < text.length()) {
-                text = text.substring(0, end);
-            }
-            if (text.length() > 0) {
-                AbstractIrcChannel channel = getChannel();
-                EirccUi.getController().postMessage(channel, text);
-                inputViewer.getDocument().set("");
-            }
-        }
-    }
 
     /**
      * @see org.eclipse.ui.part.WorkbenchPart#setFocus()
      */
     @Override
     public void setFocus() {
-        if (inputViewer != null && inputViewer.getControl().isVisible()) {
-            inputViewer.getControl().setFocus();
+        if (inputViewer != null && inputViewer.isVisible()) {
+            inputViewer.setFocus();
         } else {
             super.setFocus();
         }
