@@ -29,6 +29,7 @@ import org.l2x6.eircc.core.model.PlainIrcChannel;
 import org.l2x6.eircc.core.model.resource.IrcResourceException;
 import org.l2x6.eircc.core.util.IrcUtils;
 import org.l2x6.eircc.ui.EirccUi;
+import org.schwering.irc.lib.CTCPCommand;
 import org.schwering.irc.lib.IRCCommand;
 
 /**
@@ -223,9 +224,16 @@ public class IrcController {
         IrcUtils.assertUiThread();
         IrcClient client = getClientOrConnect(channel.getAccount());
 
-        IRCCommand cmd = IrcUtils.getInitialCommand(text);
-        if (cmd != null) {
-            client.postRaw(IrcUtils.getRawCommand(text));
+        String initialCommand = IrcUtils.getInitialCommand(text);
+        if (initialCommand != null) {
+            CTCPCommand ctcpCommand;
+            if (IRCCommand.fastValueOf(initialCommand) != null) {
+                client.postRaw(IrcUtils.getRawCommand(text));
+            } else if ((ctcpCommand = CTCPCommand.fastValueOf(initialCommand)) != null) {
+                client.postCtcpMessage(channel, ctcpCommand, text.substring(initialCommand.length() +2).trim());
+            } else {
+                throw new IrcException("Unsupported command '"+ initialCommand +"'", channel);
+            }
         } else {
             client.postMessage(channel, text);
         }

@@ -478,18 +478,8 @@ public class IrcClient {
                 @Override
                 public void run() {
                     try {
-                        String useMsg = msg;
                         CTCPCommand ctcpCommand = IrcUtils.getCtcpCommand(msg);
-                        if (ctcpCommand != null) {
-                            switch (ctcpCommand) {
-                            case ACTION:
-                                useMsg = "*** " + user.getNick() + " "
-                                        + msg.substring(ctcpCommand.name().length()).trim();
-                                break;
-                            default:
-                                break;
-                            }
-                        }
+                        String logMessage = IrcUtils.formatCtcpMessage(user.getNick(), ctcpCommand, msg);
                         final boolean isP2p = target.equals(account.getAcceptedNick());
                         IrcUser ircUser = controller.getOrCreateUser(account.getServer(), user.getNick(),
                                 user.getUsername(), user.getHost());
@@ -501,7 +491,7 @@ public class IrcClient {
                         }
                         channel.setJoined(true);
                         IrcLog log = channel.getLog();
-                        IrcMessage message = new IrcMessage(log, OffsetDateTime.now(), ircUser, useMsg,
+                        IrcMessage message = new IrcMessage(log, OffsetDateTime.now(), ircUser, logMessage,
                                 channel.isP2p(), IrcMessageType.CHAT);
                         log.appendMessage(message);
                     } catch (IrcResourceException e) {
@@ -813,17 +803,22 @@ public class IrcClient {
         });
     }
 
-    /**
-     * @throws IOException
-     *
-     */
-    public void postMessage(final AbstractIrcChannel channel, final String message) throws IrcException {
+    public void postCtcpMessage(final AbstractIrcChannel channel, final CTCPCommand ctcpCommand, final String message) throws IrcException {
+        final String protocolMessage = "" + CTCPCommand.QUOTE_CHAR + ctcpCommand.name() + " "+ message + CTCPCommand.QUOTE_CHAR;
+        final String logMessage = IrcUtils.formatCtcpMessage(channel.getAccount().getAcceptedNick(), ctcpCommand, protocolMessage);
+        postMessage(channel, protocolMessage, logMessage);
+    }
+
+    public void postMessage(final AbstractIrcChannel channel, final String protocolMessage) throws IrcException {
+        postMessage(channel, protocolMessage, protocolMessage);
+    }
+    private void postMessage(final AbstractIrcChannel channel, final String protocolMessage, String logMessage) throws IrcException {
         submit(new Runnable() {
             @Override
             public void run() {
                 try {
                     ensureConnected();
-                    connection.doPrivmsg(channel.getName(), message);
+                    connection.doPrivmsg(channel.getName(), protocolMessage);
                     /*
                      * post back to model only after the above has not thrown an
                      * exception
@@ -832,7 +827,7 @@ public class IrcClient {
                         @Override
                         public void run() {
                             IrcMessage m = new IrcMessage(channel.getLog(), OffsetDateTime.now(), account.getMe(),
-                                    message, channel.isP2p(), IrcMessageType.CHAT);
+                                    logMessage, channel.isP2p(), IrcMessageType.CHAT);
                             channel.getLog().appendMessage(m);
                         }
                     });

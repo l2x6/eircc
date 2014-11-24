@@ -82,11 +82,11 @@ public class IrcUtils {
      * @param message
      * @return the {@link IRCCommand} or {@code null}
      */
-    public static IRCCommand getInitialCommand(String message) {
+    public static String getInitialCommand(String message) {
         if (message.length() > 2 && message.charAt(0) == IrcConstants.COMMAND_MARKER) {
             String firstToken = new StringTokenizer(message, " \t\n\r").nextToken();
             firstToken = firstToken.substring(1);
-            return IRCCommand.fastValueOf(firstToken.toUpperCase(Locale.ENGLISH));
+            return firstToken.toUpperCase(Locale.ENGLISH);
         }
         return null;
     }
@@ -147,6 +147,21 @@ public class IrcUtils {
             return Class.forName("java.lang." + Character.toUpperCase(name.charAt(0)) + name.substring(1));
         } catch (ClassNotFoundException e) {
             throw new RuntimeException(e);
+        }
+    }
+
+    /**
+     * @return
+     */
+    public static String formatCtcpMessage(String nick, CTCPCommand ctcpCommand, String msg) {
+        if (ctcpCommand == null) {
+            return msg;
+        }
+        switch (ctcpCommand) {
+        case ACTION:
+            return "*** " + nick + " " + msg.trim().substring(ctcpCommand.name().length());
+        default:
+            return msg;
         }
     }
 }
