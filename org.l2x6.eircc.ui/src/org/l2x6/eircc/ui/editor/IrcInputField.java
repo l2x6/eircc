@@ -50,7 +50,7 @@ import org.l2x6.eircc.ui.prefs.IrcPreferences;
 /**
  * @author <a href="mailto:ppalaga@redhat.com">Peter Palaga</a>
  */
-public class IrcInputField implements FocusListener, DisposeListener {
+public class IrcInputField implements VerifyKeyListener, FocusListener, DisposeListener {
 
     private static class PriorizeExpression extends Expression {
 
@@ -68,50 +68,21 @@ public class IrcInputField implements FocusListener, DisposeListener {
         }
 
         @Override
-        public EvaluationResult evaluate(IEvaluationContext context)
-                throws CoreException {
+        public EvaluationResult evaluate(IEvaluationContext context) throws CoreException {
             if (Display.getCurrent() != null && focusControl.isFocusControl()) {
                 return EvaluationResult.TRUE;
             }
             return EvaluationResult.FALSE;
         }
     }
+
     private ContentAssistant contentAssistant;
     private final IrcEditor editor;
     private final List<IHandlerActivation> handlerActivations = new ArrayList<IHandlerActivation>();
+
     private final IHandlerService handlerService;
-    private VerifyKeyListener inputWidgetListener = new VerifyKeyListener() {
 
-        @Override
-        public void verifyKey(VerifyEvent e) {
-            switch (e.keyCode) {
-            case SWT.CR:
-            case SWT.LF:
-            case SWT.KEYPAD_CR:
-                if (e.stateMask == 0) {
-                    try {
-                        sendMessage();
-                        e.doit = false;
-                    } catch (Exception e1) {
-                        EirccUi.log(e1);
-                    }
-                }
-                break;
-            case SWT.SPACE:
-                if ((e.stateMask & SWT.CTRL) == SWT.CTRL) {
-                    try {
-                        contentAssistant.showPossibleCompletions();
-                    } catch (Exception e1) {
-                        EirccUi.log(e1);
-                    }
-                }
-                break;
-            default:
-                break;
-            }
-
-        }
-    };
+    private final IrcInputFieldHistoryScroller historyScroller;
 
     private final PriorizeExpression priorizeExpression;
     private final TextViewer textViewer;
@@ -123,7 +94,7 @@ public class IrcInputField implements FocusListener, DisposeListener {
         this.editor = editor;
         this.textViewer = new TextViewer(parent, SWT.MULTI | SWT.WRAP | SWT.H_SCROLL | SWT.V_SCROLL);
         textViewer.setDocument(new Document());
-        textViewer.appendVerifyKeyListener(inputWidgetListener);
+        textViewer.appendVerifyKeyListener(this);
         textViewer.setUndoManager(new TextViewerUndoManager(25));
         textViewer.activatePlugins();
 
@@ -141,15 +112,14 @@ public class IrcInputField implements FocusListener, DisposeListener {
         textWidget.addFocusListener(this);
         textWidget.addDisposeListener(this);
 
-        IWorkbenchWindow window = PlatformUI.getWorkbench()
-                .getActiveWorkbenchWindow();
-        handlerService = (IHandlerService) window
-                .getService(IHandlerService.class);
+        IWorkbenchWindow window = PlatformUI.getWorkbench().getActiveWorkbenchWindow();
+        handlerService = (IHandlerService) window.getService(IHandlerService.class);
 
         if (textViewer.getTextWidget().isFocusControl()) {
             activateContext();
         }
 
+        historyScroller = new IrcInputFieldHistoryScroller(editor, this);
     }
 
     /**
@@ -170,12 +140,14 @@ public class IrcInputField implements FocusListener, DisposeListener {
      */
     protected void activateHandler(int operation, String commandId) {
         IHandler actionHandler = createActionHandler(operation, commandId);
-        IHandlerActivation handlerActivation = handlerService.activateHandler(commandId, actionHandler, priorizeExpression);
+        IHandlerActivation handlerActivation = handlerService.activateHandler(commandId, actionHandler,
+                priorizeExpression);
         handlerActivations.add(handlerActivation);
     }
 
     /**
-     * Create an {@link IHandler} that delegates the given {@code operation} to the text viewer.
+     * Create an {@link IHandler} that delegates the given {@code operation} to
+     * the text viewer.
      *
      * @param operation
      * @param actionDefinitionId
@@ -204,7 +176,7 @@ public class IrcInputField implements FocusListener, DisposeListener {
         }
     }
 
-   /**
+    /**
      * @see org.eclipse.swt.events.FocusListener#focusGained(org.eclipse.swt.events.FocusEvent)
      */
     @Override
@@ -219,7 +191,6 @@ public class IrcInputField implements FocusListener, DisposeListener {
     public void focusLost(FocusEvent e) {
         deactivateContext();
     }
-
     /**
      * @return
      */
@@ -257,11 +228,66 @@ public class IrcInputField implements FocusListener, DisposeListener {
         textViewer.getControl().setFocus();
     }
 
+    @Override
+    public void verifyKey(VerifyEvent e) {
+        switch (e.keyCode) {
+        case SWT.CR:
+        case SWT.LF:
+        case SWT.KEYPAD_CR:
+            if (e.stateMask == 0) {
+                try {
+                    historyScroller.reset();
+                    sendMessage();
+                    e.doit = false;
+                } catch (Exception e1) {
+                    EirccUi.log(e1);
+                }
+            }
+            break;
+        case SWT.SPACE:
+            if ((e.stateMask & SWT.CTRL) == SWT.CTRL) {
+                try {
+                    contentAssistant.showPossibleCompletions();
+                } catch (Exception e1) {
+                    EirccUi.log(e1);
+                }
+            }
+            break;
+        case SWT.ARROW_UP:
+        case SWT.ARROW_DOWN:
+            if ((e.stateMask & SWT.CTRL) == SWT.CTRL) {
+                try {
+                    historyScroller.scroll(e.keyCode == SWT.ARROW_DOWN ? 1 : -1);
+                } catch (Exception e1) {
+                    EirccUi.log(e1);
+                }
+            }
+            break;
+        default:
+            break;
+        }
+
+    }
+
     /**
      * @see org.eclipse.swt.events.DisposeListener#widgetDisposed(org.eclipse.swt.events.DisposeEvent)
      */
     @Override
     public void widgetDisposed(DisposeEvent e) {
         deactivateContext();
+    }
+
+    /**
+     * @return
+     */
+    public IDocument getDocument() {
+        return textViewer.getDocument();
+    }
+
+    /**
+     * @param length
+     */
+    public void setCaretOffset(int offset) {
+        textViewer.setSelectedRange(offset, 0);
     }
 }

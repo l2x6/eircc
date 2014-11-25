@@ -9,6 +9,7 @@
 package org.l2x6.eircc.ui.notify;
 
 import java.text.MessageFormat;
+import java.util.Locale;
 
 import org.l2x6.eircc.core.model.AbstractIrcChannel;
 import org.l2x6.eircc.core.model.IrcAccount;
@@ -19,6 +20,7 @@ import org.l2x6.eircc.core.model.event.IrcModelEvent;
 import org.l2x6.eircc.core.model.event.IrcModelEventListener;
 import org.l2x6.eircc.ui.EirccUi;
 import org.l2x6.eircc.ui.IrcUiMessages;
+import org.schwering.irc.lib.IRCCommand;
 
 /**
  * @author <a href="mailto:ppalaga@redhat.com">Peter Palaga</a>
@@ -119,8 +121,10 @@ public class IrcSystemMessagesGenerator implements IrcModelEventListener {
         IrcAccount account = user.getServer().getAccount();
         String text;
         String oldNick = user.getPreviousNick();
+        String rawInput = null;
         if (account.getMe() == user) {
             text = MessageFormat.format(IrcUiMessages.Message_You_are_known_as_x, user.getNick());
+            rawInput  = "/"+ IRCCommand.NICK.name().toLowerCase(Locale.ENGLISH)+ " "+ user.getNick();
         } else {
             text = MessageFormat.format(IrcUiMessages.Message_x_is_known_as_y, oldNick, user.getNick());
         }
@@ -128,7 +132,7 @@ public class IrcSystemMessagesGenerator implements IrcModelEventListener {
             if (channel.isJoined() && channel.isPresent(user.getPreviousNick())) {
                 channel.changeNick(oldNick, user.getNick());
                 IrcLog log = channel.getLog();
-                log.appendSystemMessage(text);
+                log.appendSystemMessage(text, rawInput);
             }
         }
     }

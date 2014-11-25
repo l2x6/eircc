@@ -230,7 +230,7 @@ public class IrcController {
             if (IRCCommand.fastValueOf(initialCommand) != null) {
                 client.postRaw(IrcUtils.getRawCommand(text));
             } else if ((ctcpCommand = CTCPCommand.fastValueOf(initialCommand)) != null) {
-                client.postCtcpMessage(channel, ctcpCommand, text.substring(initialCommand.length() +2).trim());
+                client.postCtcpMessage(channel, ctcpCommand, text.substring(initialCommand.length() +2).trim(), text);
             } else {
                 throw new IrcException("Unsupported command '"+ initialCommand +"'", channel);
             }

@@ -24,6 +24,7 @@ import org.l2x6.eircc.core.model.PlainIrcMessage.IrcMessageType;
 import org.l2x6.eircc.core.model.event.IrcModelEvent;
 import org.l2x6.eircc.core.model.event.IrcModelEvent.EventType;
 import org.l2x6.eircc.core.model.resource.IrcLogResource;
+import org.l2x6.eircc.core.util.BidiIterator;
 import org.l2x6.eircc.core.util.IrcLogReader;
 import org.l2x6.eircc.core.util.IrcLogReader.IrcLogReaderException;
 import org.l2x6.eircc.ui.EirccUi;
@@ -44,10 +45,12 @@ public class IrcLog extends IrcObject implements Iterable<IrcMessage> {
     private int lastSavedMessageIndex = IrcLog.NOTHING_SAVED;
     private int lineIndex = 0;
 
+    private boolean loading = false;
     private final IrcLogResource logResource;
-    private final List<IrcMessage> messages = new ArrayList<IrcMessage>();
 
+    private final List<IrcMessage> messages = new ArrayList<IrcMessage>();
     private IrcNotificationLevel notificationLevel = IrcNotificationLevel.NO_NOTIFICATION;
+
     /**
      * @param id
      * @param channel
@@ -77,6 +80,7 @@ public class IrcLog extends IrcObject implements Iterable<IrcMessage> {
     public void appendMessage(IrcMessage message) {
         appendMessage(message, true);
     }
+
     private void appendMessage(IrcMessage message, boolean fireEvent) {
         messages.add(message);
         if (message.getType() == IrcMessageType.CHAT && !message.isFromMe()) {
@@ -90,7 +94,16 @@ public class IrcLog extends IrcObject implements Iterable<IrcMessage> {
     }
 
     public void appendSystemMessage(String text) {
-        IrcMessage m = new IrcMessage(this, OffsetDateTime.now(), null, text, channel.isP2p(), IrcMessageType.SYSTEM);
+        appendSystemMessage(text, null);
+    }
+
+    /**
+     * @param text
+     * @param rawInput
+     */
+    public void appendSystemMessage(String text, String rawInput) {
+        IrcMessage m = new IrcMessage(this, OffsetDateTime.now(), null, text, getChannel().getAccount()
+                .getAcceptedNick(), channel.isP2p(), IrcMessageType.SYSTEM, rawInput);
         appendMessage(m);
     }
 
@@ -123,7 +136,8 @@ public class IrcLog extends IrcObject implements Iterable<IrcMessage> {
                     document.set("");
                 }
 
-                // boolean newFile = lastSavedMessageIndex < 0 || !path.exists();
+                // boolean newFile = lastSavedMessageIndex < 0 ||
+                // !path.exists();
                 /* append unsaved messages */
                 for (int i = lastSavedMessageIndex + 1; i < messages.size(); i++) {
                     PlainIrcMessage m = messages.get(i);
@@ -145,6 +159,32 @@ public class IrcLog extends IrcObject implements Iterable<IrcMessage> {
 
     int getCharLength() {
         return charLength;
+    }
+
+    public IrcMessage getHottestMessage() {
+        IrcMessage result = null;
+        boolean hasUnreadMessages = !messages.isEmpty() && lastReadIndex < lastChatMessageIndex;
+        if (hasUnreadMessages) {
+            ListIterator<IrcMessage> it = messages.listIterator(messages.size());
+            while (it.hasPrevious()) {
+                int i = it.previousIndex();
+                if (lastReadIndex >= i) {
+                    break;
+                }
+                IrcMessage m = it.previous();
+                if (m.getType() == IrcMessageType.CHAT) {
+                    IrcNotificationLevel level = m.getNotificationLevel();
+                    if (result == null || level.getLevel() > result.getNotificationLevel().getLevel()) {
+                        result = m;
+                        if (result.getNotificationLevel() == IrcNotificationLevel.ME_NAMED) {
+                            /* higher level is not possible */
+                            return m;
+                        }
+                    }
+                }
+            }
+        }
+        return result;
     }
 
     int getLineIndex() {
@@ -172,27 +212,16 @@ public class IrcLog extends IrcObject implements Iterable<IrcMessage> {
      */
     @Override
     public Iterator<IrcMessage> iterator() {
-        return new Iterator<IrcMessage>() {
-            private final Iterator<IrcMessage> delegate = messages.iterator();
-
-            @Override
-            public boolean hasNext() {
-                return delegate.hasNext();
-            }
-
-            @Override
-            public IrcMessage next() {
-                return delegate.next();
-            }
-
-            @Override
-            public void remove() {
-                throw new UnsupportedOperationException();
-            }
-        };
+        return listIterator();
     }
 
-    private boolean loading = false;
+    public BidiIterator<IrcMessage> listIterator() {
+        return new BidiIterator<IrcMessage>(messages.listIterator());
+    }
+
+    public BidiIterator<IrcMessage> listIterator(int index) {
+        return new BidiIterator<IrcMessage>(messages.listIterator(index));
+    }
 
     /**
      *
@@ -202,17 +231,17 @@ public class IrcLog extends IrcObject implements Iterable<IrcMessage> {
         synchronized (lock) {
             loading = true;
             IFileEditorInput editorInput = logResource.getEditorInput();
-            System.out.println("loading "+ editorInput.getFile());
+            System.out.println("loading " + editorInput.getFile());
             IrcLogReader reader = null;
             try {
                 IDocument document = logResource.getDocument();
                 if (document.getLength() > 0) {
-                        reader = new IrcLogReader(document, editorInput.getFile().toString(), logResource.getChannelResource()
-                                .isP2p());
-                        while (reader.hasNext()) {
-                            PlainIrcMessage message = reader.next();
-                            appendMessage(message.toIrcMessage(this), false);
-                        }
+                    reader = new IrcLogReader(document, editorInput.getFile().toString(), logResource
+                            .getChannelResource().isP2p());
+                    while (reader.hasNext()) {
+                        PlainIrcMessage message = reader.next();
+                        appendMessage(message.toIrcMessage(this), false);
+                    }
                 }
             } catch (IOException e) {
                 throw new RuntimeException(e);
@@ -243,35 +272,10 @@ public class IrcLog extends IrcObject implements Iterable<IrcMessage> {
 
     public void updateNotificationLevel() {
         IrcMessage hottestMessage = getHottestMessage();
-        IrcNotificationLevel newLevel = hottestMessage != null ? hottestMessage.getNotificationLevel() : IrcNotificationLevel.NO_NOTIFICATION;
+        IrcNotificationLevel newLevel = hottestMessage != null ? hottestMessage.getNotificationLevel()
+                : IrcNotificationLevel.NO_NOTIFICATION;
         setNotificationLevel(newLevel);
         return;
-    }
-
-    public IrcMessage getHottestMessage() {
-        IrcMessage result = null;
-        boolean hasUnreadMessages = !messages.isEmpty() && lastReadIndex < lastChatMessageIndex;
-        if (hasUnreadMessages) {
-            ListIterator<IrcMessage> it = messages.listIterator(messages.size());
-            while (it.hasPrevious()) {
-                int i = it.previousIndex();
-                if (lastReadIndex >= i) {
-                    break;
-                }
-                IrcMessage m = it.previous();
-                if (m.getType() == IrcMessageType.CHAT) {
-                    IrcNotificationLevel level = m.getNotificationLevel();
-                    if (result == null || level.getLevel() > result.getNotificationLevel().getLevel()) {
-                        result = m;
-                        if (result.getNotificationLevel() == IrcNotificationLevel.ME_NAMED) {
-                            /* higher level is not possible */
-                            return m;
-                        }
-                    }
-                }
-            }
-        }
-        return result;
     }
 
 }

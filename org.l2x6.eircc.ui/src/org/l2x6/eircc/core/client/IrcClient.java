@@ -803,16 +803,16 @@ public class IrcClient {
         });
     }
 
-    public void postCtcpMessage(final AbstractIrcChannel channel, final CTCPCommand ctcpCommand, final String message) throws IrcException {
+    public void postCtcpMessage(final AbstractIrcChannel channel, final CTCPCommand ctcpCommand, final String message, String rawInput) throws IrcException {
         final String protocolMessage = "" + CTCPCommand.QUOTE_CHAR + ctcpCommand.name() + " "+ message + CTCPCommand.QUOTE_CHAR;
         final String logMessage = IrcUtils.formatCtcpMessage(channel.getAccount().getAcceptedNick(), ctcpCommand, protocolMessage);
-        postMessage(channel, protocolMessage, logMessage);
+        postMessage(channel, protocolMessage, logMessage, rawInput);
     }
 
     public void postMessage(final AbstractIrcChannel channel, final String protocolMessage) throws IrcException {
-        postMessage(channel, protocolMessage, protocolMessage);
+        postMessage(channel, protocolMessage, protocolMessage, null);
     }
-    private void postMessage(final AbstractIrcChannel channel, final String protocolMessage, String logMessage) throws IrcException {
+    private void postMessage(final AbstractIrcChannel channel, final String protocolMessage, String logMessage, final String rawInput) throws IrcException {
         submit(new Runnable() {
             @Override
             public void run() {
@@ -826,8 +826,9 @@ public class IrcClient {
                     Display.getDefault().asyncExec(new Runnable() {
                         @Override
                         public void run() {
-                            IrcMessage m = new IrcMessage(channel.getLog(), OffsetDateTime.now(), account.getMe(),
-                                    logMessage, channel.isP2p(), IrcMessageType.CHAT);
+                            IrcLog log = channel.getLog();
+                            IrcMessage m = new IrcMessage(log, OffsetDateTime.now(), account.getMe(),
+                                    logMessage, log.getChannel().getAccount().getAcceptedNick(), channel.isP2p(), IrcMessageType.CHAT, rawInput);
                             channel.getLog().appendMessage(m);
                         }
                     });
