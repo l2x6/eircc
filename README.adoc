@@ -51,3 +51,5 @@ file:///[projects-root]/eircc/org.l2x6.eircc.site/target/repository
 +
 where `[projects-root]` should be replaced with the directory where you have invoked
 the `git clone` commands in the first build step above.
+
+asciidoctor-version: {asciidoctor-version}
