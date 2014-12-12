@@ -173,7 +173,7 @@ public class NickIrcCommandMessage extends IrcCommandMessage {
         for (IrcCommandCallback callback : callbacks) {
             if (callback instanceof NickIrcCommandCallback) {
                 NickIrcCommandCallback nickCallback = (NickIrcCommandCallback) callback;
-                nickCallback.setSourceText(sourceText);
+                nickCallback.update(sourceText, timeout);
             }
         }
         return super.processCallbacks(callbacks);

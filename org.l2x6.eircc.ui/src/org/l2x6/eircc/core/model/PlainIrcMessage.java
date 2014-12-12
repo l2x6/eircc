@@ -29,7 +29,7 @@ import org.schwering.irc.lib.IRCCommand;
  */
 public class PlainIrcMessage {
 
-    public enum IrcMessageType {CHAT, ERROR, SYSTEM;
+    public enum IrcMessageType {CHAT, ERROR, SYSTEM, NOTIFICATION;
         private static final Map<String, IrcMessageType> FAST_LOOKUP;
         static {
             Map<String, IrcMessageType> fastLookUp = new HashMap<String, IrcMessageType>(64);

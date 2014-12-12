@@ -30,6 +30,7 @@ import org.eclipse.jface.resource.JFaceResources;
 import org.eclipse.jface.window.Window;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.graphics.Color;
+import org.eclipse.swt.graphics.RGB;
 import org.eclipse.swt.widgets.Display;
 import org.l2x6.eircc.core.model.AbstractIrcChannel;
 import org.l2x6.eircc.core.model.IrcMessage;
@@ -39,6 +40,7 @@ import org.l2x6.eircc.core.model.PlainIrcMessage;
 import org.l2x6.eircc.ui.EirccUi;
 import org.l2x6.eircc.ui.IrcUiMessages;
 import org.l2x6.eircc.ui.editor.IrcDefaultMessageFormatter;
+import org.l2x6.eircc.ui.editor.IrcNotificationMessageFormatter;
 import org.l2x6.eircc.ui.editor.IrcSearchMessageFormatter;
 import org.l2x6.eircc.ui.editor.IrcSystemMessageFormatter;
 import org.l2x6.eircc.ui.misc.Colors;
@@ -90,10 +92,8 @@ public class IrcPreferences implements IrcNotificationLevelProvider {
     private static final int DEFAULT_EDITOR_LOOK_BACK_LINE_LIMIT = 512;
 
     private static final TemporalAmount DEFAULT_EDITOR_LOOK_BACK_TIME_SPAN = Duration.ofHours(24);
+    private static final String DEFAULT_NOTIFICATION_MESSAGE_COLOR_KEY = IrcPreferences.class.getName() + ".defaultNotificationMessageColor";
     private static final Duration DEFAULT_PING_INTERVAL = Duration.ofMinutes(1);
-    private static final IrcPreferences INSTANCE = new IrcPreferences();
-
-    public static final char WATCHED_OBJECT_DELIMITER = ' ';
 
     private static final IInputValidator PATTERN_VALIDATOR = new IInputValidator() {
         /**
@@ -118,6 +118,9 @@ public class IrcPreferences implements IrcNotificationLevelProvider {
         }
     };
 
+    public static final char WATCHED_OBJECT_DELIMITER = ' ';
+    private static final IrcPreferences INSTANCE = new IrcPreferences();
+
     public static IrcPreferences getInstance() {
         return INSTANCE;
     }
@@ -125,11 +128,13 @@ public class IrcPreferences implements IrcNotificationLevelProvider {
     private final IrcDefaultMessageFormatter defaultFormatter = new IrcDefaultMessageFormatter(this);
 
     private final IrcSystemMessageFormatter errorFormatter = new IrcSystemMessageFormatter(this);
-
     private final ExtendedTextStyle messageTimeStyle;
-    private IrcSearchMessageFormatter searchFormatter = new IrcSearchMessageFormatter(this);
-    private final IrcSystemMessageFormatter systemFormatter = new IrcSystemMessageFormatter(this);
 
+    private final IrcNotificationMessageFormatter notificationFormatter = new IrcNotificationMessageFormatter(this);
+    private final ExtendedTextStyle notificationMessageStyle;
+    private IrcSearchMessageFormatter searchFormatter = new IrcSearchMessageFormatter(this);
+
+    private final IrcSystemMessageFormatter systemFormatter = new IrcSystemMessageFormatter(this);
     private final ExtendedTextStyle systemMessageStyle;
     private final IrcUserStyler[] userStylers;
     private final ExtendedTextStyle[] userStyles;
@@ -144,13 +149,16 @@ public class IrcPreferences implements IrcNotificationLevelProvider {
      */
     public IrcPreferences() {
         super();
+        ColorRegistry reg = JFaceResources.getColorRegistry();
         systemMessageStyle = new ExtendedTextStyle(Display.getDefault().getSystemColor(
                 SWT.COLOR_TITLE_INACTIVE_FOREGROUND));
+
+        reg.put(DEFAULT_NOTIFICATION_MESSAGE_COLOR_KEY, new RGB(254, 128, 0));
+        notificationMessageStyle = new ExtendedTextStyle(reg.get(DEFAULT_NOTIFICATION_MESSAGE_COLOR_KEY));
         messageTimeStyle = new ExtendedTextStyle(Display.getDefault().getSystemColor(
                 SWT.COLOR_TITLE_INACTIVE_FOREGROUND));
 
         Colors colors = Colors.getInstance();
-        ColorRegistry reg = JFaceResources.getColorRegistry();
         String keyPrefix = this.getClass().getName() + ".user#";
         userStyles = new ExtendedTextStyle[colors.getColorCount()];
         userStylesNamingMe = new ExtendedTextStyle[colors.getColorCount()];
@@ -174,20 +182,6 @@ public class IrcPreferences implements IrcNotificationLevelProvider {
     public void addWatchedNickPattern(String nick) {
         getWatchedNicks().put(nick, Pattern.compile(nick));
         setCollection(PreferenceKey.WATCHED_NICKS, watchedNicks.keySet());
-    }
-
-    /**
-     * @param items
-     */
-    private void setCollection(PreferenceKey preferenceKey, Collection<String> items) {
-        StringBuilder sb = new StringBuilder();
-        for (String n : items) {
-            if (sb.length() > 0) {
-                sb.append(WATCHED_OBJECT_DELIMITER);
-            }
-            sb.append(n);
-        }
-        setString(preferenceKey, sb.toString());
     }
 
     public void dispose() {
@@ -249,6 +243,8 @@ public class IrcPreferences implements IrcNotificationLevelProvider {
             return systemFormatter;
         case ERROR:
             return errorFormatter;
+        case NOTIFICATION:
+            return notificationFormatter;
         default:
             return defaultFormatter;
         }
@@ -271,6 +267,13 @@ public class IrcPreferences implements IrcNotificationLevelProvider {
             return IrcNotificationLevel.UNREAD_MESSAGES;
         }
         return IrcNotificationLevel.NO_NOTIFICATION;
+    }
+
+    /**
+     * @return
+     */
+    public ExtendedTextStyle getNotificationMessageStyle() {
+        return notificationMessageStyle;
     }
 
     public Duration getPingInterval() {
@@ -345,6 +348,28 @@ public class IrcPreferences implements IrcNotificationLevelProvider {
             }
         }
         return watchedNicks;
+    }
+
+    /**
+     * @param data
+     * @return
+     */
+    public boolean isWatched(AbstractIrcChannel channel) {
+        return channel != null && getWatchedChannels().contains(channel.getName());
+    }
+
+    /**
+     * @param items
+     */
+    private void setCollection(PreferenceKey preferenceKey, Collection<String> items) {
+        StringBuilder sb = new StringBuilder();
+        for (String n : items) {
+            if (sb.length() > 0) {
+                sb.append(WATCHED_OBJECT_DELIMITER);
+            }
+            sb.append(n);
+        }
+        setString(preferenceKey, sb.toString());
     }
 
     public void setString(PreferenceKey key, String value) {
@@ -423,14 +448,6 @@ public class IrcPreferences implements IrcNotificationLevelProvider {
             return dialog.getValue();
         }
         return null;
-    }
-
-    /**
-     * @param data
-     * @return
-     */
-    public boolean isWatched(AbstractIrcChannel channel) {
-        return channel != null && getWatchedChannels().contains(channel.getName());
     }
 
 
