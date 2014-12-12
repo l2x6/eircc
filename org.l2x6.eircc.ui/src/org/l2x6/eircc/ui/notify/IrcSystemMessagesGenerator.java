@@ -105,36 +105,11 @@ public class IrcSystemMessagesGenerator implements IrcModelEventListener {
         case CHANNEL_USER_LEFT:
             channelUserLeft((IrcChannelUser) e.getModelObject());
             break;
-        case NICK_CHANGED:
-            nickChanged((IrcUser) e.getModelObject());
-            break;
         default:
             break;
         }
 
     }
 
-    /**
-     * @param modelObject
-     */
-    private void nickChanged(IrcUser user) {
-        IrcAccount account = user.getServer().getAccount();
-        String text;
-        String oldNick = user.getPreviousNick();
-        String rawInput = null;
-        if (account.getMe() == user) {
-            text = MessageFormat.format(IrcUiMessages.Message_You_are_known_as_x, user.getNick());
-            rawInput  = "/"+ IRCCommand.NICK.name().toLowerCase(Locale.ENGLISH)+ " "+ user.getNick();
-        } else {
-            text = MessageFormat.format(IrcUiMessages.Message_x_is_known_as_y, oldNick, user.getNick());
-        }
-        for (AbstractIrcChannel channel : account.getChannels()) {
-            if (channel.isJoined() && channel.isPresent(user.getPreviousNick())) {
-                channel.changeNick(oldNick, user.getNick());
-                IrcLog log = channel.getLog();
-                log.appendSystemMessage(text, rawInput);
-            }
-        }
-    }
 
 }

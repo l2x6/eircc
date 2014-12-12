@@ -16,6 +16,8 @@ import java.util.Iterator;
 import java.util.Map;
 
 import org.l2x6.eircc.core.client.IrcClient;
+import org.l2x6.eircc.core.client.cmd.IrcCommandMessage;
+import org.l2x6.eircc.core.client.cmd.IrcCommandMessageFactory;
 import org.l2x6.eircc.core.model.AbstractIrcChannel;
 import org.l2x6.eircc.core.model.IrcAccount;
 import org.l2x6.eircc.core.model.IrcAccount.IrcAccountState;
@@ -39,7 +41,6 @@ public class IrcController {
     private final Map<String, IrcClient> clients = new HashMap<String, IrcClient>();
     private Duration commandTimeout;
     private Duration pingInterval;
-
     /**
      *
      */
@@ -224,15 +225,12 @@ public class IrcController {
         IrcUtils.assertUiThread();
         IrcClient client = getClientOrConnect(channel.getAccount());
 
-        String initialCommand = IrcUtils.getInitialCommand(text);
-        if (initialCommand != null) {
-            CTCPCommand ctcpCommand;
-            if (IRCCommand.fastValueOf(initialCommand) != null) {
-                client.postRaw(IrcUtils.getRawCommand(text));
-            } else if ((ctcpCommand = CTCPCommand.fastValueOf(initialCommand)) != null) {
-                client.postCtcpMessage(channel, ctcpCommand, text.substring(initialCommand.length() +2).trim(), text);
-            } else {
-                throw new IrcException("Unsupported command '"+ initialCommand +"'", channel);
+        IrcCommandMessage cmd = IrcCommandMessageFactory.createCommandMessage(channel, text);
+        if (cmd != null) {
+            for (IrcClient c : clients.values()) {
+                if (cmd.targetsClient(c)) {
+                    c.post(cmd);
+                }
             }
         } else {
             client.postMessage(channel, text);

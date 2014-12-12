@@ -32,6 +32,9 @@ import java.util.concurrent.TimeoutException;
 import org.eclipse.swt.widgets.Display;
 import org.l2x6.eircc.core.IrcController;
 import org.l2x6.eircc.core.IrcException;
+import org.l2x6.eircc.core.client.cmd.IrcCommandCallbackList;
+import org.l2x6.eircc.core.client.cmd.IrcCommandMessage;
+import org.l2x6.eircc.core.client.cmd.NickIrcCommandCallback;
 import org.l2x6.eircc.core.model.AbstractIrcChannel;
 import org.l2x6.eircc.core.model.IrcAccount;
 import org.l2x6.eircc.core.model.IrcAccount.IrcAccountState;
@@ -62,6 +65,9 @@ import org.schwering.irc.lib.ssl.SSLTrustManager;
  * @author <a href="mailto:ppalaga@redhat.com">Peter Palaga</a>
  */
 public class IrcClient {
+    /**
+     * A single thread Executor.
+     */
     private static class IrcExecutor extends ThreadPoolExecutor {
         /**
          * @param executorType
@@ -424,14 +430,9 @@ public class IrcClient {
          *      java.lang.String)
          */
         @Override
-        public void onNick(final IRCUser user, final String newNick) {
-            Display.getDefault().asyncExec(new Runnable() {
-                @Override
-                public void run() {
-                    PlainIrcUser plainUser = new PlainIrcUser(user.getNick(), user.getUsername(), user.getHost());
-                    controller.changeNick(account.getServer(), plainUser, newNick);
-                }
-            });
+        public void onNick(IRCUser user, String newNick) {
+            PlainIrcUser plainUser = toPlainUser(user);
+            callbacks.forEach(callback -> callback.onNick(account, plainUser, newNick));
         }
 
         /**
@@ -478,8 +479,6 @@ public class IrcClient {
                 @Override
                 public void run() {
                     try {
-                        CTCPCommand ctcpCommand = IrcUtils.getCtcpCommand(msg);
-                        String logMessage = IrcUtils.formatCtcpMessage(user.getNick(), ctcpCommand, msg);
                         final boolean isP2p = target.equals(account.getAcceptedNick());
                         IrcUser ircUser = controller.getOrCreateUser(account.getServer(), user.getNick(),
                                 user.getUsername(), user.getHost());
@@ -490,10 +489,16 @@ public class IrcClient {
                             channel = controller.getOrCreateP2pChannel(ircUser);
                         }
                         channel.setJoined(true);
-                        IrcLog log = channel.getLog();
-                        IrcMessage message = new IrcMessage(log, OffsetDateTime.now(), ircUser, logMessage,
-                                channel.isP2p(), IrcMessageType.CHAT);
-                        log.appendMessage(message);
+                        CTCPCommand ctcpCommand = IrcUtils.getCtcpCommand(msg);
+                        if (ctcpCommand != null) {
+                            PlainIrcUser plainUser = toPlainUser(user);
+                            callbacks.forEach(callback -> callback.onCtcp(channel, plainUser, ctcpCommand, msg));
+                        } else {
+                            IrcLog log = channel.getLog();
+                            IrcMessage message = new IrcMessage(log, OffsetDateTime.now(), ircUser, msg, channel
+                                    .isP2p(), IrcMessageType.CHAT);
+                            log.appendMessage(message);
+                        }
                     } catch (IrcResourceException e) {
                         EirccUi.log(e);
                     }
@@ -596,23 +601,42 @@ public class IrcClient {
 
     }
 
+    /**
+     * @param user
+     * @return
+     */
+    private static PlainIrcUser toPlainUser(IRCUser user) {
+        return new PlainIrcUser(user.getNick(), user.getUsername(), user.getHost());
+    }
+
     public static final int DEFAULT_PORT = 6667;
 
     /** Update UI by this many list entries. */
     private static final int LIST_BUFFER_SIZE = 16;
 
     private IrcAccount account;
+
+    /**
+     * Written from {@link #executor} thread and read from {@link #connection}'s
+     * receiving thread.
+     */
+    private IrcCommandCallbackList callbacks;
+
     private Duration commandTimeout;
 
     private IRCConnection connection;
 
     private final IrcController controller;
 
+    /**
+     * An executor whose single thread is used to send IRC messages over
+     * {@link #connection}.
+     */
     private ExecutorService executor;
 
     private final IrcNickGenerator nickGenerator = IrcNickGenerator.DEFAULT;
-    private Duration pingInterval;
 
+    private Duration pingInterval;
     private final IrcExecutor timeoutChecker;
 
     /**
@@ -625,8 +649,9 @@ public class IrcClient {
         this.controller = controller;
         this.pingInterval = pingInterval;
         this.commandTimeout = commandTimeout;
-        executor = new IrcExecutor("Executor");
-        timeoutChecker = new IrcExecutor("TaskValidator");
+        this.executor = new IrcExecutor("Executor");
+        this.timeoutChecker = new IrcExecutor("TaskValidator");
+        this.callbacks = IrcCommandCallbackList.empty().add(new NickIrcCommandCallback(controller));
     }
 
     public void close() {
@@ -696,6 +721,10 @@ public class IrcClient {
         } else {
             throw new IllegalStateException("Must be connected");
         }
+    }
+
+    public IrcAccount getAccount() {
+        return account;
     }
 
     public Duration getCommandTimeout() {
@@ -803,22 +832,32 @@ public class IrcClient {
         });
     }
 
-    public void postCtcpMessage(final AbstractIrcChannel channel, final CTCPCommand ctcpCommand, final String message, String rawInput) throws IrcException {
-        final String protocolMessage = "" + CTCPCommand.QUOTE_CHAR + ctcpCommand.name() + " "+ message + CTCPCommand.QUOTE_CHAR;
-        final String logMessage = IrcUtils.formatCtcpMessage(channel.getAccount().getAcceptedNick(), ctcpCommand, protocolMessage);
-        postMessage(channel, protocolMessage, logMessage, rawInput);
-    }
-
-    public void postMessage(final AbstractIrcChannel channel, final String protocolMessage) throws IrcException {
-        postMessage(channel, protocolMessage, protocolMessage, null);
-    }
-    private void postMessage(final AbstractIrcChannel channel, final String protocolMessage, String logMessage, final String rawInput) throws IrcException {
+    /**
+     * @param cmd
+     */
+    public void post(final IrcCommandMessage cmd) {
         submit(new Runnable() {
             @Override
             public void run() {
                 try {
                     ensureConnected();
-                    connection.doPrivmsg(channel.getName(), protocolMessage);
+                    IrcClient.this.callbacks = cmd.processCallbacks(IrcClient.this.callbacks);
+                    connection.send(cmd.getProtocolCommand());
+                    cmd.sentSuccessfully(IrcClient.this);
+                } catch (IrcException e) {
+                    notifyUi(e);
+                }
+            }
+        });
+    }
+
+    public void postMessage(final AbstractIrcChannel channel, final String message) throws IrcException {
+        submit(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    ensureConnected();
+                    connection.doPrivmsg(channel.getName(), message);
                     /*
                      * post back to model only after the above has not thrown an
                      * exception
@@ -826,10 +865,15 @@ public class IrcClient {
                     Display.getDefault().asyncExec(new Runnable() {
                         @Override
                         public void run() {
-                            IrcLog log = channel.getLog();
-                            IrcMessage m = new IrcMessage(log, OffsetDateTime.now(), account.getMe(),
-                                    logMessage, log.getChannel().getAccount().getAcceptedNick(), channel.isP2p(), IrcMessageType.CHAT, rawInput);
-                            channel.getLog().appendMessage(m);
+                            try {
+                                IrcLog log = channel.getLog();
+                                IrcMessage m = new IrcMessage(log, OffsetDateTime.now(), account.getMe(), message, log
+                                        .getChannel().getAccount().getAcceptedNick(), channel.isP2p(), IrcMessageType.CHAT,
+                                        null);
+                                channel.getLog().appendMessage(m);
+                            } catch (Exception e) {
+                                EirccUi.log(e);
+                            }
                         }
                     });
                 } catch (IrcException e) {

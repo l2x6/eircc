@@ -12,8 +12,6 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.util.Locale;
-import java.util.StringTokenizer;
 
 import org.eclipse.core.resources.IContainer;
 import org.eclipse.core.resources.IFolder;
@@ -22,7 +20,6 @@ import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.swt.widgets.Display;
 import org.schwering.irc.lib.CTCPCommand;
-import org.schwering.irc.lib.IRCCommand;
 
 /**
  * @author <a href="mailto:ppalaga@redhat.com">Peter Palaga</a>
@@ -75,32 +72,6 @@ public class IrcUtils {
         return CTCPCommand.fastValueOf(cmd);
     }
 
-    /**
-     * Looks whether the {@code message} starts with {@code '/'} followed by a
-     * command name followed in {@link IRCCommand}.
-     *
-     * @param message
-     * @return a command string without the initial {@code '/'} or {@code null}
-     */
-    public static String getInitialCommand(String message) {
-        if (message.length() > 2 && message.charAt(0) == IrcConstants.COMMAND_MARKER) {
-            String firstToken = new StringTokenizer(message, " \t\n\r").nextToken();
-            firstToken = firstToken.substring(1);
-            return firstToken.toUpperCase(Locale.ENGLISH);
-        }
-        return null;
-    }
-
-    /**
-     * Call only after you have ensured that {@link #getInitialCommand(String)} returns a valid command.
-     *
-     * @param message
-     * @return
-     */
-    public static String getRawCommand(String message) {
-        return message.substring(1);
-    }
-
     public static String getRealUserName() throws IOException, InterruptedException {
         String os = System.getProperty("os.name");
         if (os != null && (os.startsWith("Windows"))) {
@@ -147,24 +118,6 @@ public class IrcUtils {
             return Class.forName("java.lang." + Character.toUpperCase(name.charAt(0)) + name.substring(1));
         } catch (ClassNotFoundException e) {
             throw new RuntimeException(e);
-        }
-    }
-
-    /**
-     * Returns a message in a format suitable for presenting in a chat log. If
-     * ctcpCommand is {@code null} returns {@code msg}.
-     *
-     * @return a formatted message
-     */
-    public static String formatCtcpMessage(String nick, CTCPCommand ctcpCommand, String msg) {
-        if (ctcpCommand == null) {
-            return msg;
-        }
-        switch (ctcpCommand) {
-        case ACTION:
-            return "*** " + nick + " " + msg.trim().substring(ctcpCommand.name().length());
-        default:
-            return msg;
         }
     }
 }
