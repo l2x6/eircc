@@ -28,8 +28,6 @@ import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.graphics.Rectangle;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Display;
-import org.l2x6.eircc.core.model.PlainIrcMessage;
-import org.l2x6.eircc.ui.prefs.IrcPreferences;
 
 /**
  * @author <a href="mailto:ppalaga@redhat.com">Peter Palaga</a>
@@ -154,12 +152,6 @@ public class IrcLogViewer extends SourceViewer {
                 }
             }
         }
-    }
-
-    public void appendMessage(PlainIrcMessage m) {
-        IrcPreferences prefs = IrcPreferences.getInstance();
-        IrcDefaultMessageFormatter formatter = prefs.getFormatter(m);
-        formatter.format(this, m);
     }
 
     public void clear() {

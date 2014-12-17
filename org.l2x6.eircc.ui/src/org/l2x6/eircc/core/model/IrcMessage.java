@@ -71,4 +71,12 @@ public class IrcMessage extends PlainIrcMessage {
         return user;
     }
 
+    /**
+     * @param recordOffset
+     * @return
+     */
+    public IrcMessage fixOffsets() {
+        return new IrcMessage(log, arrivedAt, user, rawInput, myNick, isP2pChannel, type, rawInput);
+    }
+
 }

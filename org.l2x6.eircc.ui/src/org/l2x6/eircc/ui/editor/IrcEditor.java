@@ -308,29 +308,57 @@ public class IrcEditor extends AbstractIrcEditor implements IrcModelEventListene
     @Override
     public void handle(IrcModelEvent e) {
         IrcUtils.assertUiThread();
-        switch (e.getEventType()) {
-        case LOG_STATE_CHANGED:
-            IrcLog log = (IrcLog) e.getModelObject();
-            if (log.getLogResource() == getLastLogResource()) {
-                updateTitle();
+        try {
+            switch (e.getEventType()) {
+            case LOG_STATE_CHANGED:
+                IrcLog log = (IrcLog) e.getModelObject();
+                if (log.getLogResource() == getLastLogResource()) {
+                    updateTitle();
+                }
+                break;
+            case CHANNEL_JOINED_CHANGED:
+                AbstractIrcChannel ch = (AbstractIrcChannel) e.getModelObject();
+                if (ch == getChannel()) {
+                    updateTitle();
+                }
+                break;
+            case NEW_MESSAGE:
+                IrcMessage m = (IrcMessage) e.getModelObject();
+                if (m.getLog().getChannel() == getChannel()) {
+                    appendMessage(new TextViewerWrapper(logViewer), m);
+                    logViewer.scrollToBottom();
+                    updateReadMessages();
+                }
+                break;
+            case MESSAGE_REPLACED:
+                IrcMessage replacementMessage = (IrcMessage) e.getModelObject();
+                IrcLog l = replacementMessage.getLog();
+                if (l.getChannel() == getChannel()) {
+                    IDocument doc = logViewer.getDocument();
+                    int replacementLineIndex = replacementMessage.getLineIndex();
+                    int replacementStart = doc.getLineOffset(replacementLineIndex);
+                    if (replacementStart > 0 && doc.getChar(replacementStart - 1) == '\n') {
+                        replacementStart--;
+                    }
+                    doc.replace(replacementStart, doc.getLength() - replacementStart, "");
+                    boolean replacing = false;
+                    for (IrcMessage logMessage : l) {
+                        if (logMessage == replacementMessage) {
+                            replacing = true;
+                        }
+                        if (replacing) {
+                            appendMessage(new TextViewerWrapper(logViewer), logMessage);
+                        }
+                    }
+                    logViewer.scrollToBottom();
+                    updateReadMessages();
+                }
+                break;
+            default:
+                break;
             }
-            break;
-        case CHANNEL_JOINED_CHANGED:
-            AbstractIrcChannel ch = (AbstractIrcChannel) e.getModelObject();
-            if (ch == getChannel()) {
-                updateTitle();
-            }
-            break;
-        case NEW_MESSAGE:
-            IrcMessage m = (IrcMessage) e.getModelObject();
-            if (m.getLog().getChannel() == getChannel()) {
-                appendMessage(new TextViewerWrapper(logViewer), m);
-                logViewer.scrollToBottom();
-                updateReadMessages();
-            }
-            break;
-        default:
-            break;
+        } catch (BadLocationException e1) {
+            EirccUi.log(e1);
         }
     }
 

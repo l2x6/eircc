@@ -31,6 +31,7 @@ import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.plugin.AbstractUIPlugin;
 import org.eclipse.ui.texteditor.IDocumentProvider;
 import org.l2x6.eircc.core.IrcController;
+import org.l2x6.eircc.core.IrcException;
 import org.l2x6.eircc.core.model.AbstractIrcChannel;
 import org.l2x6.eircc.core.model.IrcAccount;
 import org.l2x6.eircc.core.model.IrcLog;
@@ -195,6 +196,7 @@ public class EirccUi extends AbstractUIPlugin implements IrcModelEventListener {
                 log(e1);
             }
             break;
+        case MESSAGE_REPLACED:
         case NEW_MESSAGE:
             try {
                 IrcMessage m = (IrcMessage) e.getModelObject();
@@ -374,9 +376,10 @@ public class EirccUi extends AbstractUIPlugin implements IrcModelEventListener {
 
     /**
      * @throws CoreException
+     * @throws IrcException
      *
      */
-    private void saveAll() throws CoreException {
+    private void saveAll() throws IrcException {
 
         for (IrcAccount account : model.getAccounts()) {
             for (AbstractIrcChannel channel : account.getChannels()) {

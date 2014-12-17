@@ -139,6 +139,7 @@ public class IrcUiMessages extends NLS {
 
     public static String ListChannelsAction_label;
 
+    public static String Message_Still_nick;
     public static String Message_x_is_known_as_y;
     public static String Message_x_joined;
     public static String Message_x_left;

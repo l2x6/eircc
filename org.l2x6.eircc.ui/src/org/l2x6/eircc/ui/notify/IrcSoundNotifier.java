@@ -22,6 +22,8 @@ import javax.sound.sampled.LineUnavailableException;
 import javax.sound.sampled.UnsupportedAudioFileException;
 
 import org.l2x6.eircc.core.model.IrcMessage;
+import org.l2x6.eircc.core.model.event.IrcModelEvent;
+import org.l2x6.eircc.ui.EirccUi;
 import org.l2x6.eircc.ui.prefs.IrcPreferences;
 
 /**
@@ -29,7 +31,7 @@ import org.l2x6.eircc.ui.prefs.IrcPreferences;
  */
 public class IrcSoundNotifier {
     public enum SoundFile {
-        ME_NAMED, MESSAGE_FROM_TRACKED_USER;
+        ONE_KNOCK, TWO_KNOCKS, THREE_KNOCKS, WATER_DROP;
 
         private final String absolutePath;
 
@@ -51,6 +53,7 @@ public class IrcSoundNotifier {
             }
         }
     };
+    private NowPlaying nowPlaying;
 
     /**
      *
@@ -59,18 +62,38 @@ public class IrcSoundNotifier {
         super();
     }
 
+    public void handle(IrcModelEvent e) {
+        try {
+            switch (e.getEventType()) {
+            case NICK_TIMEOUT:
+                play(SoundFile.WATER_DROP);
+                break;
+            case NEW_MESSAGE:
+                IrcMessage m = (IrcMessage) e.getModelObject();
+                notify(m);
+                break;
+            default:
+                break;
+            }
+        } catch (Exception e1) {
+            EirccUi.log(e1);
+        }
+
+    }
+
     public void notify(IrcMessage m) throws LineUnavailableException, IOException, UnsupportedAudioFileException {
         if (IrcPreferences.getInstance().shouldPlaySoundForMessage(m)) {
             switch (m.getNotificationLevel()) {
             case NO_NOTIFICATION:
                 break;
             case UNREAD_MESSAGES:
+                play(SoundFile.ONE_KNOCK);
                 break;
             case UNREAD_MESSAGES_FROM_A_TRACKED_USER:
-                play(SoundFile.MESSAGE_FROM_TRACKED_USER);
+                play(SoundFile.TWO_KNOCKS);
                 break;
             case ME_NAMED:
-                play(SoundFile.ME_NAMED);
+                play(SoundFile.THREE_KNOCKS);
                 break;
             default:
                 break;
@@ -78,8 +101,31 @@ public class IrcSoundNotifier {
         }
     }
 
+    private static class NowPlaying {
+        /**
+         * @param endSystemTimeMs
+         * @param soundFile
+         */
+        public NowPlaying(long endSystemTimeMs, SoundFile soundFile) {
+            super();
+            this.endSystemTimeMs = endSystemTimeMs;
+            this.soundFile = soundFile;
+        }
+        private final long endSystemTimeMs;
+        private final SoundFile soundFile;
+        /**
+         * @param soundFile2
+         */
+        public boolean accept(SoundFile soundFile) {
+            return soundFile != this.soundFile || System.currentTimeMillis() > endSystemTimeMs;
+        }
+    }
 
     private void play(SoundFile soundFile) throws LineUnavailableException, IOException, UnsupportedAudioFileException {
+        if (this.nowPlaying != null && !this.nowPlaying.accept(soundFile)) {
+            /* we still play the same clip */
+            return;
+        }
         String path = soundFile.getAbsolutePath();
         URL url = this.getClass().getResource(path);
         AudioInputStream audioIn = AudioSystem.getAudioInputStream(url);
@@ -87,6 +133,8 @@ public class IrcSoundNotifier {
         clip.removeLineListener(CLIP_AUTOCLOSE);
         clip.addLineListener(CLIP_AUTOCLOSE);
         clip.open(audioIn);
+        long lengthMillis = clip.getMicrosecondLength() / 1000;
+        this.nowPlaying = new NowPlaying(System.currentTimeMillis() + lengthMillis, soundFile);
         clip.start();
     }
 }

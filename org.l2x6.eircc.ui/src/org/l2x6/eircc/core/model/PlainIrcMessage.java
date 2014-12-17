@@ -29,7 +29,7 @@ import org.schwering.irc.lib.IRCCommand;
  */
 public class PlainIrcMessage {
 
-    public enum IrcMessageType {CHAT, ERROR, SYSTEM, NOTIFICATION;
+    public enum IrcMessageType {CHAT, ERROR, NOTIFICATION, SYSTEM;
         private static final Map<String, IrcMessageType> FAST_LOOKUP;
         static {
             Map<String, IrcMessageType> fastLookUp = new HashMap<String, IrcMessageType>(64);
@@ -54,7 +54,7 @@ public class PlainIrcMessage {
     };
 
     protected final OffsetDateTime arrivedAt;
-    private final boolean isP2pChannel;
+    protected final boolean isP2pChannel;
     /**
      * Number of lines of this message. Basically
      * {@code 1 + numberOfEolsInMessageText}
@@ -66,20 +66,20 @@ public class PlainIrcMessage {
      */
     protected final int lineIndex;
     private boolean meNamed;
-    private final String myNick;
-    /** Character length of this message within the IRC log file */
+    protected final String myNick;
+    /** Character length of this message within the IRC log file. */
     protected final int recordLenght;
-    /** This message starts at this character offset in the IRC log file */
+
+    /** This message starts at this character offset in the IRC log file. */
     protected final int recordOffset;
     private final IrcUserBase sender;
     private String string;
-
     protected final String text;
+
     protected final int textOffset;
     private boolean tokenized = false;
     protected final IrcMessageType type;
     protected final int userColorIndex;
-
     /**
      * @param arrivedAt
      * @param nick
@@ -166,14 +166,26 @@ public class PlainIrcMessage {
         return lineIndex;
     }
 
+    public String getMyNick() {
+        return myNick;
+    }
+
     public String getNick() {
         return sender != null ? sender.getNick() : null;
     }
 
+    /**
+     * Returns the character length of this whole message (incl. date, sender and flags) within the IRC log file.
+     * @return the record length
+     */
     public int getRecordLenght() {
         return recordLenght;
     }
 
+    /**
+     * Returns a character offset at which this whole message (incl. date, sender and flags) starts in the IRC log file.
+     * @return the record offset
+     */
     public int getRecordOffset() {
         return recordOffset;
     }

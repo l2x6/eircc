@@ -110,12 +110,9 @@ public class IrcNotificationController implements IrcModelEventListener {
      */
     @Override
     public void handle(IrcModelEvent e) {
+        soundNotifier.handle(e);
         try {
             switch (e.getEventType()) {
-            case NEW_MESSAGE:
-                IrcMessage m = (IrcMessage) e.getModelObject();
-                soundNotifier.notify(m);
-                break;
             case ACCOUNT_STATE_CHANGED:
             case LOG_STATE_CHANGED:
                 tray.update();

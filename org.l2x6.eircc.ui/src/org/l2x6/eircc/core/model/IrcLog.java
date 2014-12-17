@@ -17,9 +17,11 @@ import java.util.ListIterator;
 
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IProgressMonitor;
+import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.IDocument;
 import org.eclipse.ui.IFileEditorInput;
 import org.eclipse.ui.texteditor.IDocumentProvider;
+import org.l2x6.eircc.core.IrcException;
 import org.l2x6.eircc.core.model.PlainIrcMessage.IrcMessageType;
 import org.l2x6.eircc.core.model.event.IrcModelEvent;
 import org.l2x6.eircc.core.model.event.IrcModelEvent.EventType;
@@ -43,6 +45,7 @@ public class IrcLog extends IrcObject implements Iterable<IrcMessage> {
     /** The time of the last non-system message that arrived */
     // private Instant lastMessageTime = Instant.MIN;
     private int lastSavedMessageIndex = IrcLog.NOTHING_SAVED;
+    private int firstUpdatedMessageIndex = IrcLog.NOTHING_SAVED;
     private int lineIndex = 0;
 
     private boolean loading = false;
@@ -81,6 +84,53 @@ public class IrcLog extends IrcObject implements Iterable<IrcMessage> {
         appendMessage(message, true);
     }
 
+    public void replaceOrAppendMessage(IrcMessageReplacer replacer, boolean fireEvent) {
+        ListIterator<IrcMessage> it = messages.listIterator(messages.size());
+        LOOP: while (it.hasPrevious()) {
+            int index = it.previousIndex();
+            IrcMessage m = it.previous();
+            switch (replacer.match(m)) {
+            case MATCH:
+                replaceMessage(index, m, replacer, fireEvent);
+                return;
+            case CONTINUE:
+                /* do nothing */
+                break;
+            case STOP:
+                /* stop the iteration */
+                break LOOP;
+            }
+        }
+        appendMessage(replacer.createNewMessage(this), fireEvent);
+    }
+
+    /**
+     * @param message
+     * @param index
+     * @param fireEvent
+     */
+    private void replaceMessage(int index, IrcMessage replacedMessage, IrcMessageReplacer replacer, boolean fireEvent) {
+        List<IrcMessage> changedMessages = messages.subList(index, messages.size());
+        int i = 0;
+        this.charLength = replacedMessage.getRecordOffset();
+        this.lineIndex = replacedMessage.getLineIndex();
+        if (firstUpdatedMessageIndex == NOTHING_SAVED || firstUpdatedMessageIndex > index) {
+            firstUpdatedMessageIndex = index;
+        }
+        IrcMessage replacement = replacer.createReplacementMessage(replacedMessage);
+        messages.set(index, replacement);
+        i++;
+        for (; i < changedMessages.size(); i++) {
+            IrcMessage m = changedMessages.get(i);
+            IrcMessage fixedMessage = m.fixOffsets();
+            messages.set(index + i, fixedMessage);
+        }
+
+        if (fireEvent) {
+            channel.getAccount().getModel().fire(new IrcModelEvent(EventType.MESSAGE_REPLACED, replacement));
+        }
+    }
+
     private void appendMessage(IrcMessage message, boolean fireEvent) {
         messages.add(message);
         if (message.getType() == IrcMessageType.CHAT && !message.isFromMe()) {
@@ -114,10 +164,10 @@ public class IrcLog extends IrcObject implements Iterable<IrcMessage> {
     public void dispose() {
     }
 
-    public void ensureAllSaved(IProgressMonitor monitor) throws CoreException {
+    public void ensureAllSaved(IProgressMonitor monitor) throws IrcException {
         Object lock = logResource.getLockObject();
         synchronized (lock) {
-            if (lastSavedMessageIndex == messages.size() - 1) {
+            if (lastSavedMessageIndex == messages.size() - 1 && firstUpdatedMessageIndex == NOTHING_SAVED) {
                 return;
             }
 
@@ -136,8 +186,15 @@ public class IrcLog extends IrcObject implements Iterable<IrcMessage> {
                     document.set("");
                 }
 
-                // boolean newFile = lastSavedMessageIndex < 0 ||
-                // !path.exists();
+                if (firstUpdatedMessageIndex != IrcLog.NOTHING_SAVED && firstUpdatedMessageIndex < lastSavedMessageIndex) {
+                    lastSavedMessageIndex = firstUpdatedMessageIndex - 1;
+                    /* truncate the document */
+                    PlainIrcMessage m = messages.get(firstUpdatedMessageIndex);
+                    int startTruncate = m.getRecordOffset();
+                    document.replace(startTruncate, document.getLength() - startTruncate, "");
+                    firstUpdatedMessageIndex = IrcLog.NOTHING_SAVED;
+                }
+
                 /* append unsaved messages */
                 for (int i = lastSavedMessageIndex + 1; i < messages.size(); i++) {
                     PlainIrcMessage m = messages.get(i);
@@ -146,6 +203,10 @@ public class IrcLog extends IrcObject implements Iterable<IrcMessage> {
                 }
                 documentProvider.saveDocument(monitor, editorInput, document, true);
                 lastSavedMessageIndex = messages.size() - 1;
+            } catch (CoreException e) {
+                throw new IrcException("Could not perform ensureAllSaved() for "+ logResource.getLogFile(), e, this);
+            } catch (BadLocationException e) {
+                throw new IrcException("Could not perform ensureAllSaved() for "+ logResource.getLogFile(), e, this);
             } finally {
                 documentProvider.changed(editorInput);
                 monitor.done();

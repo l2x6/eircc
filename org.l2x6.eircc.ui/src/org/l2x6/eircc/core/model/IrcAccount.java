@@ -11,6 +11,8 @@ package org.l2x6.eircc.core.model;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.text.MessageFormat;
+import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -25,6 +27,7 @@ import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.l2x6.eircc.core.IrcException;
+import org.l2x6.eircc.core.model.PlainIrcMessage.IrcMessageType;
 import org.l2x6.eircc.core.model.event.IrcModelEvent;
 import org.l2x6.eircc.core.model.event.IrcModelEvent.EventType;
 import org.l2x6.eircc.core.model.resource.IrcAccountResource;
@@ -39,6 +42,51 @@ import org.schwering.irc.lib.TrafficLogger;
  * @author <a href="mailto:ppalaga@redhat.com">Peter Palaga</a>
  */
 public class IrcAccount extends InitialIrcAccount implements PersistentIrcObject {
+    private static class NickTimeoutMessageReplacer implements IrcMessageReplacer {
+        private boolean depleted = false;
+        private final String expectedText;
+
+        /**
+         * @param expectedMessage
+         */
+        public NickTimeoutMessageReplacer(String expectedMessage) {
+            super();
+            this.expectedText = expectedMessage;
+        }
+
+        @Override
+        public IrcMessageMatcherState match(IrcMessage m) {
+            if (depleted) {
+                return IrcMessageMatcherState.STOP;
+            }
+            if (m.getType() == IrcMessageType.NOTIFICATION && expectedText.equals(m.getText())) {
+                depleted = true;
+                return IrcMessageMatcherState.MATCH;
+            }
+            return IrcMessageMatcherState.STOP;
+        }
+
+        /**
+         * @see org.l2x6.eircc.core.model.IrcMessageReplacer#createReplacementMessage(org.l2x6.eircc.core.model.IrcMessage)
+         */
+        @Override
+        public IrcMessage createReplacementMessage(IrcMessage replacedMessage) {
+            return new IrcMessage(replacedMessage.getLog(), OffsetDateTime.now(), replacedMessage.getUser(),
+                    replacedMessage.getText(), replacedMessage.getMyNick(), replacedMessage.getLog().getChannel()
+                            .isP2p(), replacedMessage.getType(), replacedMessage.getRawInput());
+        }
+
+        /**
+         * @see org.l2x6.eircc.core.model.IrcMessageReplacer#createNewMessage(org.l2x6.eircc.core.model.IrcLog)
+         */
+        @Override
+        public IrcMessage createNewMessage(IrcLog log) {
+            return new IrcMessage(log, OffsetDateTime.now(), null, expectedText, log.getChannel().isP2p(),
+                    IrcMessageType.NOTIFICATION);
+        }
+
+    }
+
     public enum IrcAccountField implements TypedField {
         autoConnect(IrcUiMessages.Account_Connect_Automatically) {
             @Override
@@ -287,6 +335,18 @@ public class IrcAccount extends InitialIrcAccount implements PersistentIrcObject
             }
         }
         return null;
+    }
+
+    public void fireNickTimeoutNotification() {
+        getModel().fire(new IrcModelEvent(EventType.NICK_TIMEOUT, this));
+        String myNick = getAcceptedNick();
+        String text = MessageFormat.format(IrcUiMessages.Message_Still_nick, myNick);
+        for (AbstractIrcChannel channel : channels) {
+            IrcLog log = channel.getLog();
+            NickTimeoutMessageReplacer replacer = new NickTimeoutMessageReplacer(text);
+            log.replaceOrAppendMessage(replacer, true);
+        }
+
     }
 
     public String getAcceptedNick() {

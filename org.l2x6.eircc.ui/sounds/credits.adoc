@@ -3,6 +3,8 @@ This file summarizes where the sounds in this folder come from.
 [options="header"]
 |=========================================================
 | File                          | Original Author       | Changes                          | Original File URL  | Original File License
-| me_named.wav                  | Taira Komori          | mp3 -> wav                       |https://www.freesound.org/people/Taira%20Komori/sounds/211496/ | http://creativecommons.org/licenses/by/3.0/
+| three_knocks.wav              | Taira Komori          | mp3 -> wav                       |https://www.freesound.org/people/Taira%20Komori/sounds/211496/ | http://creativecommons.org/licenses/by/3.0/
+| two_knocks.wav                | Taira Komori          | mp3 -> wav, first knock removed  |https://www.freesound.org/people/Taira%20Komori/sounds/211496/ | http://creativecommons.org/licenses/by/3.0/
 | message_from_tracked_user.wav | Taira Komori          | mp3 -> wav, only last knock kept |https://www.freesound.org/people/Taira%20Komori/sounds/211496/ | http://creativecommons.org/licenses/by/3.0/
+| water_drop.wav                | kijjaz                | aif -> wav                       |https://www.freesound.org/people/kijjaz/sounds/16746/          | http://creativecommons.org/licenses/by/3.0/
 |=========================================================
