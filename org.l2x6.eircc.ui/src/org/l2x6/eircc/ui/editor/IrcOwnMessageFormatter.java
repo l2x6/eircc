@@ -8,8 +8,8 @@
 
 package org.l2x6.eircc.ui.editor;
 
-import org.l2x6.eircc.core.model.PlainIrcUser;
 import org.l2x6.eircc.core.model.PlainIrcMessage;
+import org.l2x6.eircc.core.model.PlainIrcUser;
 import org.l2x6.eircc.ui.misc.StyledWrapper;
 import org.l2x6.eircc.ui.prefs.IrcPreferences;
 

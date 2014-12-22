@@ -13,8 +13,6 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 
-import org.schwering.irc.lib.IRCEventListener;
-
 /**
  * @author <a href="mailto:ppalaga@redhat.com">Peter Palaga</a>
  */

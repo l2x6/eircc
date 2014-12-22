@@ -10,13 +10,10 @@ package org.l2x6.eircc.core.client.cmd;
 
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
-import java.util.List;
 
-import org.l2x6.eircc.core.IrcException;
 import org.l2x6.eircc.core.client.IrcClient;
 import org.l2x6.eircc.core.model.AbstractIrcChannel;
 import org.schwering.irc.lib.IRCCommand;
-import org.schwering.irc.lib.IRCEventListener;
 
 /**
  * @author <a href="mailto:ppalaga@redhat.com">Peter Palaga</a>

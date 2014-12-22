@@ -21,9 +21,9 @@ import java.time.format.DateTimeParseException;
 import java.util.Iterator;
 
 import org.eclipse.jface.text.IDocument;
-import org.l2x6.eircc.core.model.PlainIrcUser;
 import org.l2x6.eircc.core.model.PlainIrcMessage;
 import org.l2x6.eircc.core.model.PlainIrcMessage.IrcMessageType;
+import org.l2x6.eircc.core.model.PlainIrcUser;
 
 /**
  * @author <a href="mailto:ppalaga@redhat.com">Peter Palaga</a>

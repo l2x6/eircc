@@ -31,8 +31,6 @@ import org.l2x6.eircc.core.model.PlainIrcChannel;
 import org.l2x6.eircc.core.model.resource.IrcResourceException;
 import org.l2x6.eircc.core.util.IrcUtils;
 import org.l2x6.eircc.ui.EirccUi;
-import org.schwering.irc.lib.CTCPCommand;
-import org.schwering.irc.lib.IRCCommand;
 
 /**
  * @author <a href="mailto:ppalaga@redhat.com">Peter Palaga</a>
