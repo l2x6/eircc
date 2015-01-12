@@ -25,6 +25,8 @@ import org.eclipse.swt.widgets.Shell;
 import org.eclipse.ui.IEditorInput;
 import org.eclipse.ui.IEditorPart;
 import org.eclipse.ui.IEditorReference;
+import org.eclipse.ui.IWorkbench;
+import org.eclipse.ui.IWorkbenchListener;
 import org.eclipse.ui.IWorkbenchPage;
 import org.eclipse.ui.IWorkbenchWindow;
 import org.eclipse.ui.PlatformUI;
@@ -117,6 +119,26 @@ public class EirccUi extends AbstractUIPlugin implements IrcModelEventListener {
 
     private IrcModel model;
 
+    private IWorkbenchListener workbenchListener = new IWorkbenchListener() {
+
+        @Override
+        public boolean preShutdown(IWorkbench workbench, boolean forced) {
+            try {
+                saveAll();
+            } catch (Exception e) {
+                log(e);
+            }
+
+            closeAutoopenedEditors();
+
+            return true;
+        }
+
+        @Override
+        public void postShutdown(IWorkbench workbench) {
+        }
+    };
+
     /**
      * @return
      */
@@ -171,7 +193,7 @@ public class EirccUi extends AbstractUIPlugin implements IrcModelEventListener {
                 AbstractIrcChannel ch = (AbstractIrcChannel) e.getModelObject();
                 if (ch.isJoined()) {
                     System.out.println("About to open editor for "+ ch.getName());
-                    openEditor(ch);
+                    openEditor(ch, false);
                     System.out.println("Opened editor for "+ ch.getName());
                 }
             } catch (Exception e1) {
@@ -235,7 +257,7 @@ public class EirccUi extends AbstractUIPlugin implements IrcModelEventListener {
         return null;
     }
 
-    public IrcEditor openEditor(AbstractIrcChannel channel) throws IrcResourceException, CoreException, IOException {
+    public IrcEditor openEditor(AbstractIrcChannel channel, boolean activate) throws IrcResourceException, CoreException, IOException {
         IrcUtils.assertUiThread();
         IWorkbenchPage page = PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage();
         IrcChannelResource channelResource = channel.getChannelResource();
@@ -253,9 +275,11 @@ public class EirccUi extends AbstractUIPlugin implements IrcModelEventListener {
                 if (input.equals(editorInput)) {
                     /*
                      * The editor for the given channel is already opened, we
-                     * just need to activate it
+                     * just need to activate it if required
                      */
-                    page.activate(editor);
+                    if (activate) {
+                        page.activate(editor);
+                    }
                     return ircEditor;
                 }
                 /*
@@ -265,9 +289,11 @@ public class EirccUi extends AbstractUIPlugin implements IrcModelEventListener {
                 // TODO AbstractIrcChannel editorChannel =
                 // ircEditor.getChannel();
 
-                IrcLogResource editorLogResource = ircEditor.getLastLogResource();
-                if (channelResource == editorLogResource.getChannelResource()) {
-                    channelEditors.put(editorLogResource.getTime(), ircEditor);
+                if (!ircEditor.isHistoryViewer()) {
+                    IrcLogResource editorLogResource = ircEditor.getLastLogResource();
+                    if (channelResource == editorLogResource.getChannelResource()) {
+                        channelEditors.put(editorLogResource.getTime(), ircEditor);
+                    }
                 }
             }
         }
@@ -279,19 +305,13 @@ public class EirccUi extends AbstractUIPlugin implements IrcModelEventListener {
          */
         if (!channelEditors.isEmpty()) {
 
-            TemporalAmount lookBackTimeSpan = IrcPreferences.getInstance().getEditorLookBackTimeSpan();
-
             OffsetDateTime editorStart = channelEditors.lastKey();
             IrcEditor lastEditor = channelEditors.get(editorStart);
-            OffsetDateTime editorEnd = lastEditor.getLastMessageTime();
-
-            OffsetDateTime lookBackStart = OffsetDateTime.now().minus(lookBackTimeSpan);
-            if (!lookBackStart.isAfter(editorEnd)) {
-                /* lookBackStart is between editorStart and editorEnd */
-                lastEditor.rotate();
+            lastEditor.fillAndRotate();
+            if (activate) {
                 page.activate(lastEditor);
-                return lastEditor;
             }
+            return lastEditor;
         }
 
         /* there was no open editor belonging to this channel */
@@ -329,6 +349,7 @@ public class EirccUi extends AbstractUIPlugin implements IrcModelEventListener {
 
         IrcSystemMessagesGenerator.getInstance();
 
+        PlatformUI.getWorkbench().addWorkbenchListener(workbenchListener);
     }
 
     /**
@@ -337,11 +358,7 @@ public class EirccUi extends AbstractUIPlugin implements IrcModelEventListener {
     @Override
     public void stop(BundleContext context) throws Exception {
         IrcUtils.markShutDownThread();
-        try {
-            saveAll();
-        } catch (Exception e) {
-            log(e);
-        }
+
         try {
             IrcSystemMessagesGenerator.getInstance().dispose();
         } catch (Exception e) {
@@ -375,6 +392,34 @@ public class EirccUi extends AbstractUIPlugin implements IrcModelEventListener {
     }
 
     /**
+     * @throws IrcResourceException
+     *
+     */
+    private void closeAutoopenedEditors() {
+        IWorkbenchPage page = PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage();
+
+        for (IrcAccount account : model.getAccounts()) {
+            for (AbstractIrcChannel channel : account.getChannels()) {
+                if (channel.isAutoJoin()) {
+                    try {
+                        IrcChannelResource channelResource = channel.getChannelResource();
+                        IrcLogResource logResource = channelResource.getLastLogResource();
+                        if (logResource != null) {
+                            IEditorInput input = logResource.getEditorInput();
+                            IEditorPart editor = page.findEditor(input);
+                            if (editor != null) {
+                                page.closeEditor(editor, false);
+                            }
+                        }
+                    } catch (Exception e) {
+                        log(e);
+                    }
+                }
+            }
+        }
+    }
+
+    /**
      * @throws CoreException
      * @throws IrcException
      *
@@ -383,9 +428,11 @@ public class EirccUi extends AbstractUIPlugin implements IrcModelEventListener {
 
         for (IrcAccount account : model.getAccounts()) {
             for (AbstractIrcChannel channel : account.getChannels()) {
-                IrcLog log = channel.getLog();
-                if (log != null) {
-                    log.ensureAllSaved(new NullProgressMonitor());
+                if (channel.isJoined()) {
+                    IrcLog log = channel.getLog();
+                    if (log != null) {
+                        log.ensureAllSaved(new NullProgressMonitor());
+                    }
                 }
             }
         }
@@ -424,7 +471,7 @@ public class EirccUi extends AbstractUIPlugin implements IrcModelEventListener {
         }
         if (hottestMessage != null) {
             AbstractIrcChannel ch = hottestMessage.getLog().getChannel();
-            IrcEditor editor = openEditor(ch);
+            IrcEditor editor = openEditor(ch, true);
             editor.reveal(hottestMessage);
         }
     }

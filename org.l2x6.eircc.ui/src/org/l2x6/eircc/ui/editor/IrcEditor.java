@@ -17,6 +17,9 @@ import java.time.temporal.ChronoField;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.NavigableSet;
 import java.util.SortedMap;
 
 import org.eclipse.core.resources.IFile;
@@ -31,6 +34,7 @@ import org.eclipse.swt.widgets.Shell;
 import org.eclipse.ui.IEditorInput;
 import org.eclipse.ui.IEditorSite;
 import org.eclipse.ui.IFileEditorInput;
+import org.eclipse.ui.IMemento;
 import org.eclipse.ui.IPartListener2;
 import org.eclipse.ui.IWorkbenchPartReference;
 import org.eclipse.ui.PartInitException;
@@ -67,6 +71,8 @@ import org.l2x6.eircc.ui.views.IrcLabelProvider;
 public class IrcEditor extends AbstractIrcEditor implements IrcModelEventListener {
 
     private static class IrcLogEntry {
+        private final int lineIndex;
+        private final IrcLogResource logResource;
         /**
          * @param logResource
          * @param start
@@ -76,30 +82,33 @@ public class IrcEditor extends AbstractIrcEditor implements IrcModelEventListene
             this.logResource = logResource;
             this.lineIndex = lineIndex;
         }
-        private final IrcLogResource logResource;
-        public IrcLogResource getLogResource() {
-            return logResource;
-        }
         public int getLineIndex() {
             return lineIndex;
         }
-        private final int lineIndex;
+        public IrcLogResource getLogResource() {
+            return logResource;
+        }
     }
 
+    private static final String HISTORY_VIEWER_KEY = "org.l2x6.eircc.ui.editor.IrcEditor.historyViewer";
+
     public static final String ID = "org.l2x6.eircc.ui.editor.IrcEditor";
+
     private static final DateTimeFormatter TITLE_DATE_FORMATTER = new DateTimeFormatterBuilder()
             .appendValue(ChronoField.HOUR_OF_DAY, 2).appendLiteral(':').appendValue(ChronoField.MINUTE_OF_HOUR, 2)
             .toFormatter();
+
     private SashForm accountsDetailsSplitter;
+
     private AbstractIrcChannel channel;
-
-
     private boolean historyViewer = true;
     private IrcInputField inputViewer;
-
     private OffsetDateTime lastMessageTime;
+
+
     private List<IrcLogEntry> logResources = new ArrayList<IrcLogEntry>();
     private IrcChannelOutlinePage outlinePage;
+
     private IPartListener2 readMessagesUpdater = new IPartListener2() {
 
         /**
@@ -164,7 +173,6 @@ public class IrcEditor extends AbstractIrcEditor implements IrcModelEventListene
 
     };
     private String tooltip;
-
     /**
      *
      */
@@ -172,7 +180,24 @@ public class IrcEditor extends AbstractIrcEditor implements IrcModelEventListene
         super();
         setSourceViewerConfiguration(new IrcLogEditorConfiguration(getPreferenceStore()));
     }
+    private void addLogResource(IrcLogResource logResource) {
+        int lineIndex = 0;
+        if (!logResources.isEmpty()) {
 
+            if (logViewer != null) {
+                IDocument doc = logViewer.getDocument();
+                if (doc != null) {
+                    try {
+                        lineIndex = doc.getLineOfOffset(doc.getLength());
+                    } catch (BadLocationException e) {
+                        throw new RuntimeException(e);
+                    }
+                }
+            }
+        }
+        IrcLogEntry entry = new IrcLogEntry(logResource, lineIndex);
+        logResources.add(entry);
+    }
     private void adjustUi() {
         if (isHistoryViewer()) {
             accountsDetailsSplitter.setMaximizedControl(getSourceViewer().getControl());
@@ -183,6 +208,16 @@ public class IrcEditor extends AbstractIrcEditor implements IrcModelEventListene
         if (outlinePage != null) {
             outlinePage.updateInput();
         }
+    }
+
+    /**
+     * @param m
+     */
+    private void appendMessage(StyledWrapper wrapper, PlainIrcMessage m) {
+        IrcPreferences prefs = IrcPreferences.getInstance();
+        IrcDefaultMessageFormatter formatter = prefs.getFormatter(m);
+        formatter.format(wrapper, m, TimeStyle.TIME);
+        lastMessageTime = m.getArrivedAt();
     }
 
     /**
@@ -233,6 +268,10 @@ public class IrcEditor extends AbstractIrcEditor implements IrcModelEventListene
         super.dispose();
     }
 
+    protected void doRestoreState(IMemento memento) {
+
+    }
+
     /**
      * @see org.eclipse.ui.part.EditorPart#doSave(org.eclipse.core.runtime.IProgressMonitor)
      */
@@ -245,6 +284,15 @@ public class IrcEditor extends AbstractIrcEditor implements IrcModelEventListene
      */
     @Override
     public void doSaveAs() {
+    }
+
+    private IrcLogEntry findEntry(IFile logFile) {
+        for (IrcLogEntry entry : logResources) {
+            if (logFile.equals(entry.getLogResource().getLogFile())) {
+                return entry;
+            }
+        }
+        return null;
     }
 
     @Override
@@ -424,25 +472,6 @@ public class IrcEditor extends AbstractIrcEditor implements IrcModelEventListene
         return false;
     }
 
-    private void addLogResource(IrcLogResource logResource) {
-        int lineIndex = 0;
-        if (!logResources.isEmpty()) {
-
-            if (logViewer != null) {
-                IDocument doc = logViewer.getDocument();
-                if (doc != null) {
-                    try {
-                        lineIndex = doc.getLineOfOffset(doc.getLength());
-                    } catch (BadLocationException e) {
-                        throw new RuntimeException(e);
-                    }
-                }
-            }
-        }
-        IrcLogEntry entry = new IrcLogEntry(logResource, lineIndex);
-        logResources.add(entry);
-    }
-
     /**
      * @param logResource
      * @throws CoreException
@@ -496,16 +525,6 @@ public class IrcEditor extends AbstractIrcEditor implements IrcModelEventListene
         addLogResource(logResource);
     }
 
-    /**
-     * @param m
-     */
-    private void appendMessage(StyledWrapper wrapper, PlainIrcMessage m) {
-        IrcPreferences prefs = IrcPreferences.getInstance();
-        IrcDefaultMessageFormatter formatter = prefs.getFormatter(m);
-        formatter.format(wrapper, m, TimeStyle.TIME);
-        lastMessageTime = m.getArrivedAt();
-    }
-
     private void reload() throws IOException, CoreException {
         logViewer.clear();
         List<IrcLogEntry> logResourcesCopy = new ArrayList<IrcLogEntry>(logResources);
@@ -515,6 +534,22 @@ public class IrcEditor extends AbstractIrcEditor implements IrcModelEventListene
         }
 
         updateTitle();
+    }
+
+    @Override
+    public void restoreState(IMemento memento) {
+        super.restoreState(memento);
+        Boolean b = memento.getBoolean(HISTORY_VIEWER_KEY);
+        this.historyViewer = b != null ? b.booleanValue() : false;
+    }
+
+    private void reveal(IrcLogEntry entry, PlainIrcMessage message, int offsetInMessageText, int length) throws BadLocationException {
+        int lineOffset = logViewer.getDocument().getLineOffset(entry.getLineIndex() + message.getLineIndex());
+        String nick = message.getNick();
+        int nickLength = nick != null ? nick.length() + 2 : 0;
+        int relativeTextOfset = IrcDefaultMessageFormatter.TimeStyle.TIME.getCharacterLength() + 1 + nickLength
+                + offsetInMessageText;
+        selectAndReveal(lineOffset + relativeTextOfset, length);
     }
 
     /**
@@ -527,27 +562,9 @@ public class IrcEditor extends AbstractIrcEditor implements IrcModelEventListene
         reveal(entry, message, ircMatch.getOffsetInMessageText(), ircMatch.getLength());
     }
 
-    private IrcLogEntry findEntry(IFile logFile) {
-        for (IrcLogEntry entry : logResources) {
-            if (logFile.equals(entry.getLogResource().getLogFile())) {
-                return entry;
-            }
-        }
-        return null;
-    }
-
     public void reveal(IrcMessage message) throws BadLocationException {
         IrcLogEntry entry = findEntry(message.getLog().getLogResource().getLogFile());
         reveal(entry, message, 0, message.getText().length());
-    }
-
-    private void reveal(IrcLogEntry entry, PlainIrcMessage message, int offsetInMessageText, int length) throws BadLocationException {
-        int lineOffset = logViewer.getDocument().getLineOffset(entry.getLineIndex() + message.getLineIndex());
-        String nick = message.getNick();
-        int nickLength = nick != null ? nick.length() + 2 : 0;
-        int relativeTextOfset = IrcDefaultMessageFormatter.TimeStyle.TIME.getCharacterLength() + 1 + nickLength
-                + offsetInMessageText;
-        selectAndReveal(lineOffset + relativeTextOfset, length);
     }
 
     /**
@@ -586,6 +603,11 @@ public class IrcEditor extends AbstractIrcEditor implements IrcModelEventListene
         }
     }
 
+    @Override
+    public void saveState(IMemento memento) {
+        memento.putBoolean(HISTORY_VIEWER_KEY, Boolean.valueOf(this.historyViewer));
+        super.saveState(memento);
+    }
 
     /**
      * @see org.eclipse.ui.part.WorkbenchPart#setFocus()
@@ -680,6 +702,29 @@ public class IrcEditor extends AbstractIrcEditor implements IrcModelEventListene
                 setTitleImage(IrcImages.getInstance().getImage(channel));
             }
         }
+    }
+
+    /**
+     *
+     */
+    public void fillAndRotate() {
+        /* Make sure we show the preferred span of the history up to the
+         * newest session log */
+        int desiredMessageCount = IrcPreferences.getInstance().getEditorLookBackMessageSpan();
+        IrcLogResource logResource = getLastLogResource();
+        if (logResource != null && !logResource.isLast()) {
+            IrcChannelResource channelResouce = logResource.getChannelResource();
+            channelResouce.refresh();
+            SortedMap<OffsetDateTime, IrcLogResource> logs = channelResouce.getLogResources();
+            Iterator<Entry<OffsetDateTime, IrcLogResource>> it = ((NavigableSet<Map.Entry<OffsetDateTime, IrcLogResource>>)logs.entrySet()).descendingIterator();
+            while (it.hasNext()) {
+                IrcLogResource r = it.next().getValue();
+                r.getLogFile().get
+            }
+        }
+
+        rotate();
+
     }
 
 }

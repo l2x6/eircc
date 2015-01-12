@@ -325,14 +325,9 @@ public class IrcAccountsView extends ViewPart implements IrcModelEventListener {
                                 if (data instanceof AbstractIrcChannel) {
                                     AbstractIrcChannel ch = (AbstractIrcChannel) selection[0].getData();
                                     if (!ch.isJoined()) {
-                                        /*
-                                         * this should both join and open the
-                                         * editor
-                                         */
                                         EirccUi.getController().joinChannel(ch);
-                                    } else {
-                                        EirccUi.getDefault().openEditor(ch);
                                     }
+                                    EirccUi.getDefault().openEditor(ch, true);
                                 } else if (data instanceof PlainIrcChannel) {
                                     PlainIrcChannel ch = (PlainIrcChannel) data;
                                     EirccUi.getController().joinChannel(ch);

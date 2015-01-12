@@ -91,7 +91,7 @@ public class IrcPreferences implements IrcNotificationLevelProvider {
 
     private static final int DEFAULT_EDITOR_LOOK_BACK_LINE_LIMIT = 512;
 
-    private static final TemporalAmount DEFAULT_EDITOR_LOOK_BACK_TIME_SPAN = Duration.ofHours(24);
+    private static final int DEFAULT_EDITOR_LOOK_BACK_MESSAGE_SPAN = 128;
     private static final String DEFAULT_NOTIFICATION_MESSAGE_COLOR_KEY = IrcPreferences.class.getName() + ".defaultNotificationMessageColor";
     private static final Duration DEFAULT_PING_INTERVAL = Duration.ofMinutes(1);
 
@@ -229,8 +229,8 @@ public class IrcPreferences implements IrcNotificationLevelProvider {
         return DEFAULT_EDITOR_LOOK_BACK_LINE_LIMIT;
     }
 
-    public TemporalAmount getEditorLookBackTimeSpan() {
-        return DEFAULT_EDITOR_LOOK_BACK_TIME_SPAN;
+    public int getEditorLookBackMessageSpan() {
+        return DEFAULT_EDITOR_LOOK_BACK_MESSAGE_SPAN;
     }
 
     /**

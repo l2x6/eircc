@@ -133,7 +133,7 @@ public class IrcTreeActions<E> extends Action implements Listener, IrcTreeAction
                     /* this should both join and open the editor */
                     EirccUi.getController().joinChannel(ch);
                 } else {
-                    EirccUi.getDefault().openEditor(ch);
+                    EirccUi.getDefault().openEditor(ch, true);
                 }
             } catch (Exception e) {
                 EirccUi.log(e);
