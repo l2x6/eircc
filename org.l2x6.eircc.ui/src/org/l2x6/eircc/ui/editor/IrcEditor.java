@@ -17,11 +17,16 @@ import java.time.temporal.ChronoField;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.ListIterator;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.NavigableSet;
 import java.util.SortedMap;
 
+import org.eclipse.core.filesystem.EFS;
+import org.eclipse.core.filesystem.IFileInfo;
+import org.eclipse.core.filesystem.IFileStore;
+import org.eclipse.core.filesystem.IFileSystem;
 import org.eclipse.core.resources.IFile;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IProgressMonitor;
@@ -198,6 +203,14 @@ public class IrcEditor extends AbstractIrcEditor implements IrcModelEventListene
         IrcLogEntry entry = new IrcLogEntry(logResource, lineIndex);
         logResources.add(entry);
     }
+
+    private void clear() {
+        logResources.clear();
+        if (logViewer != null) {
+            logViewer.clear();
+        }
+    }
+
     private void adjustUi() {
         if (isHistoryViewer()) {
             accountsDetailsSplitter.setMaximizedControl(getSourceViewer().getControl());
@@ -567,42 +580,6 @@ public class IrcEditor extends AbstractIrcEditor implements IrcModelEventListene
         reveal(entry, message, 0, message.getText().length());
     }
 
-    /**
-     * Updates the input to point to the last log of the present channel.
-     *
-     * @throws IrcResourceException
-     * @throws IOException
-     * @throws CoreException
-     */
-    public void rotate() throws IrcResourceException, CoreException, IOException {
-        IrcLogResource logResource = getLastLogResource();
-        if (logResource != null && !logResource.isLast()) {
-
-            IrcChannelResource channelResouce = logResource.getChannelResource();
-            channelResouce.refresh();
-            SortedMap<OffsetDateTime, IrcLogResource> tailMap = channelResouce.getLogResources().tailMap(
-                    logResource.getTime());
-            Iterator<IrcLogResource> tailIt = tailMap.values().iterator();
-
-            if (tailIt.hasNext()) {
-                IrcLogResource lr = tailIt.next();
-                if (lr == logResource) {
-                    /* already loaded - ignore */
-                } else {
-                    load(lr);
-                }
-                while (tailIt.hasNext()) {
-                    lr = tailIt.next();
-                    load(lr);
-                }
-            }
-
-            IEditorInput newInput = logResource.getChannelResource().getActiveLogResource().getEditorInput();
-            init(getEditorSite(), newInput);
-            adjustUi();
-        }
-    }
-
     @Override
     public void saveState(IMemento memento) {
         memento.putBoolean(HISTORY_VIEWER_KEY, Boolean.valueOf(this.historyViewer));
@@ -705,26 +682,52 @@ public class IrcEditor extends AbstractIrcEditor implements IrcModelEventListene
     }
 
     /**
+     * @param channel2
+     * @throws IrcResourceException
+     * @throws IOException
+     * @throws CoreException
      *
      */
-    public void fillAndRotate() {
+    public void refillAndRotate(AbstractIrcChannel ch) throws IrcResourceException, CoreException, IOException {
         /* Make sure we show the preferred span of the history up to the
          * newest session log */
-        int desiredMessageCount = IrcPreferences.getInstance().getEditorLookBackMessageSpan();
-        IrcLogResource logResource = getLastLogResource();
-        if (logResource != null && !logResource.isLast()) {
-            IrcChannelResource channelResouce = logResource.getChannelResource();
-            channelResouce.refresh();
-            SortedMap<OffsetDateTime, IrcLogResource> logs = channelResouce.getLogResources();
-            Iterator<Entry<OffsetDateTime, IrcLogResource>> it = ((NavigableSet<Map.Entry<OffsetDateTime, IrcLogResource>>)logs.entrySet()).descendingIterator();
-            while (it.hasNext()) {
-                IrcLogResource r = it.next().getValue();
-                r.getLogFile().get
+        clear();
+        IrcChannelResource channelResouce = ch.getChannelResource();
+        channelResouce.refresh();
+
+        /* the following eventually creates a new active log resource */
+        IEditorInput newInput = channelResouce.getActiveLogResource().getEditorInput();
+        SortedMap<OffsetDateTime, IrcLogResource> logs = channelResouce.getLogResources();
+
+        /* we will iterate from newest to oldest */
+        Iterator<Entry<OffsetDateTime, IrcLogResource>> it = ((NavigableSet<Map.Entry<OffsetDateTime, IrcLogResource>>)logs.entrySet()).descendingIterator();
+        long loadedBytes = 0;
+        final long maxBytes = IrcPreferences.getInstance().getLookbackTresholdBytes();
+        List<IrcLogResource> loadResources = new ArrayList<IrcLogResource>();
+        while (it.hasNext()) {
+            IrcLogResource r = it.next().getValue();
+            loadResources.add(r);
+            IFileSystem fs = EFS.getLocalFileSystem();
+            IFileStore store = fs.getStore(r.getLogFile().getLocation());
+            IFileInfo fileInfo = store.fetchInfo();
+            long length = fileInfo.getLength();
+            if (length != EFS.NONE) {
+                loadedBytes += length;
+                if (loadedBytes >= maxBytes) {
+                    break;
+                }
             }
         }
 
-        rotate();
+        /* load the chosen log resources
+         * iterate in the reverse order because we have added newest first to loadResources */
+        ListIterator<IrcLogResource> listIt = loadResources.listIterator(loadResources.size());
+        while (listIt.hasPrevious()) {
+            load(listIt.previous());
+        }
 
+        init(getEditorSite(), newInput);
+        adjustUi();
     }
 
 }

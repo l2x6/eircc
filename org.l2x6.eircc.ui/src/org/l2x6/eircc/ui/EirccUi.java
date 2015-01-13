@@ -307,7 +307,7 @@ public class EirccUi extends AbstractUIPlugin implements IrcModelEventListener {
 
             OffsetDateTime editorStart = channelEditors.lastKey();
             IrcEditor lastEditor = channelEditors.get(editorStart);
-            lastEditor.fillAndRotate();
+            lastEditor.refillAndRotate(channel);
             if (activate) {
                 page.activate(lastEditor);
             }

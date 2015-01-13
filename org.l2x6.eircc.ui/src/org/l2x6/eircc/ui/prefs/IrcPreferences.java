@@ -10,7 +10,6 @@ package org.l2x6.eircc.ui.prefs;
 
 import java.text.MessageFormat;
 import java.time.Duration;
-import java.time.temporal.TemporalAmount;
 import java.util.Collection;
 import java.util.Map;
 import java.util.Set;
@@ -89,12 +88,12 @@ public class IrcPreferences implements IrcNotificationLevelProvider {
 
     private static final Duration COMMAND_TIMEOUT = Duration.ofSeconds(3);
 
-    private static final int DEFAULT_EDITOR_LOOK_BACK_LINE_LIMIT = 512;
-
-    private static final int DEFAULT_EDITOR_LOOK_BACK_MESSAGE_SPAN = 128;
+    private static final long DEFAULT_EDITOR_LOOK_BACK_BYTE_LIMIT = 8 * 1024;
     private static final String DEFAULT_NOTIFICATION_MESSAGE_COLOR_KEY = IrcPreferences.class.getName() + ".defaultNotificationMessageColor";
+
     private static final Duration DEFAULT_PING_INTERVAL = Duration.ofMinutes(1);
 
+    private static final IrcPreferences INSTANCE = new IrcPreferences();
     private static final IInputValidator PATTERN_VALIDATOR = new IInputValidator() {
         /**
          * Validates the String. Returns null for no error, or an error message
@@ -119,7 +118,6 @@ public class IrcPreferences implements IrcNotificationLevelProvider {
     };
 
     public static final char WATCHED_OBJECT_DELIMITER = ' ';
-    private static final IrcPreferences INSTANCE = new IrcPreferences();
 
     public static IrcPreferences getInstance() {
         return INSTANCE;
@@ -225,14 +223,6 @@ public class IrcPreferences implements IrcNotificationLevelProvider {
         return true;
     }
 
-    public int getEditorLookBackLineLimit() {
-        return DEFAULT_EDITOR_LOOK_BACK_LINE_LIMIT;
-    }
-
-    public int getEditorLookBackMessageSpan() {
-        return DEFAULT_EDITOR_LOOK_BACK_MESSAGE_SPAN;
-    }
-
     /**
      * @param m
      * @return
@@ -248,6 +238,13 @@ public class IrcPreferences implements IrcNotificationLevelProvider {
         default:
             return defaultFormatter;
         }
+    }
+
+    /**
+     * @return
+     */
+    public long getLookbackTresholdBytes() {
+        return DEFAULT_EDITOR_LOOK_BACK_BYTE_LIMIT;
     }
 
     public ExtendedTextStyle getMessageTimeStyle() {
