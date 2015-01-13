@@ -32,6 +32,7 @@ import java.util.concurrent.TimeoutException;
 import org.eclipse.swt.widgets.Display;
 import org.l2x6.eircc.core.IrcController;
 import org.l2x6.eircc.core.IrcException;
+import org.l2x6.eircc.core.client.cmd.CtcpIrcCommandCallback;
 import org.l2x6.eircc.core.client.cmd.IrcCommandCallbackList;
 import org.l2x6.eircc.core.client.cmd.IrcCommandMessage;
 import org.l2x6.eircc.core.client.cmd.NickIrcCommandCallback;
@@ -651,7 +652,9 @@ public class IrcClient {
         this.commandTimeout = commandTimeout;
         this.executor = new IrcExecutor("Executor");
         this.timeoutChecker = new IrcExecutor("TaskValidator");
-        this.callbacks = IrcCommandCallbackList.empty().add(new NickIrcCommandCallback(controller));
+        this.callbacks = IrcCommandCallbackList.empty()
+                .add(new NickIrcCommandCallback(controller))
+                .add(new CtcpIrcCommandCallback(controller));
     }
 
     public void close() {

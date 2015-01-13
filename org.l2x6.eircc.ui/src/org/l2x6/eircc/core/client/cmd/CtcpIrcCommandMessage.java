@@ -34,7 +34,7 @@ public class CtcpIrcCommandMessage extends IrcCommandMessage {
         this.ctcpCommand = ctcpCommand;
         String cleanMessage = sourceText.substring(initialCommand.length() +2).trim();
         this.quotedCtcpCommand = CTCPCommand.QUOTE_CHAR + ctcpCommand.name() + " "+ cleanMessage + CTCPCommand.QUOTE_CHAR;
-        this.protocolCommand = IRCCommand.PRIVMSG +" "+ channel.getName() + " " + quotedCtcpCommand;
+        this.protocolCommand = IRCCommand.PRIVMSG +" "+ channel.getName() + " :" + quotedCtcpCommand;
     }
 
     @Override

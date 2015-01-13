@@ -67,7 +67,7 @@ public class CtcpIrcCommandCallback implements IrcCommandCallback {
         }
         switch (ctcpCommand) {
         case ACTION:
-            String cleanMessage = msg.substring(ctcpCommand.name().length() + 2).trim();
+            String cleanMessage = msg.substring(ctcpCommand.name().length() + 1).trim();
             String displayMessage = "*** " + sender.getNick() + " " + cleanMessage;
             String commandSource = null;
             if (myNick.equals(sender.getNick())) {
