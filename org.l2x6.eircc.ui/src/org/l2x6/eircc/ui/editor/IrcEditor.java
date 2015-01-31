@@ -204,11 +204,17 @@ public class IrcEditor extends AbstractIrcEditor implements IrcModelEventListene
         logResources.add(entry);
     }
 
-    private void clear() {
-        logResources.clear();
-        if (logViewer != null) {
-            logViewer.clear();
+    /**
+     * @param logResource
+     */
+    private void addLogResourceIfNecessary(IrcLogResource logResource) {
+        for (IrcLogEntry entry : logResources) {
+            if (entry.getLogResource().equals(logResource)) {
+                /* nothing to do */
+                return;
+            }
         }
+        addLogResource(logResource);
     }
 
     private void adjustUi() {
@@ -231,6 +237,13 @@ public class IrcEditor extends AbstractIrcEditor implements IrcModelEventListene
         IrcDefaultMessageFormatter formatter = prefs.getFormatter(m);
         formatter.format(wrapper, m, TimeStyle.TIME);
         lastMessageTime = m.getArrivedAt();
+    }
+
+    private void clear() {
+        logResources.clear();
+        if (logViewer != null) {
+            logViewer.clear();
+        }
     }
 
     /**
@@ -438,7 +451,7 @@ public class IrcEditor extends AbstractIrcEditor implements IrcModelEventListene
             try {
                 IrcLogResource logResource = model.getRootResource().getLogResource(logFile);
                 lastMessageTime = logResource.getTime();
-                addLogResource(logResource);
+                addLogResourceIfNecessary(logResource);
                 updateMode();
                 if (isHistoryViewer()) {
                     EirccUi.getDefault().getModel().removeModelEventListener(this);
@@ -536,6 +549,55 @@ public class IrcEditor extends AbstractIrcEditor implements IrcModelEventListene
             }
         }
         addLogResource(logResource);
+    }
+
+    /**
+     * @param channel2
+     * @throws IrcResourceException
+     * @throws IOException
+     * @throws CoreException
+     *
+     */
+    public void refillAndRotate(AbstractIrcChannel ch) throws IrcResourceException, CoreException, IOException {
+        /* Make sure we show the preferred span of the history up to the
+         * newest session log */
+        clear();
+        IrcChannelResource channelResouce = ch.getChannelResource();
+        channelResouce.refresh();
+
+        /* the following eventually creates a new active log resource */
+        IEditorInput newInput = channelResouce.getActiveLogResource().getEditorInput();
+        SortedMap<OffsetDateTime, IrcLogResource> logs = channelResouce.getLogResources();
+
+        /* we will iterate from newest to oldest */
+        Iterator<Entry<OffsetDateTime, IrcLogResource>> it = ((NavigableSet<Map.Entry<OffsetDateTime, IrcLogResource>>)logs.entrySet()).descendingIterator();
+        long loadedBytes = 0;
+        final long maxBytes = IrcPreferences.getInstance().getLookbackTresholdBytes();
+        List<IrcLogResource> loadResources = new ArrayList<IrcLogResource>();
+        while (it.hasNext()) {
+            IrcLogResource r = it.next().getValue();
+            loadResources.add(r);
+            IFileSystem fs = EFS.getLocalFileSystem();
+            IFileStore store = fs.getStore(r.getLogFile().getLocation());
+            IFileInfo fileInfo = store.fetchInfo();
+            long length = fileInfo.getLength();
+            if (length != EFS.NONE) {
+                loadedBytes += length;
+                if (loadedBytes >= maxBytes) {
+                    break;
+                }
+            }
+        }
+
+        /* load the chosen log resources
+         * iterate in the reverse order because we have added newest first to loadResources */
+        ListIterator<IrcLogResource> listIt = loadResources.listIterator(loadResources.size());
+        while (listIt.hasPrevious()) {
+            load(listIt.previous());
+        }
+
+        init(getEditorSite(), newInput);
+        adjustUi();
     }
 
     private void reload() throws IOException, CoreException {
@@ -679,55 +741,6 @@ public class IrcEditor extends AbstractIrcEditor implements IrcModelEventListene
                 setTitleImage(IrcImages.getInstance().getImage(channel));
             }
         }
-    }
-
-    /**
-     * @param channel2
-     * @throws IrcResourceException
-     * @throws IOException
-     * @throws CoreException
-     *
-     */
-    public void refillAndRotate(AbstractIrcChannel ch) throws IrcResourceException, CoreException, IOException {
-        /* Make sure we show the preferred span of the history up to the
-         * newest session log */
-        clear();
-        IrcChannelResource channelResouce = ch.getChannelResource();
-        channelResouce.refresh();
-
-        /* the following eventually creates a new active log resource */
-        IEditorInput newInput = channelResouce.getActiveLogResource().getEditorInput();
-        SortedMap<OffsetDateTime, IrcLogResource> logs = channelResouce.getLogResources();
-
-        /* we will iterate from newest to oldest */
-        Iterator<Entry<OffsetDateTime, IrcLogResource>> it = ((NavigableSet<Map.Entry<OffsetDateTime, IrcLogResource>>)logs.entrySet()).descendingIterator();
-        long loadedBytes = 0;
-        final long maxBytes = IrcPreferences.getInstance().getLookbackTresholdBytes();
-        List<IrcLogResource> loadResources = new ArrayList<IrcLogResource>();
-        while (it.hasNext()) {
-            IrcLogResource r = it.next().getValue();
-            loadResources.add(r);
-            IFileSystem fs = EFS.getLocalFileSystem();
-            IFileStore store = fs.getStore(r.getLogFile().getLocation());
-            IFileInfo fileInfo = store.fetchInfo();
-            long length = fileInfo.getLength();
-            if (length != EFS.NONE) {
-                loadedBytes += length;
-                if (loadedBytes >= maxBytes) {
-                    break;
-                }
-            }
-        }
-
-        /* load the chosen log resources
-         * iterate in the reverse order because we have added newest first to loadResources */
-        ListIterator<IrcLogResource> listIt = loadResources.listIterator(loadResources.size());
-        while (listIt.hasPrevious()) {
-            load(listIt.previous());
-        }
-
-        init(getEditorSite(), newInput);
-        adjustUi();
     }
 
 }

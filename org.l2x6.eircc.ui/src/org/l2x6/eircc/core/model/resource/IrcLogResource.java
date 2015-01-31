@@ -180,4 +180,25 @@ public class IrcLogResource implements ISynchronizable {
         throw new UnsupportedOperationException();
     }
 
+    @Override
+    public int hashCode() {
+        final int prime = 31;
+        int result = 1;
+        result = prime * result + ((logFile == null) ? 0 : logFile.hashCode());
+        return result;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj)
+            return true;
+        if (obj == null)
+            return false;
+        if (getClass() != obj.getClass())
+            return false;
+        IrcLogResource other = (IrcLogResource) obj;
+        return this.logFile == other.logFile || (this.logFile != null && this.logFile.equals(other.logFile));
+    }
+
+
 }

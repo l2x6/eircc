@@ -129,7 +129,7 @@ public class EirccUi extends AbstractUIPlugin implements IrcModelEventListener {
                 log(e);
             }
 
-            closeAutoopenedEditors();
+            //closeAutoopenedEditors();
 
             return true;
         }
