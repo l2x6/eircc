@@ -9,7 +9,6 @@ package org.l2x6.eircc.ui;
 
 import java.io.IOException;
 import java.time.OffsetDateTime;
-import java.time.temporal.TemporalAmount;
 import java.util.SortedMap;
 import java.util.TreeMap;
 
@@ -268,31 +267,33 @@ public class EirccUi extends AbstractUIPlugin implements IrcModelEventListener {
 
         IEditorReference[] editorRefs = page.getEditorReferences();
         for (IEditorReference editorRef : editorRefs) {
-            IEditorPart editor = editorRef.getEditor(true);
-            if (editor instanceof IrcEditor) {
-                IrcEditor ircEditor = (IrcEditor) editor;
-                IEditorInput editorInput = ircEditor.getEditorInput();
-                if (input.equals(editorInput)) {
-                    /*
-                     * The editor for the given channel is already opened, we
-                     * just need to activate it if required
-                     */
-                    if (activate) {
-                        page.activate(editor);
+            if (IrcEditor.ID.equals(editorRef.getId())) {
+                IEditorPart editor = editorRef.getEditor(true);
+                if (editor instanceof IrcEditor) {
+                    IrcEditor ircEditor = (IrcEditor) editor;
+                    IEditorInput editorInput = ircEditor.getEditorInput();
+                    if (input.equals(editorInput)) {
+                        /*
+                         * The editor for the given channel is already opened, we
+                         * just need to activate it if required
+                         */
+                        if (activate) {
+                            page.activate(editor);
+                        }
+                        return ircEditor;
                     }
-                    return ircEditor;
-                }
-                /*
-                 * we should somehow ensure that there is only one connected
-                 * editor per channel
-                 */
-                // TODO AbstractIrcChannel editorChannel =
-                // ircEditor.getChannel();
+                    /*
+                     * we should somehow ensure that there is only one connected
+                     * editor per channel
+                     */
+                    // TODO AbstractIrcChannel editorChannel =
+                    // ircEditor.getChannel();
 
-                if (!ircEditor.isHistoryViewer()) {
-                    IrcLogResource editorLogResource = ircEditor.getLastLogResource();
-                    if (channelResource == editorLogResource.getChannelResource()) {
-                        channelEditors.put(editorLogResource.getTime(), ircEditor);
+                    if (!ircEditor.isHistoryViewer()) {
+                        IrcLogResource editorLogResource = ircEditor.getLastLogResource();
+                        if (editorLogResource != null && channelResource == editorLogResource.getChannelResource()) {
+                            channelEditors.put(editorLogResource.getTime(), ircEditor);
+                        }
                     }
                 }
             }
@@ -395,6 +396,7 @@ public class EirccUi extends AbstractUIPlugin implements IrcModelEventListener {
      * @throws IrcResourceException
      *
      */
+    @SuppressWarnings("unused")
     private void closeAutoopenedEditors() {
         IWorkbenchPage page = PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage();
 

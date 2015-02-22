@@ -18,8 +18,6 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
-import java.util.Map;
-import java.util.Map.Entry;
 import java.util.NavigableSet;
 import java.util.SortedMap;
 
@@ -264,7 +262,9 @@ public class IrcEditor extends AbstractIrcEditor implements IrcModelEventListene
             if (!isHistoryViewer()) {
                 logViewer.scrollToBottom();
                 AbstractIrcChannel channel = getChannel();
-                channel.getLog().allRead();
+                if (channel != null) {
+                    channel.getLog().allRead();
+                }
             }
         } catch (IOException | CoreException e) {
             EirccUi.log(e);
@@ -570,12 +570,12 @@ public class IrcEditor extends AbstractIrcEditor implements IrcModelEventListene
         SortedMap<OffsetDateTime, IrcLogResource> logs = channelResouce.getLogResources();
 
         /* we will iterate from newest to oldest */
-        Iterator<Entry<OffsetDateTime, IrcLogResource>> it = ((NavigableSet<Map.Entry<OffsetDateTime, IrcLogResource>>)logs.entrySet()).descendingIterator();
+        Iterator<OffsetDateTime> it = ((NavigableSet<OffsetDateTime>)logs.keySet()).descendingIterator();
         long loadedBytes = 0;
         final long maxBytes = IrcPreferences.getInstance().getLookbackTresholdBytes();
         List<IrcLogResource> loadResources = new ArrayList<IrcLogResource>();
         while (it.hasNext()) {
-            IrcLogResource r = it.next().getValue();
+            IrcLogResource r = logs.get(it.next());
             loadResources.add(r);
             IFileSystem fs = EFS.getLocalFileSystem();
             IFileStore store = fs.getStore(r.getLogFile().getLocation());
