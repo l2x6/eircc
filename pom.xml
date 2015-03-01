@@ -43,6 +43,15 @@
         <url>https://github.com/ppalaga/eircc</url>
     </scm>
 
+    <distributionManagement>
+        <repository>
+        <!-- http://techblog.ralph-schuster.eu/2013/12/25/plugin-to-publish-eclipse-p2-repositories/ -->
+            <id>eircc-repository</id>
+            <name>EIRCC Public Update Site</name>
+            <url></url>
+        </repository>
+    </distributionManagement>
+
     <properties>
         <maven.compiler.target>1.8</maven.compiler.target>
         <maven.compiler.source>1.8</maven.compiler.source>
@@ -50,6 +59,9 @@
         <irclib-version>2.0-SNAPSHOT</irclib-version>
         <commons-math3-version>3.3</commons-math3-version>
         <tycho-version>0.21.0</tycho-version>
+
+        <maven.install.skip>true</maven.install.skip>
+        <maven.deploy.skip>true</maven.deploy.skip>
     </properties>
 
     <modules>
@@ -208,6 +220,11 @@
                             </pluginExecutions>
                         </lifecycleMappingMetadata>
                     </configuration>
+                </plugin>
+                <plugin>
+                    <groupId>eu.ralph-schuster</groupId>
+                    <artifactId>uploadfiles-maven-plugin</artifactId>
+                    <version>1.1.1</version>
                 </plugin>
             </plugins>
         </pluginManagement>

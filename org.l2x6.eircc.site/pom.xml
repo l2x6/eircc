@@ -30,6 +30,22 @@
                     <publishArtifacts>true</publishArtifacts>
                 </configuration>
             </plugin>
+            <plugin>
+                <groupId>eu.ralph-schuster</groupId>
+                <artifactId>uploadfiles-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>upload</goal>
+                        </goals>
+                        <phase>deploy</phase>
+                    </execution>
+                </executions>
+                <configuration>
+                    <path>target/repository</path>
+                    <targetPath>.</targetPath>
+                </configuration>
+            </plugin>
         </plugins>
     </build>
 
