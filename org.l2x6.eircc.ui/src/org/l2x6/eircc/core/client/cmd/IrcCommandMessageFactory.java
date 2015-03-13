@@ -34,9 +34,10 @@ public class IrcCommandMessageFactory {
                     return new IrcCommandMessage(channel, sourceText, ircCommand);
                 }
             }
-
-            CTCPCommand ctcpCommand = CTCPCommand.fastValueOf(initialCommand);
-            if (ctcpCommand != null) {
+            CTCPCommand ctcpCommand = null;
+            if (CtcpIrcCommandMessage.ME.equals(initialCommand)) {
+                return new CtcpIrcCommandMessage(channel, initialCommand, CTCPCommand.ACTION, sourceText);
+            } else if ((ctcpCommand = CTCPCommand.fastValueOf(initialCommand)) != null) {
                 return new CtcpIrcCommandMessage(channel, initialCommand, ctcpCommand, sourceText);
             } else {
                 throw new IrcException("Unsupported command '"+ initialCommand +"'", channel);

@@ -21,6 +21,7 @@ import org.schwering.irc.lib.IRCCommand;
  * @author <a href="mailto:ppalaga@redhat.com">Peter Palaga</a>
  */
 public class CtcpIrcCommandMessage extends IrcCommandMessage {
+    public static final String ME = "ME";
     private final String protocolCommand;
     private final CTCPCommand ctcpCommand;
     private final String quotedCtcpCommand;
@@ -30,7 +31,7 @@ public class CtcpIrcCommandMessage extends IrcCommandMessage {
      * @param ircCommand
      */
     public CtcpIrcCommandMessage(AbstractIrcChannel channel, String initialCommand, CTCPCommand ctcpCommand, String sourceText) {
-        super(channel, sourceText, IRCCommand.CTCP);
+        super(channel, sourceText, IRCCommand.PRIVMSG);
         this.ctcpCommand = ctcpCommand;
         String cleanMessage = sourceText.substring(initialCommand.length() +2).trim();
         this.quotedCtcpCommand = CTCPCommand.QUOTE_CHAR + ctcpCommand.name() + " "+ cleanMessage + CTCPCommand.QUOTE_CHAR;

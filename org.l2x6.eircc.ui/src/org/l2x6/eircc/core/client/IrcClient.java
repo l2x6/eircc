@@ -58,7 +58,7 @@ import org.schwering.irc.lib.IRCConnection;
 import org.schwering.irc.lib.IRCEventListener;
 import org.schwering.irc.lib.IRCModeParser;
 import org.schwering.irc.lib.IRCUser;
-import org.schwering.irc.lib.Rpl;
+import org.schwering.irc.lib.IRCReply;
 import org.schwering.irc.lib.ssl.SSLIRCConnection;
 import org.schwering.irc.lib.ssl.SSLTrustManager;
 
@@ -331,7 +331,7 @@ public class IrcClient {
          */
         @Override
         public void onError(int num, String msg) {
-            Rpl rpl = Rpl.valueByCode(num);
+            IRCReply rpl = IRCReply.valueByCode(num);
             if (rpl != null) {
                 switch (rpl) {
                 case ERR_NICKNAMEINUSE:
@@ -544,7 +544,7 @@ public class IrcClient {
         @Override
         public void onReply(int num, String value, String msg) {
             try {
-                Rpl rpl = Rpl.valueByCode(num);
+                IRCReply rpl = IRCReply.valueByCode(num);
                 if (rpl != null) {
                     switch (rpl) {
                     case RPL_LISTSTART:

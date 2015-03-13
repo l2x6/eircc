@@ -35,7 +35,7 @@ import org.l2x6.eircc.core.model.resource.IrcRootResource;
 import org.l2x6.eircc.core.util.IrcUtils;
 import org.l2x6.eircc.ui.EirccUi;
 import org.l2x6.eircc.ui.IrcUiMessages;
-import org.schwering.irc.lib.TrafficLogger;
+import org.schwering.irc.lib.IRCTrafficLogger;
 
 /**
  * Model root
@@ -89,7 +89,7 @@ public class IrcModel extends IrcBase {
         return new IrcAccount(this, label, System.currentTimeMillis());
     }
 
-    TrafficLogger createTrafficLogger(IrcAccount account) {
+    IRCTrafficLogger createTrafficLogger(IrcAccount account) {
         return trafficLoggerFactory.createTrafficLogger(account);
     }
 

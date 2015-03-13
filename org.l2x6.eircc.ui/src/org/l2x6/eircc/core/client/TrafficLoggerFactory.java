@@ -9,11 +9,11 @@
 package org.l2x6.eircc.core.client;
 
 import org.l2x6.eircc.core.model.IrcAccount;
-import org.schwering.irc.lib.TrafficLogger;
+import org.schwering.irc.lib.IRCTrafficLogger;
 
 /**
  * @author <a href="mailto:ppalaga@redhat.com">Peter Palaga</a>
  */
 public interface TrafficLoggerFactory {
-    TrafficLogger createTrafficLogger(IrcAccount account);
+    IRCTrafficLogger createTrafficLogger(IrcAccount account);
 }

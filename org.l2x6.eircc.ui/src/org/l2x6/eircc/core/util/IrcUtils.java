@@ -19,6 +19,7 @@ import org.eclipse.core.resources.IResource;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.swt.widgets.Display;
+import org.l2x6.eircc.core.client.cmd.CtcpIrcCommandMessage;
 import org.schwering.irc.lib.CTCPCommand;
 
 /**
@@ -69,7 +70,11 @@ public class IrcUtils {
             i++;
         }
         String cmd = msg.substring(0, i);
-        return CTCPCommand.fastValueOf(cmd);
+        if (CtcpIrcCommandMessage.ME.equals(cmd)) {
+            return CTCPCommand.ACTION;
+        } else {
+            return CTCPCommand.fastValueOf(cmd);
+        }
     }
 
     public static String getRealUserName() throws IOException, InterruptedException {

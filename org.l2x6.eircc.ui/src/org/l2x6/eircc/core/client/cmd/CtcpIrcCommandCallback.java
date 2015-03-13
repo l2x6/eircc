@@ -71,7 +71,7 @@ public class CtcpIrcCommandCallback implements IrcCommandCallback {
             String displayMessage = "*** " + sender.getNick() + " " + cleanMessage;
             String commandSource = null;
             if (myNick.equals(sender.getNick())) {
-                commandSource = "/"+ CTCPCommand.ME.toLowerCase(Locale.ENGLISH) + " "+ cleanMessage;
+                commandSource = "/"+ CtcpIrcCommandMessage.ME.toLowerCase(Locale.ENGLISH) + " "+ cleanMessage;
             }
             return new IrcMessage(log, OffsetDateTime.now(), sender, displayMessage, myNick, channel.isP2p(),
                     IrcMessageType.CHAT, commandSource);

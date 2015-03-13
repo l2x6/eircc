@@ -8,6 +8,10 @@
 
 package org.l2x6.eircc.ui.views;
 
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.StringWriter;
+
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.ui.IWorkbenchPage;
 import org.eclipse.ui.IWorkbenchWindow;
@@ -24,13 +28,13 @@ import org.l2x6.eircc.core.client.TrafficLoggerFactory;
 import org.l2x6.eircc.core.model.IrcAccount;
 import org.l2x6.eircc.ui.EirccUi;
 import org.l2x6.eircc.ui.IrcUiMessages;
-import org.schwering.irc.lib.TrafficLogger;
+import org.schwering.irc.lib.IRCTrafficLogger;
 
 /**
  * @author <a href="mailto:ppalaga@redhat.com">Peter Palaga</a>
  */
 public class IrcConsole implements TrafficLoggerFactory {
-    public static class ConsoleTrafficLogger implements TrafficLogger {
+    public static class ConsoleTrafficLogger implements IRCTrafficLogger {
         private MessageConsole console;
         private final MessageConsoleStream consoleStream;
 
@@ -95,6 +99,22 @@ public class IrcConsole implements TrafficLoggerFactory {
                 }
             }
         }
+
+        /**
+         * @see org.schwering.irc.lib.IRCTrafficLogger#exception(java.lang.Throwable)
+         */
+        @Override
+        public void exception(Throwable e) {
+            try {
+                reveal();
+                StringWriter w = new StringWriter();
+                PrintWriter pw = new PrintWriter(w);
+                e.printStackTrace(pw);
+                pw.flush();
+                consoleStream.write(w.toString());
+            } catch (IOException ignored) {
+            }
+        }
     }
 
     private static final IrcConsole INSTANCE = new IrcConsole();
@@ -107,7 +127,7 @@ public class IrcConsole implements TrafficLoggerFactory {
      * @see org.l2x6.eircc.core.client.TrafficLoggerFactory#createTrafficLogger(org.l2x6.eircc.core.model.IrcAccount)
      */
     @Override
-    public TrafficLogger createTrafficLogger(IrcAccount account) {
+    public IRCTrafficLogger createTrafficLogger(IrcAccount account) {
         String consoleName = account.getLabel() + IrcUiMessages.Console_Account_Log;
         MessageConsole console = getOrCreateConsole(consoleName);
         return new ConsoleTrafficLogger(console);

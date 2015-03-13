@@ -36,7 +36,7 @@ import org.l2x6.eircc.core.model.resource.IrcLogResource;
 import org.l2x6.eircc.core.model.resource.IrcResourceException;
 import org.l2x6.eircc.core.util.TypedField;
 import org.l2x6.eircc.ui.IrcUiMessages;
-import org.schwering.irc.lib.TrafficLogger;
+import org.schwering.irc.lib.IRCTrafficLogger;
 
 /**
  * @author <a href="mailto:ppalaga@redhat.com">Peter Palaga</a>
@@ -171,7 +171,7 @@ public class IrcAccount extends InitialIrcAccount implements PersistentIrcObject
     private final IrcServer server;
     private IrcAccountState state = IrcAccountState.OFFLINE;
 
-    private TrafficLogger trafficLogger;
+    private IRCTrafficLogger trafficLogger;
 
     public IrcAccount(InitialIrcAccount src) throws IrcResourceException {
         this(src.getModel(), src.getLabel(), System.currentTimeMillis());
@@ -455,7 +455,7 @@ public class IrcAccount extends InitialIrcAccount implements PersistentIrcObject
     /**
      * @return
      */
-    public TrafficLogger getTraffciLogger() {
+    public IRCTrafficLogger getTraffciLogger() {
         if (trafficLogger == null) {
             trafficLogger = model.createTrafficLogger(this);
         }
