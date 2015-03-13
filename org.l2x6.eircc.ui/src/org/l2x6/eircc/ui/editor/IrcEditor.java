@@ -399,8 +399,11 @@ public class IrcEditor extends AbstractIrcEditor implements IrcModelEventListene
             case NEW_MESSAGE:
                 IrcMessage m = (IrcMessage) e.getModelObject();
                 if (m.getLog().getChannel() == getChannel()) {
+                    boolean autoScroll = logViewer.isAtBottom();
                     appendMessage(new TextViewerWrapper(logViewer), m);
-                    logViewer.scrollToBottom();
+                    if (autoScroll) {
+                        logViewer.scrollToBottom();
+                    }
                     updateReadMessages();
                 }
                 break;

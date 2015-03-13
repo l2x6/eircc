@@ -28,6 +28,7 @@ import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.graphics.Rectangle;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Display;
+import org.eclipse.swt.widgets.ScrollBar;
 
 /**
  * @author <a href="mailto:ppalaga@redhat.com">Peter Palaga</a>
@@ -184,6 +185,11 @@ public class IrcLogViewer extends SourceViewer {
 
     public IAnnotationModel getRawModel() {
         return rawModel;
+    }
+
+    public boolean isAtBottom() {
+        ScrollBar verticalBar = textWidget.getVerticalBar();
+        return !verticalBar.isVisible() || verticalBar.getMaximum() == verticalBar.getSelection() + verticalBar.getThumb();
     }
 
     public boolean isEmpty() {
