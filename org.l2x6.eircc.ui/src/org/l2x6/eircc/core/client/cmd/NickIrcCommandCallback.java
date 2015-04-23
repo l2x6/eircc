@@ -19,7 +19,7 @@ import org.l2x6.eircc.core.model.IrcAccount;
 import org.l2x6.eircc.core.model.IrcLog;
 import org.l2x6.eircc.core.model.PlainIrcUser;
 import org.l2x6.eircc.ui.IrcUiMessages;
-import org.schwering.irc.lib.CTCPCommand;
+import org.schwering.irc.lib.util.CTCPCommand;
 
 /**
  * @author <a href="mailto:ppalaga@redhat.com">Peter Palaga</a>

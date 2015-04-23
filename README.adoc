@@ -17,15 +17,12 @@ toc::[]
 +
 .................
 $ git clone https://github.com/ppalaga/eircc.git
-$ git clone https://github.com/ppalaga/irclib.git
 .................
 
 3. Build with maven
 +
 .................
-$ cd irclib
-$ mvn clean install -DskipTests
-$ cd ../eircc
+$ cd eircc
 $ mvn clean install
 .................
 

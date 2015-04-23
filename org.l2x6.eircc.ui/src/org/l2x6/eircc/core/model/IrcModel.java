@@ -35,6 +35,7 @@ import org.l2x6.eircc.core.model.resource.IrcRootResource;
 import org.l2x6.eircc.core.util.IrcUtils;
 import org.l2x6.eircc.ui.EirccUi;
 import org.l2x6.eircc.ui.IrcUiMessages;
+import org.schwering.irc.lib.IRCExceptionHandler;
 import org.schwering.irc.lib.IRCTrafficLogger;
 
 /**
@@ -90,7 +91,11 @@ public class IrcModel extends IrcBase {
     }
 
     IRCTrafficLogger createTrafficLogger(IrcAccount account) {
-        return trafficLoggerFactory.createTrafficLogger(account);
+        return trafficLoggerFactory.getTrafficLogger(account);
+    }
+
+    IRCExceptionHandler createExceptionHandler(IrcAccount account) {
+        return trafficLoggerFactory.getExceptionHandler(account);
     }
 
     public void dispose() {

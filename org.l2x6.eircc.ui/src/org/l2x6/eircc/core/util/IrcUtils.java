@@ -20,7 +20,7 @@ import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.swt.widgets.Display;
 import org.l2x6.eircc.core.client.cmd.CtcpIrcCommandMessage;
-import org.schwering.irc.lib.CTCPCommand;
+import org.schwering.irc.lib.util.CTCPCommand;
 
 /**
  * @author <a href="mailto:ppalaga@redhat.com">Peter Palaga</a>

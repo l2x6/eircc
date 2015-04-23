@@ -36,57 +36,13 @@ import org.l2x6.eircc.core.model.resource.IrcLogResource;
 import org.l2x6.eircc.core.model.resource.IrcResourceException;
 import org.l2x6.eircc.core.util.TypedField;
 import org.l2x6.eircc.ui.IrcUiMessages;
+import org.schwering.irc.lib.IRCExceptionHandler;
 import org.schwering.irc.lib.IRCTrafficLogger;
 
 /**
  * @author <a href="mailto:ppalaga@redhat.com">Peter Palaga</a>
  */
 public class IrcAccount extends InitialIrcAccount implements PersistentIrcObject {
-    private static class NickTimeoutMessageReplacer implements IrcMessageReplacer {
-        private boolean depleted = false;
-        private final String expectedText;
-
-        /**
-         * @param expectedMessage
-         */
-        public NickTimeoutMessageReplacer(String expectedMessage) {
-            super();
-            this.expectedText = expectedMessage;
-        }
-
-        @Override
-        public IrcMessageMatcherState match(IrcMessage m) {
-            if (depleted) {
-                return IrcMessageMatcherState.STOP;
-            }
-            if (m.getType() == IrcMessageType.NOTIFICATION && expectedText.equals(m.getText())) {
-                depleted = true;
-                return IrcMessageMatcherState.MATCH;
-            }
-            return IrcMessageMatcherState.STOP;
-        }
-
-        /**
-         * @see org.l2x6.eircc.core.model.IrcMessageReplacer#createReplacementMessage(org.l2x6.eircc.core.model.IrcMessage)
-         */
-        @Override
-        public IrcMessage createReplacementMessage(IrcMessage replacedMessage) {
-            return new IrcMessage(replacedMessage.getLog(), OffsetDateTime.now(), replacedMessage.getUser(),
-                    replacedMessage.getText(), replacedMessage.getMyNick(), replacedMessage.getLog().getChannel()
-                            .isP2p(), replacedMessage.getType(), replacedMessage.getRawInput());
-        }
-
-        /**
-         * @see org.l2x6.eircc.core.model.IrcMessageReplacer#createNewMessage(org.l2x6.eircc.core.model.IrcLog)
-         */
-        @Override
-        public IrcMessage createNewMessage(IrcLog log) {
-            return new IrcMessage(log, OffsetDateTime.now(), null, expectedText, log.getChannel().isP2p(),
-                    IrcMessageType.NOTIFICATION);
-        }
-
-    }
-
     public enum IrcAccountField implements TypedField {
         autoConnect(IrcUiMessages.Account_Connect_Automatically) {
             @Override
@@ -157,20 +113,66 @@ public class IrcAccount extends InitialIrcAccount implements PersistentIrcObject
         OFFLINE, OFFLINE_AFTER_ERROR, ONLINE
     }
 
+    private static class NickTimeoutMessageReplacer implements IrcMessageReplacer {
+        private boolean depleted = false;
+        private final String expectedText;
+
+        /**
+         * @param expectedMessage
+         */
+        public NickTimeoutMessageReplacer(String expectedMessage) {
+            super();
+            this.expectedText = expectedMessage;
+        }
+
+        /**
+         * @see org.l2x6.eircc.core.model.IrcMessageReplacer#createNewMessage(org.l2x6.eircc.core.model.IrcLog)
+         */
+        @Override
+        public IrcMessage createNewMessage(IrcLog log) {
+            return new IrcMessage(log, OffsetDateTime.now(), null, expectedText, log.getChannel().isP2p(),
+                    IrcMessageType.NOTIFICATION);
+        }
+
+        /**
+         * @see org.l2x6.eircc.core.model.IrcMessageReplacer#createReplacementMessage(org.l2x6.eircc.core.model.IrcMessage)
+         */
+        @Override
+        public IrcMessage createReplacementMessage(IrcMessage replacedMessage) {
+            return new IrcMessage(replacedMessage.getLog(), OffsetDateTime.now(), replacedMessage.getUser(),
+                    replacedMessage.getText(), replacedMessage.getMyNick(), replacedMessage.getLog().getChannel()
+                            .isP2p(), replacedMessage.getType(), replacedMessage.getRawInput());
+        }
+
+        @Override
+        public IrcMessageMatcherState match(IrcMessage m) {
+            if (depleted) {
+                return IrcMessageMatcherState.STOP;
+            }
+            if (m.getType() == IrcMessageType.NOTIFICATION && expectedText.equals(m.getText())) {
+                depleted = true;
+                return IrcMessageMatcherState.MATCH;
+            }
+            return IrcMessageMatcherState.STOP;
+        }
+
+    }
+
     private final IrcAccountResource accountResource;
     /** Kept or joined channels */
     private final List<AbstractIrcChannel> channels = new ArrayList<AbstractIrcChannel>();
 
     private long createdOn;
 
+    private IRCExceptionHandler exceptionHandler;
+
     private AbstractIrcChannel[] keptChannelsArray;
-
     private IrcException lastException;
+
     private IrcUser me;
-
     private final IrcServer server;
-    private IrcAccountState state = IrcAccountState.OFFLINE;
 
+    private IrcAccountState state = IrcAccountState.OFFLINE;
     private IRCTrafficLogger trafficLogger;
 
     public IrcAccount(InitialIrcAccount src) throws IrcResourceException {
@@ -369,6 +371,13 @@ public class IrcAccount extends InitialIrcAccount implements PersistentIrcObject
 
     public long getCreatedOn() {
         return createdOn;
+    }
+
+    public IRCExceptionHandler getExceptionHandler() {
+        if (exceptionHandler == null) {
+            exceptionHandler = model.createExceptionHandler(this);
+        }
+        return exceptionHandler;
     }
 
     /**

@@ -11,7 +11,7 @@ package org.l2x6.eircc.core.client.cmd;
 import org.l2x6.eircc.core.model.AbstractIrcChannel;
 import org.l2x6.eircc.core.model.IrcAccount;
 import org.l2x6.eircc.core.model.PlainIrcUser;
-import org.schwering.irc.lib.CTCPCommand;
+import org.schwering.irc.lib.util.CTCPCommand;
 
 /**
  * @author <a href="mailto:ppalaga@redhat.com">Peter Palaga</a>

@@ -9,7 +9,8 @@
 package org.l2x6.eircc.core.client;
 
 import java.io.IOException;
-import java.security.cert.X509Certificate;
+import java.security.KeyManagementException;
+import java.security.NoSuchAlgorithmException;
 import java.text.MessageFormat;
 import java.time.Duration;
 import java.time.OffsetDateTime;
@@ -52,15 +53,17 @@ import org.l2x6.eircc.core.model.resource.IrcResourceException;
 import org.l2x6.eircc.core.util.IrcUtils;
 import org.l2x6.eircc.ui.EirccUi;
 import org.l2x6.eircc.ui.IrcUiMessages;
-import org.schwering.irc.lib.CTCPCommand;
-import org.schwering.irc.lib.IRCCommand;
+import org.schwering.irc.lib.IRCConfig;
+import org.schwering.irc.lib.IRCConfigBuilder;
 import org.schwering.irc.lib.IRCConnection;
+import org.schwering.irc.lib.IRCConnectionFactory;
 import org.schwering.irc.lib.IRCEventListener;
-import org.schwering.irc.lib.IRCModeParser;
 import org.schwering.irc.lib.IRCUser;
-import org.schwering.irc.lib.IRCReply;
-import org.schwering.irc.lib.ssl.SSLIRCConnection;
-import org.schwering.irc.lib.ssl.SSLTrustManager;
+import org.schwering.irc.lib.impl.DefaultIRCSSLSupport;
+import org.schwering.irc.lib.util.CTCPCommand;
+import org.schwering.irc.lib.util.IRCCommand;
+import org.schwering.irc.lib.util.IRCModeParser;
+import org.schwering.irc.lib.util.IRCReply;
 
 /**
  * @author <a href="mailto:ppalaga@redhat.com">Peter Palaga</a>
@@ -99,23 +102,6 @@ public class IrcClient {
                     createThreadFactory(executorType));
         }
 
-    }
-
-    /**
-     * A place where the <i>Man in the Middle</i> likes to reside.
-     *
-     * @author <a href="mailto:ppalaga@redhat.com">Peter Palaga</a>
-     */
-    private static class MitmLounge implements SSLTrustManager {
-        private X509Certificate[] chain;
-
-        public X509Certificate[] getAcceptedIssuers() {
-            return chain != null ? chain : new X509Certificate[0];
-        }
-
-        public boolean isTrusted(X509Certificate[] chain) {
-            return true;
-        }
     }
 
     private class TimeoutCheckTask implements Runnable {
@@ -675,23 +661,34 @@ public class IrcClient {
     public void connect(IrcAccount account) throws IrcException {
         IrcUtils.assertUiThread();
         this.account = account;
-        if (account.isSsl()) {
-            SSLIRCConnection conn = new SSLIRCConnection(account.getHost(), new int[] { account.getPort() },
-                    account.getPassword(), account.getPreferedNickOrUser(), account.getUsername(), account.getName(),
-                    account.getSocksProxyHost(), account.getSocksProxyPort(), account.getTraffciLogger());
-            conn.addTrustManager(new MitmLounge());
-            connection = conn;
+        IRCConfigBuilder builder = IRCConfigBuilder.newBuilder()
+                .stripColors(true)
+                .host(account.getHost())
+                .port(account.getPort())
+                .password(account.getPassword())
+                .nick(account.getPreferedNickOrUser())
+                .username(account.getUsername())
+                .realname(account.getName())
+                .trafficLogger(account.getTraffciLogger())
+                .exceptionHandler(account.getExceptionHandler());
 
-        } else {
-            connection = new IRCConnection(account.getHost(), new int[] { account.getPort() }, account.getPassword(),
-                    account.getPreferedNickOrUser(), account.getUsername(), account.getName(),
-                    account.getSocksProxyHost(), account.getSocksProxyPort(), account.getTraffciLogger());
+        if (
+                account.getSocksProxyHost() != null
+                && account.getSocksProxyPort() > 0) {
+            builder.socksProxy(
+                    account.getSocksProxyHost(),
+                    account.getSocksProxyPort()
+                    );
         }
+        if (account.isSsl()) {
+            builder.sslSupport(DefaultIRCSSLSupport.INSECURE);
+        }
+
+        IRCConfig config = builder.build();
+
+        connection = IRCConnectionFactory.newConnection(config);
+
         connection.addIRCEventListener(new UiListener());
-        connection.setEncoding("UTF-8");
-        connection.setPong(true);
-        connection.setDaemon(false);
-        connection.setColors(false);
         executor.submit(new Runnable() {
             @Override
             public void run() {
@@ -717,7 +714,7 @@ public class IrcClient {
         } else if (connection != null) {
             try {
                 connection.connect();
-            } catch (IOException e) {
+            } catch (IOException | KeyManagementException | NoSuchAlgorithmException e) {
                 controller.handle(new IrcException("Could not connect to '" + account.getLabel() + "': "
                         + e.getMessage(), e, account));
             }

@@ -22,7 +22,7 @@ import org.l2x6.eircc.core.util.IrcLogReader;
 import org.l2x6.eircc.core.util.IrcToken;
 import org.l2x6.eircc.core.util.IrcTokenizer;
 import org.l2x6.eircc.ui.misc.Colors;
-import org.schwering.irc.lib.IRCCommand;
+import org.schwering.irc.lib.util.IRCCommand;
 
 /**
  * @author <a href="mailto:ppalaga@redhat.com">Peter Palaga</a>

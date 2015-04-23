@@ -11,6 +11,8 @@ package org.l2x6.eircc.ui.views;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.ui.IWorkbenchPage;
@@ -28,13 +30,15 @@ import org.l2x6.eircc.core.client.TrafficLoggerFactory;
 import org.l2x6.eircc.core.model.IrcAccount;
 import org.l2x6.eircc.ui.EirccUi;
 import org.l2x6.eircc.ui.IrcUiMessages;
+import org.schwering.irc.lib.IRCConnection;
+import org.schwering.irc.lib.IRCExceptionHandler;
 import org.schwering.irc.lib.IRCTrafficLogger;
 
 /**
  * @author <a href="mailto:ppalaga@redhat.com">Peter Palaga</a>
  */
 public class IrcConsole implements TrafficLoggerFactory {
-    public static class ConsoleTrafficLogger implements IRCTrafficLogger {
+    public static class ConsoleTrafficLogger implements IRCTrafficLogger, IRCExceptionHandler {
         private MessageConsole console;
         private final MessageConsoleStream consoleStream;
 
@@ -45,6 +49,22 @@ public class IrcConsole implements TrafficLoggerFactory {
             super();
             this.consoleStream = console.newMessageStream();
             this.console = console;
+        }
+
+        /**
+         * @see org.schwering.irc.lib.IRCExceptionHandler#exception(org.schwering.irc.lib.IRCConnection, java.lang.Throwable)
+         */
+        @Override
+        public void exception(IRCConnection arg0, Throwable e) {
+            try {
+                reveal();
+                StringWriter w = new StringWriter();
+                PrintWriter pw = new PrintWriter(w);
+                e.printStackTrace(pw);
+                pw.flush();
+                consoleStream.write(w.toString());
+            } catch (IOException ignored) {
+            }
         }
 
         /**
@@ -99,22 +119,6 @@ public class IrcConsole implements TrafficLoggerFactory {
                 }
             }
         }
-
-        /**
-         * @see org.schwering.irc.lib.IRCTrafficLogger#exception(java.lang.Throwable)
-         */
-        @Override
-        public void exception(Throwable e) {
-            try {
-                reveal();
-                StringWriter w = new StringWriter();
-                PrintWriter pw = new PrintWriter(w);
-                e.printStackTrace(pw);
-                pw.flush();
-                consoleStream.write(w.toString());
-            } catch (IOException ignored) {
-            }
-        }
     }
 
     private static final IrcConsole INSTANCE = new IrcConsole();
@@ -124,13 +128,29 @@ public class IrcConsole implements TrafficLoggerFactory {
     }
 
     /**
-     * @see org.l2x6.eircc.core.client.TrafficLoggerFactory#createTrafficLogger(org.l2x6.eircc.core.model.IrcAccount)
+     * @param account
+     * @return
+     */
+    private static String getLabel(IrcAccount account) {
+        return account.getLabel() + IrcUiMessages.Console_Account_Log;
+    }
+
+    private final Map<String, ConsoleTrafficLogger> loggerMap = new HashMap<String, ConsoleTrafficLogger>();
+
+    /**
+     * @see org.l2x6.eircc.core.client.TrafficLoggerFactory#getExceptionHandler(org.l2x6.eircc.core.model.IrcAccount)
      */
     @Override
-    public IRCTrafficLogger createTrafficLogger(IrcAccount account) {
-        String consoleName = account.getLabel() + IrcUiMessages.Console_Account_Log;
-        MessageConsole console = getOrCreateConsole(consoleName);
-        return new ConsoleTrafficLogger(console);
+    public IRCExceptionHandler getExceptionHandler(IrcAccount account) {
+        synchronized (this.loggerMap) {
+            ConsoleTrafficLogger result = this.loggerMap.get(account.getName());
+            if (result == null) {
+                MessageConsole console = getOrCreateConsole(getLabel(account));
+                result = new ConsoleTrafficLogger(console);
+                this.loggerMap.put(account.getName(), result);
+            }
+            return result;
+        }
     }
 
     private MessageConsole getOrCreateConsole(String name) {
@@ -143,6 +163,22 @@ public class IrcConsole implements TrafficLoggerFactory {
         MessageConsole myConsole = new MessageConsole(name, null);
         conMan.addConsoles(new IConsole[] { myConsole });
         return myConsole;
+    }
+
+    /**
+     * @see org.l2x6.eircc.core.client.TrafficLoggerFactory#getTrafficLogger(org.l2x6.eircc.core.model.IrcAccount)
+     */
+    @Override
+    public IRCTrafficLogger getTrafficLogger(IrcAccount account) {
+        synchronized (this.loggerMap) {
+            ConsoleTrafficLogger result = this.loggerMap.get(account.getName());
+            if (result == null) {
+                MessageConsole console = getOrCreateConsole(getLabel(account));
+                result = new ConsoleTrafficLogger(console);
+                this.loggerMap.put(account.getName(), result);
+            }
+            return result;
+        }
     }
 
 }
